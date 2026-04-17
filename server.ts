@@ -1,37 +1,54 @@
+import 'dotenv/config';
 import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
 import multer from "multer";
-import admin from "firebase-admin";
-import { getFirestore } from "firebase-admin/firestore";
-import fs from "fs";
+import { Pool } from "pg";
 
-// Import the Firebase configuration
-const firebaseConfig = JSON.parse(fs.readFileSync("./firebase-applet-config.json", "utf-8"));
+const pool = new Pool({
+  connectionString: process.env.POSTGRES_CONNECTION_STRING || process.env.DATABASE_URL,
+  host: process.env.POSTGRES_HOST,
+  port: process.env.POSTGRES_PORT ? Number(process.env.POSTGRES_PORT) : undefined,
+  user: process.env.POSTGRES_USER,
+  password: process.env.POSTGRES_PASSWORD,
+  database: process.env.POSTGRES_DB,
+  ssl: process.env.POSTGRES_SSL === 'true' ? { rejectUnauthorized: false } : false,
+});
 
-// Initialize Firebase Admin SDK
-if (!admin.apps.length) {
-  admin.initializeApp({
-    projectId: firebaseConfig.projectId,
-  });
+async function initDb() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS images (
+      id SERIAL PRIMARY KEY,
+      name TEXT NOT NULL,
+      content_type TEXT NOT NULL,
+      data BYTEA NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS documents (
+      id SERIAL PRIMARY KEY,
+      collection_name TEXT NOT NULL,
+      doc_id TEXT NOT NULL,
+      data JSONB NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      UNIQUE(collection_name, doc_id)
+    )
+  `);
 }
 
-// Initialize Firestore with the specific database ID if provided
-const db = firebaseConfig.firestoreDatabaseId 
-  ? getFirestore(firebaseConfig.firestoreDatabaseId) 
-  : getFirestore();
-
 async function startServer() {
-  const app = express();
-  const PORT = 3000;
+  await initDb();
 
-  // Configure Multer for memory storage
-  const upload = multer({ 
+  const app = express();
+  const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
+
+  const upload = multer({
     storage: multer.memoryStorage(),
-    limits: { fileSize: 10 * 1024 * 1024 } // 10MB limit
+    limits: { fileSize: 10 * 1024 * 1024 },
   });
 
-  // API Route for Image Upload (Saves to Firestore instead of Storage)
   app.post("/api/upload", upload.single("image"), async (req, res) => {
     try {
       if (!req.file) {
@@ -39,62 +56,127 @@ async function startServer() {
         return res.status(400).json({ error: "No file uploaded" });
       }
 
-      console.log(`[Server] Firestore Upload: ${req.file.originalname}, size: ${req.file.size} bytes`);
-      
-      // Convert buffer to base64
-      const base64Data = req.file.buffer.toString('base64');
-      const dataUrl = `data:${req.file.mimetype};base64,${base64Data}`;
-      
-      // Save to Firestore 'images' collection
-      const imageDoc = db.collection('images').doc();
-      await imageDoc.set({
-        dataUrl: dataUrl,
-        contentType: req.file.mimetype,
-        createdAt: admin.firestore.FieldValue.serverTimestamp(),
-        name: req.file.originalname
-      });
+      const result = await pool.query(
+        `INSERT INTO images (name, content_type, data) VALUES ($1, $2, $3) RETURNING id`,
+        [req.file.originalname, req.file.mimetype, req.file.buffer]
+      );
 
-      // Return the URL to our own Express server endpoint
-      const downloadURL = `/api/images/${imageDoc.id}`;
-      
-      console.log(`[Server] Firestore Upload success. URL: ${downloadURL}`);
+      const imageId = result.rows[0]?.id;
+      if (!imageId) {
+        throw new Error("Failed to save image");
+      }
+
+      const downloadURL = `/api/images/${imageId}`;
+      console.log(`[Server] PostgreSQL Upload success. URL: ${downloadURL}`);
       res.json({ url: downloadURL });
     } catch (error: any) {
-      console.error("[Server] FIRESTORE UPLOAD ERROR:", error);
-      res.status(500).json({ 
+      console.error("[Server] POSTGRES UPLOAD ERROR:", error);
+      res.status(500).json({
         error: error.message || "Internal server error",
-        details: error.stack
+        details: error.stack,
       });
     }
   });
 
-  // API Route to serve images from Firestore
   app.get("/api/images/:id", async (req, res) => {
     try {
-      const doc = await db.collection('images').doc(req.params.id).get();
-      if (!doc.exists) {
+      const result = await pool.query(
+        `SELECT name, content_type, data FROM images WHERE id = $1`,
+        [req.params.id]
+      );
+
+      const row = result.rows[0];
+      if (!row) {
         return res.status(404).send("Image not found");
       }
-      
-      const data = doc.data();
-      if (!data || !data.dataUrl) {
-        return res.status(404).send("Image data missing");
-      }
-      
-      // Extract base64 data
-      const base64Data = data.dataUrl.split(',')[1];
-      const buffer = Buffer.from(base64Data, 'base64');
-      
-      res.setHeader('Content-Type', data.contentType || 'image/jpeg');
-      res.setHeader('Cache-Control', 'public, max-age=31536000'); // Cache for 1 year
-      res.send(buffer);
+
+      res.setHeader('Content-Type', row.content_type || 'image/jpeg');
+      res.setHeader('Cache-Control', 'public, max-age=31536000');
+      res.send(row.data);
     } catch (error) {
       console.error("[Server] Image fetch error:", error);
       res.status(500).send("Error fetching image");
     }
   });
 
-  // Vite middleware for development
+  app.get('/api/collections/:collection', async (req, res) => {
+    try {
+      const result = await pool.query(
+        `SELECT doc_id, data FROM documents WHERE collection_name = $1 ORDER BY created_at DESC`,
+        [req.params.collection]
+      );
+      const items = result.rows.map((row) => ({ id: row.doc_id, ...row.data }));
+      res.json(items);
+    } catch (error) {
+      console.error('[Server] Collection fetch error:', error);
+      res.status(500).json({ error: 'Failed to fetch collection' });
+    }
+  });
+
+  app.get('/api/collections/:collection/:id', async (req, res) => {
+    try {
+      const result = await pool.query(
+        `SELECT data FROM documents WHERE collection_name = $1 AND doc_id = $2 LIMIT 1`,
+        [req.params.collection, req.params.id]
+      );
+      const row = result.rows[0];
+      if (!row) {
+        return res.status(404).json({ error: 'Not found' });
+      }
+      res.json({ id: req.params.id, ...row.data });
+    } catch (error) {
+      console.error('[Server] Document fetch error:', error);
+      res.status(500).json({ error: 'Failed to fetch document' });
+    }
+  });
+
+  app.post('/api/collections/:collection', express.json(), async (req, res) => {
+    try {
+      const collectionName = req.params.collection;
+      const body = req.body;
+      const docId = body.id?.toString() || Date.now().toString();
+      await pool.query(
+        `INSERT INTO documents (collection_name, doc_id, data) VALUES ($1, $2, $3)
+         ON CONFLICT (collection_name, doc_id) DO UPDATE SET data = $3, created_at = NOW()`,
+        [collectionName, docId, body]
+      );
+      res.json({ id: docId, ...body });
+    } catch (error) {
+      console.error('[Server] Document create error:', error);
+      res.status(500).json({ error: 'Failed to create document' });
+    }
+  });
+
+  app.put('/api/collections/:collection/:id', express.json(), async (req, res) => {
+    try {
+      const collectionName = req.params.collection;
+      const docId = req.params.id;
+      const body = req.body;
+      const result = await pool.query(
+        `INSERT INTO documents (collection_name, doc_id, data) VALUES ($1, $2, $3)
+         ON CONFLICT (collection_name, doc_id) DO UPDATE SET data = $3`,
+        [collectionName, docId, body]
+      );
+      res.json({ id: docId, ...body });
+    } catch (error) {
+      console.error('[Server] Document update error:', error);
+      res.status(500).json({ error: 'Failed to update document' });
+    }
+  });
+
+  app.delete('/api/collections/:collection/:id', async (req, res) => {
+    try {
+      await pool.query(
+        `DELETE FROM documents WHERE collection_name = $1 AND doc_id = $2`,
+        [req.params.collection, req.params.id]
+      );
+      res.json({ success: true });
+    } catch (error) {
+      console.error('[Server] Document delete error:', error);
+      res.status(500).json({ error: 'Failed to delete document' });
+    }
+  });
+
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
       server: { middlewareMode: true },
@@ -114,4 +196,7 @@ async function startServer() {
   });
 }
 
-startServer();
+startServer().catch((error) => {
+  console.error("Failed to start server:", error);
+  process.exit(1);
+});

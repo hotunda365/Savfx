@@ -42,33 +42,13 @@ import {
   Database
 } from 'lucide-react';
 import { 
-  onSnapshot, 
-  collection, 
-  doc, 
-  setDoc, 
-  updateDoc, 
-  deleteDoc, 
-  query, 
-  orderBy,
-  getDoc,
-  getDocs,
-  addDoc,
-  writeBatch
-} from 'firebase/firestore';
-import { 
-  ref, 
-  uploadBytes, 
-  uploadBytesResumable,
-  getDownloadURL 
-} from 'firebase/storage';
-import { 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword,
   onAuthStateChanged, 
   signOut,
   User
 } from 'firebase/auth';
-import { db, auth, storage } from './firebase';
+import { auth } from './firebase';
 
 enum OperationType {
   CREATE = 'create',
@@ -99,26 +79,75 @@ interface FirestoreErrorInfo {
 }
 
 function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const authInfo = {
+    userId: auth.currentUser?.uid,
+    email: auth.currentUser?.email,
+    emailVerified: auth.currentUser?.emailVerified,
+    isAnonymous: auth.currentUser?.isAnonymous,
+    tenantId: auth.currentUser?.tenantId,
+    providerInfo: auth.currentUser?.providerData.map(provider => ({
+      providerId: provider.providerId,
+      displayName: provider.displayName,
+      email: provider.email,
+      photoUrl: provider.photoURL
+    })) || []
+  };
   const errInfo: FirestoreErrorInfo = {
     error: error instanceof Error ? error.message : String(error),
-    authInfo: {
-      userId: auth.currentUser?.uid,
-      email: auth.currentUser?.email,
-      emailVerified: auth.currentUser?.emailVerified,
-      isAnonymous: auth.currentUser?.isAnonymous,
-      tenantId: auth.currentUser?.tenantId,
-      providerInfo: auth.currentUser?.providerData.map(provider => ({
-        providerId: provider.providerId,
-        displayName: provider.displayName,
-        email: provider.email,
-        photoUrl: provider.photoURL
-      })) || []
-    },
+    authInfo,
     operationType,
     path
-  }
+  };
   console.error('Firestore Error: ', JSON.stringify(errInfo));
   throw new Error(JSON.stringify(errInfo));
+}
+
+const apiPath = (collection: string, id?: string) => id ? `/api/collections/${collection}/${id}` : `/api/collections/${collection}`;
+
+async function apiFetchCollection(collection: string) {
+  const res = await fetch(apiPath(collection));
+  if (!res.ok) throw new Error(`Failed to fetch collection: ${collection}`);
+  return res.json();
+}
+
+async function apiGetDoc(collection: string, id: string) {
+  const res = await fetch(apiPath(collection, id));
+  if (!res.ok) throw new Error(`Failed to fetch document ${collection}/${id}`);
+  return res.json();
+}
+
+async function apiSetDoc(collection: string, id: string, data: any) {
+  const res = await fetch(apiPath(collection, id), {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) throw new Error(`Failed to save document ${collection}/${id}`);
+  return res.json();
+}
+
+async function apiAddDoc(collection: string, data: any) {
+  const res = await fetch(apiPath(collection), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data)
+  });
+  if (!res.ok) throw new Error(`Failed to add document to ${collection}`);
+  return res.json();
+}
+
+async function apiDeleteDoc(collection: string, id: string) {
+  const res = await fetch(apiPath(collection, id), { method: 'DELETE' });
+  if (!res.ok) throw new Error(`Failed to delete document ${collection}/${id}`);
+  return res.json();
+}
+
+async function apiBulkSet(collection: string, items: Array<{ id: string; [key: string]: any }>) {
+  await Promise.all(items.map(item => apiSetDoc(collection, item.id.toString(), item)));
+}
+
+async function apiDeleteDocs(collection: string, ids: string[]) {
+  await Promise.all(ids.map(id => apiDeleteDoc(collection, id.toString())));
 }
 
 // --- Custom Masks (SVG Paths) ---
@@ -319,48 +348,33 @@ function AppContent() {
     showConfirm("初始化資料", "這將會為您的網站建立預設的單元與課程組合。確定要繼續嗎？", async () => {
       setIsSavingUnits(true);
       try {
-        const batch = writeBatch(db);
-        
-        // Default Units
         const defaultUnits = [
-          { name: "色彩學", price: 3000, isMandatory: false },
-          { name: "水彩", price: 3000, isMandatory: false },
-          { name: "漫畫設計", price: 3000, isMandatory: true },
-          { name: "2D動畫1", price: 3000, isMandatory: true },
-          { name: "2D動畫作品2", price: 3000, isMandatory: true },
-          { name: "3D 機械動畫", price: 3000, isMandatory: true },
-          { name: "3D虛擬骨骼1", price: 3000, isMandatory: false },
-          { name: "電腦合成", price: 3000, isMandatory: false },
-          { name: "3D動畫作品1", price: 3000, isMandatory: false },
-          { name: "AI應用3：2D 動畫", price: 3000, isMandatory: false }
+          { id: 0, name: "色彩學", price: 3000, isMandatory: false },
+          { id: 1, name: "水彩", price: 3000, isMandatory: false },
+          { id: 2, name: "漫畫設計", price: 3000, isMandatory: true },
+          { id: 3, name: "2D動畫1", price: 3000, isMandatory: true },
+          { id: 4, name: "2D動畫作品2", price: 3000, isMandatory: true },
+          { id: 5, name: "3D 機械動畫", price: 3000, isMandatory: true },
+          { id: 6, name: "3D虛擬骨骼1", price: 3000, isMandatory: false },
+          { id: 7, name: "電腦合成", price: 3000, isMandatory: false },
+          { id: 8, name: "3D動畫作品1", price: 3000, isMandatory: false },
+          { id: 9, name: "AI應用3：2D 動畫", price: 3000, isMandatory: false }
         ];
 
-        defaultUnits.forEach((unit, i) => {
-          batch.set(doc(db, 'units', i.toString()), { id: i, ...unit });
-        });
-
-        // Default Courses
         const defaultCourses = [
           { id: 1, name: "專業證書課程", type: "Certificate", mandatory: [2, 3, 4, 5], minUnits: 4, allowExtra: false, title: "專業證書課程", subtitle: "Professional Certificate", desc: "快速提升 AI 視覺應用能力", mask: "mask-graduation-cap", img: "course-1" },
           { id: 2, name: "一年制文憑課程", type: "Diploma", mandatory: [2, 3, 4, 5], minUnits: 16, allowExtra: true, title: "一年制文憑課程", subtitle: "One-Year Diploma", desc: "全面掌握動畫與特效技術", mask: "mask-book", img: "course-2" }
         ];
 
-        defaultCourses.forEach(course => {
-          batch.set(doc(db, 'courses', course.id.toString()), course);
-        });
-
-        // Default Group Courses
         const defaultGroupCourses = [
-          { title: "學校工作坊", desc: "為中小學設計的 AI 動畫體驗課程", mask: "mask-cloud", img: "https://picsum.photos/seed/school/800/600" },
-          { title: "社福機構合作", desc: "透過視覺藝術提升學員創意與自信", mask: "mask-dream", img: "https://picsum.photos/seed/charity/800/600" },
-          { title: "企業培訓", desc: "提升團隊 AI 工具應用效率與視覺傳達能力", mask: "mask-star", img: "https://picsum.photos/seed/corp/800/600" }
+          { id: 'default-0', title: "學校工作坊", desc: "為中小學設計的 AI 動畫體驗課程", mask: "mask-cloud", img: "https://picsum.photos/seed/school/800/600" },
+          { id: 'default-1', title: "社福機構合作", desc: "透過視覺藝術提升學員創意與自信", mask: "mask-dream", img: "https://picsum.photos/seed/charity/800/600" },
+          { id: 'default-2', title: "企業培訓", desc: "提升團隊 AI 工具應用效率與視覺傳達能力", mask: "mask-star", img: "https://picsum.photos/seed/corp/800/600" }
         ];
 
-        defaultGroupCourses.forEach((gc, i) => {
-          batch.set(doc(db, 'groupCourses', `default-${i}`), gc);
-        });
-
-        await batch.commit();
+        await apiBulkSet('units', defaultUnits.map(unit => ({ id: unit.id.toString(), ...unit })));
+        await apiBulkSet('courses', defaultCourses.map(course => ({ id: course.id.toString(), ...course })));
+        await apiBulkSet('groupCourses', defaultGroupCourses.map(gc => ({ id: gc.id.toString(), ...gc })));
         showToast("資料初始化成功！");
       } catch (error) {
         handleFirestoreError(error, OperationType.WRITE, 'seed');
@@ -501,7 +515,7 @@ function AppContent() {
       const file = e.target.files?.[0];
       if (!file) return;
 
-      console.log(`[Uploader] Starting Firebase Storage upload for: ${file.name}`);
+      console.log(`[Uploader] Starting upload for: ${file.name}`);
       
       if (!auth.currentUser) {
         console.error("[Uploader] No user logged in");
@@ -513,7 +527,6 @@ function AppContent() {
       setProgress(10);
       
       try {
-        // 1. Compression
         let blobToUpload: Blob = file;
         try {
           console.log("[Uploader] Compressing...");
@@ -524,48 +537,28 @@ function AppContent() {
           setProgress(30);
         }
 
-        // 2. Upload to Firebase Storage
-        console.log("[Uploader] Uploading to Firebase Storage...");
-        const storageRef = ref(storage, `uploads/${auth.currentUser.uid}/${Date.now()}_${file.name}`);
-        const uploadTask = uploadBytesResumable(storageRef, blobToUpload);
-        
-        // Store task for cancellation if needed
-        (window as any).currentUploadTask = uploadTask;
+        const formData = new FormData();
+        formData.append('image', new File([blobToUpload], file.name, { type: file.type }));
 
-        uploadTask.on('state_changed', 
-          (snapshot) => {
-            const p = (snapshot.bytesTransferred / snapshot.totalBytes) * 60 + 30; // 30% to 90%
-            setProgress(p);
-            console.log(`[Uploader] Progress: ${p.toFixed(0)}%`);
-          }, 
-          (error) => {
-            console.error("[Uploader] Storage error:", error);
-            let msg = error.message;
-            if (error.code === 'storage/unauthorized') msg = "權限不足，請檢查 Firebase Storage 規則";
-            if (error.code === 'storage/retry-limit-exceeded') msg = "上傳逾時，請檢查網路或 Storage 是否已啟用";
-            showToast(`上傳失敗: ${msg}`, "error");
-            setUploading(false);
-            setProgress(0);
-          }, 
-          async () => {
-            try {
-              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
-              setProgress(100);
-              console.log("[Uploader] Success! Download URL:", downloadURL);
-              onUpload(downloadURL);
-              showToast("圖片上傳成功");
-            } catch (err: any) {
-              console.error("[Uploader] Error getting download URL:", err);
-              showToast("取得圖片連結失敗", "error");
-            } finally {
-              setUploading(false);
-              setProgress(0);
-            }
-          }
-        );
+        const response = await fetch('/api/upload', {
+          method: 'POST',
+          body: formData
+        });
+
+        if (!response.ok) {
+          const errorBody = await response.text();
+          throw new Error(errorBody || 'Upload failed');
+        }
+
+        const data = await response.json();
+        setProgress(100);
+        console.log("[Uploader] Success! Image URL:", data.url);
+        onUpload(data.url);
+        showToast("圖片上傳成功");
       } catch (error: any) {
         console.error("[Uploader] Error:", error);
         showToast(`處理失敗: ${error.message || "未知錯誤"}`, "error");
+      } finally {
         setUploading(false);
         setProgress(0);
       }
@@ -670,115 +663,100 @@ function AppContent() {
 
   // --- Data Fetching Effects ---
   useEffect(() => {
-    console.log("Initializing Firestore listeners...");
-    
-    // Settings still use onSnapshot for live preview in admin
-    const unsubSettings = onSnapshot(doc(db, 'settings', 'global'), (doc) => {
-      if (doc.exists()) {
-        const data = doc.data() as any;
+    console.log("Initializing backend data fetch...");
+
+    const loadSettings = async () => {
+      try {
+        const data = await apiGetDoc('settings', 'global');
         setSiteSettings(data);
         localStorage.setItem('savfx_settings_draft', JSON.stringify(data));
         setSettingsLoadStatus('success');
-      } else {
-        setSettingsLoadStatus('not-found');
-        // If not found in DB but we have draft, we keep draft
-        setSiteSettings(prev => {
-          if (prev.heroImages.length > 0) return prev;
-          return {
-            ...prev,
-            heroImages: [
-              'https://picsum.photos/seed/hero-0/400/400',
-              'https://picsum.photos/seed/hero-1/400/400',
-              'https://picsum.photos/seed/hero-2/400/400',
-              'https://picsum.photos/seed/hero-3/400/400',
-              'https://picsum.photos/seed/hero-4/400/400',
-              'https://picsum.photos/seed/hero-5/400/400'
-            ]
-          };
-        });
+      } catch (error: any) {
+        if (error.message?.includes('Not found')) {
+          setSettingsLoadStatus('not-found');
+          setSiteSettings(prev => {
+            if (prev.heroImages.length > 0) return prev;
+            return {
+              ...prev,
+              heroImages: [
+                'https://picsum.photos/seed/hero-0/400/400',
+                'https://picsum.photos/seed/hero-1/400/400',
+                'https://picsum.photos/seed/hero-2/400/400',
+                'https://picsum.photos/seed/hero-3/400/400',
+                'https://picsum.photos/seed/hero-4/400/400',
+                'https://picsum.photos/seed/hero-5/400/400'
+              ]
+            };
+          });
+        } else {
+          console.error("Settings fetch error:", error);
+          setSettingsLoadStatus('error');
+        }
+      } finally {
+        setDataLoaded(prev => ({ ...prev, settings: true }));
       }
-      setDataLoaded(prev => ({ ...prev, settings: true }));
-    }, (error) => {
-      if (error.message?.includes('Quota limit exceeded')) {
-        console.warn("Settings fetch failed (Quota). Keeping local draft.");
-      } else {
-        console.error("Settings listener error:", error);
-      }
-      setSettingsLoadStatus('error');
-      setDataLoaded(prev => ({ ...prev, settings: true }));
-    });
-    
-    // One-time fetches for less dynamic content to save quota
+    };
+
     const fetchData = async () => {
       const fetchCollection = async (
-        name: string, 
-        fetcher: () => Promise<void>, 
+        name: string,
+        fetcher: () => Promise<void>,
         loadedKey: keyof typeof dataLoaded
       ) => {
         try {
           await fetcher();
           setDataLoaded(prev => ({ ...prev, [loadedKey]: true }));
         } catch (error: any) {
-          if (error.message?.includes('Quota exceeded') || error.message?.includes('Quota limit exceeded')) {
-            console.warn(`[Silent Mode] Quota exceeded for ${name}. Using local cache version.`);
-          } else {
-            console.error(`Error fetching ${name}:`, error);
-          }
+          console.error(`Error fetching ${name}:`, error);
           setDataLoaded(prev => ({ ...prev, [loadedKey]: true }));
         }
       };
 
-      // Activities
       fetchCollection('activities', async () => {
-        const actSnap = await getDocs(query(collection(db, 'activities'), orderBy('id', 'desc')));
-        setActivities(actSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        const items = await apiFetchCollection('activities');
+        setActivities(items.sort((a: any, b: any) => Number(b.id) - Number(a.id)));
       }, 'activities');
 
-      // Group Courses
       fetchCollection('groupCourses', async () => {
-        const gcSnap = await getDocs(collection(db, 'groupCourses'));
-        setGroupCourses(gcSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        const items = await apiFetchCollection('groupCourses');
+        setGroupCourses(items);
       }, 'groupCourses');
 
-      // Units
       fetchCollection('units', async () => {
-        const unitSnap = await getDocs(query(collection(db, 'units'), orderBy('id', 'asc')));
-        const units = unitSnap.docs.map(doc => doc.data());
-        setUnitNames(units);
-        setAdminUnitNames(units);
+        const items = await apiFetchCollection('units');
+        const sorted = items.sort((a: any, b: any) => Number(a.id) - Number(b.id));
+        setUnitNames(sorted);
+        setAdminUnitNames(sorted);
       }, 'units');
 
-      // Courses
       fetchCollection('courses', async () => {
-        const courseSnap = await getDocs(collection(db, 'courses'));
-        const coursesData = courseSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        const items = await apiFetchCollection('courses');
+        const coursesData = items.sort((a: any, b: any) => Number(a.id) - Number(b.id));
         setCourses(coursesData);
         if (coursesData.length > 0 && adminSelectedCourseId === null) {
           setAdminSelectedCourseId(coursesData[0].id.toString());
         }
       }, 'courses');
 
-      // Tutors
       fetchCollection('tutors', async () => {
-        const tutorSnap = await getDocs(collection(db, 'tutors'));
-        setTutors(tutorSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        const items = await apiFetchCollection('tutors');
+        setTutors(items);
       }, 'tutors');
 
-      // Testimonials
       fetchCollection('testimonials', async () => {
-        const testSnap = await getDocs(collection(db, 'testimonials'));
-        setTestimonials(testSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        const items = await apiFetchCollection('testimonials');
+        setTestimonials(items);
       }, 'testimonials');
     };
 
+    loadSettings();
     fetchData();
 
-    // Fallback timeout
     const timeout = setTimeout(() => {
       setDataLoaded(prev => {
         const allLoaded = Object.values(prev).every(v => v);
         if (!allLoaded) {
-          console.warn("Firestore data loading timed out. Unlocking UI...");
+          console.warn("Backend data loading timed out. Unlocking UI...");
           return {
             settings: true,
             units: true,
@@ -794,7 +772,6 @@ function AppContent() {
     }, 8000);
 
     return () => {
-      unsubSettings();
       clearTimeout(timeout);
     };
   }, []);
@@ -869,16 +846,15 @@ function AppContent() {
       id
     };
     try {
-      await setDoc(doc(db, 'courses', id.toString()), course);
-      // Manually update local state
+      await apiSetDoc('courses', id.toString(), course);
       setCourses(prev => [...prev, course]);
       setShowAddCombinationModal(false);
-      setAdminSelectedCourseId(id.toString()); // Use string ID
+      setAdminSelectedCourseId(id.toString());
       setNewCourse({ 
         name: '', 
         type: 'Diploma', 
         mandatory: [], 
-        minUnits: 4, // Default to 4 for personal combinations
+        minUnits: 4, 
         allowExtra: true,
         title: '',
         subtitle: '',
@@ -899,8 +875,7 @@ function AppContent() {
     if (!editingCourse) return;
     setIsSavingCourses(true);
     try {
-      await updateDoc(doc(db, 'courses', editingCourse.id.toString()), editingCourse);
-      // Manually update local state
+      await apiSetDoc('courses', editingCourse.id.toString(), editingCourse);
       setCourses(prev => prev.map(c => c.id === editingCourse.id ? editingCourse : c));
       setShowEditCombinationModal(false);
       setEditingCourse(null);
@@ -915,8 +890,7 @@ function AppContent() {
   const handleDeleteCourse = async (id: string) => {
     showConfirm("確定刪除", "確定刪除此課程？", async () => {
       try {
-        await deleteDoc(doc(db, 'courses', id));
-        // Manually update local state
+        await apiDeleteDoc('courses', id);
         setCourses(prev => prev.filter(c => c.id.toString() !== id.toString()));
         showToast("課程已刪除");
       } catch (error: any) {
@@ -937,11 +911,9 @@ function AppContent() {
       newMandatory.push(unitId);
     }
     
-    // Remove id from data before saving to avoid duplication if it's already doc.id
     const { id, ...courseData } = course;
     try {
-      await setDoc(doc(db, 'courses', courseId.toString()), { ...courseData, mandatory: newMandatory });
-      // Manually update local state
+      await apiSetDoc('courses', courseId.toString(), { ...courseData, mandatory: newMandatory });
       setCourses(prev => prev.map(c => c.id.toString() === courseId.toString() ? { ...c, mandatory: newMandatory } : c));
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `courses/${courseId}`);
@@ -956,8 +928,7 @@ function AppContent() {
     
     const { id, ...courseData } = course;
     try {
-      await setDoc(doc(db, 'courses', courseId.toString()), { ...courseData, mandatory: newMandatory });
-      // Manually update local state
+      await apiSetDoc('courses', courseId.toString(), { ...courseData, mandatory: newMandatory });
       setCourses(prev => prev.map(c => c.id.toString() === courseId.toString() ? { ...c, mandatory: newMandatory } : c));
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `courses/${courseId}`);
@@ -974,8 +945,7 @@ function AppContent() {
       tags: newActivity.tags.split(',').map(t => t.trim()).filter(t => t !== '')
     };
     try {
-      await setDoc(doc(db, 'activities', id.toString()), activity);
-      // Manually update local state
+      await apiSetDoc('activities', id.toString(), activity);
       setActivities(prev => [activity, ...prev]);
       setNewActivity({ title: '', content: '', date: '', img: '', tags: '#SAVFX, #AI, #動畫' });
       setShowAddForm(false);
@@ -990,8 +960,7 @@ function AppContent() {
   const handleDeleteActivity = async (id: string) => {
     showConfirm("確定刪除", "確定刪除此活動？", async () => {
       try {
-        await deleteDoc(doc(db, 'activities', id));
-        // Manually update local state
+        await apiDeleteDoc('activities', id);
         setActivities(prev => prev.filter(a => a.id !== id));
         showToast("活動已刪除");
       } catch (error: any) {
@@ -1006,8 +975,7 @@ function AppContent() {
     setIsSavingTutors(true);
     const id = Date.now().toString();
     try {
-      await setDoc(doc(db, 'tutors', id), newTutor);
-      // Manually update local state
+      await apiSetDoc('tutors', id, newTutor);
       setTutors(prev => [...prev, { id, ...newTutor }]);
       setNewTutor({ name: '', role: '', desc: '', img: '' });
       showToast("導師已新增");
@@ -1021,8 +989,7 @@ function AppContent() {
   const handleDeleteTutor = async (id: string) => {
     showConfirm("確定刪除", "確定刪除此導師？", async () => {
       try {
-        await deleteDoc(doc(db, 'tutors', id));
-        // Manually update local state
+        await apiDeleteDoc('tutors', id);
         setTutors(prev => prev.filter(t => t.id !== id));
         showToast("導師已刪除");
       } catch (error: any) {
@@ -1037,8 +1004,7 @@ function AppContent() {
     setIsSavingTestimonials(true);
     const id = Date.now().toString();
     try {
-      await setDoc(doc(db, 'testimonials', id), newTestimonial);
-      // Manually update local state
+      await apiSetDoc('testimonials', id, newTestimonial);
       setTestimonials(prev => [...prev, { id, ...newTestimonial }]);
       setNewTestimonial({ name: '', text: '', img: '' });
       showToast("感想已新增");
@@ -1052,8 +1018,7 @@ function AppContent() {
   const handleDeleteTestimonial = async (id: string) => {
     showConfirm("確定刪除", "確定刪除此學員感想？", async () => {
       try {
-        await deleteDoc(doc(db, 'testimonials', id));
-        // Manually update local state
+        await apiDeleteDoc('testimonials', id);
         setTestimonials(prev => prev.filter(t => t.id !== id));
         showToast("感想已刪除");
       } catch (error: any) {
@@ -2551,7 +2516,7 @@ function AppContent() {
                                   showToast("儲存逾時，請檢查網路連線", "error");
                                 }, 15000);
                                 try {
-                                  await setDoc(doc(db, 'settings', 'global'), siteSettings);
+                                  await apiSetDoc('settings', 'global', siteSettings);
                                   clearTimeout(saveTimeout);
                                   showToast("首頁設定已儲存！");
                                 } catch (error) {
@@ -2659,7 +2624,7 @@ function AppContent() {
                                   showToast("儲存逾時，請檢查網路連線", "error");
                                 }, 15000);
                                 try {
-                                  await setDoc(doc(db, 'settings', 'global'), siteSettings);
+                                  await apiSetDoc('settings', 'global', siteSettings);
                                   clearTimeout(saveTimeout);
                                   showToast("基本資料已儲存！");
                                 } catch (error) {
@@ -2804,27 +2769,16 @@ function AppContent() {
                               onClick={async () => {
                                 setIsSavingUnits(true);
                                 try {
-                                  const batch = writeBatch(db);
-                                  
-                                  // First, get all current units to see what needs to be deleted
-                                  const snapshot = await getDocs(collection(db, 'units'));
-                                  const existingIds = snapshot.docs.map(doc => doc.id);
-                                  
-                                  // Save current units
-                                  for (let i = 0; i < adminUnitNames.length; i++) {
-                                    batch.set(doc(db, 'units', i.toString()), { id: i, ...adminUnitNames[i] });
-                                  }
-                                  
-                                  // Delete units that are no longer in the list
+                                  const unitDocs = adminUnitNames.map((unit, i) => ({ id: i.toString(), ...{ id: i, ...unit } }));
+                                  await apiBulkSet('units', unitDocs);
+
+                                  const existing = await apiFetchCollection('units');
                                   const newIds = adminUnitNames.map((_, i) => i.toString());
-                                  const toDelete = existingIds.filter(id => !newIds.includes(id));
-                                  
-                                  for (const id of toDelete) {
-                                    batch.delete(doc(db, 'units', id));
+                                  const toDelete = existing.map((item: any) => item.id.toString()).filter((id: string) => !newIds.includes(id));
+                                  if (toDelete.length > 0) {
+                                    await apiDeleteDocs('units', toDelete);
                                   }
-                                  
-                                  await batch.commit();
-                                  // Manually update local state
+
                                   setUnitNames([...adminUnitNames]);
                                   showToast("單元已更新！");
                                 } catch (error) {
@@ -3322,14 +3276,12 @@ function AppContent() {
                                     setIsSavingGroupCourses(true);
                                     try {
                                       if (adminEditingGroupCourseId) {
-                                        await updateDoc(doc(db, 'groupCourses', adminEditingGroupCourseId), adminGroupCourseForm);
-                                        // Manually update local state
+                                        await apiSetDoc('groupCourses', adminEditingGroupCourseId, adminGroupCourseForm);
                                         setGroupCourses(prev => prev.map(gc => gc.id === adminEditingGroupCourseId ? { ...gc, ...adminGroupCourseForm } : gc));
                                         showToast("已更新團體課程");
                                       } else {
-                                        const docRef = await addDoc(collection(db, 'groupCourses'), adminGroupCourseForm);
-                                        // Manually update local state
-                                        setGroupCourses(prev => [...prev, { id: docRef.id, ...adminGroupCourseForm }]);
+                                        const result = await apiAddDoc('groupCourses', adminGroupCourseForm);
+                                        setGroupCourses(prev => [...prev, { id: result.id, ...adminGroupCourseForm }]);
                                         showToast("已新增團體課程");
                                       }
                                       setAdminGroupCourseForm({ title: '', desc: '', mask: 'mask-cloud', img: '' });
@@ -3393,8 +3345,7 @@ function AppContent() {
                                     onClick={() => {
                                       showConfirm("刪除團體課程", `確定要刪除「${item.title}」嗎？`, async () => {
                                         try {
-                                          await deleteDoc(doc(db, 'groupCourses', item.id));
-                                          // Manually update local state
+                                          await apiDeleteDoc('groupCourses', item.id.toString());
                                           setGroupCourses(prev => prev.filter(gc => gc.id !== item.id));
                                           showToast("已刪除團體課程");
                                         } catch (error) {
@@ -3704,48 +3655,48 @@ function AppContent() {
 
                                 for (let i = 0; i < defaultUnits.length; i++) {
                                   try {
-                                    await setDoc(doc(db, 'units', i.toString()), { id: i, name: defaultUnits[i] });
+                                    await apiSetDoc('units', i.toString(), { id: i, name: defaultUnits[i] });
                                   } catch (error) {
                                     handleFirestoreError(error, OperationType.CREATE, `units/${i}`);
                                   }
                                 }
                                 for (const c of defaultCourses) {
                                   try {
-                                    await setDoc(doc(db, 'courses', c.id.toString()), c);
+                                    await apiSetDoc('courses', c.id.toString(), c);
                                   } catch (error) {
                                     handleFirestoreError(error, OperationType.CREATE, `courses/${c.id}`);
                                   }
                                 }
                                 for (const a of defaultActivities) {
                                   try {
-                                    await setDoc(doc(db, 'activities', a.id.toString()), a);
+                                    await apiSetDoc('activities', a.id.toString(), a);
                                   } catch (error) {
                                     handleFirestoreError(error, OperationType.CREATE, `activities/${a.id}`);
                                   }
                                 }
                                 for (let i = 0; i < defaultTutors.length; i++) {
                                   try {
-                                    await setDoc(doc(db, 'tutors', i.toString()), defaultTutors[i]);
+                                    await apiSetDoc('tutors', i.toString(), defaultTutors[i]);
                                   } catch (error) {
                                     handleFirestoreError(error, OperationType.CREATE, `tutors/${i}`);
                                   }
                                 }
                                 for (let i = 0; i < defaultTestimonials.length; i++) {
                                   try {
-                                    await setDoc(doc(db, 'testimonials', i.toString()), defaultTestimonials[i]);
+                                    await apiSetDoc('testimonials', i.toString(), defaultTestimonials[i]);
                                   } catch (error) {
                                     handleFirestoreError(error, OperationType.CREATE, `testimonials/${i}`);
                                   }
                                 }
                                 for (let i = 0; i < defaultGroupCourses.length; i++) {
                                   try {
-                                    await addDoc(collection(db, 'groupCourses'), defaultGroupCourses[i]);
+                                    await apiSetDoc('groupCourses', `default-${i}`, defaultGroupCourses[i]);
                                   } catch (error) {
                                     handleFirestoreError(error, OperationType.CREATE, 'groupCourses');
                                   }
                                 }
                                 try {
-                                  await setDoc(doc(db, 'settings', 'global'), {
+                                  await apiSetDoc('settings', 'global', {
                                     ...siteSettings,
                                     address: '香港九龍...',
                                     facebookUrl: 'https://facebook.com/savfx',
