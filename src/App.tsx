@@ -2275,11 +2275,14 @@ function AppContent() {
                                   currentImage={newCourse.img}
                                   onUpload={(url) => setNewCourse({...newCourse, img: url})}
                                 />
-                                <input 
-                                  type="url" placeholder="或輸入 URL" required
-                                  className="w-full border-2 border-black p-3 rounded-xl font-bold text-sm mt-2"
-                                  value={newCourse.img} onChange={e => setNewCourse({...newCourse, img: e.target.value})}
-                                />
+                                {newCourse.img && (
+                                  <input 
+                                    type="url" placeholder="圖片 URL（已自動設置）" 
+                                    className="w-full border-2 border-gray-300 p-3 rounded-xl font-bold text-sm mt-2 bg-gray-50"
+                                    value={newCourse.img} onChange={e => setNewCourse({...newCourse, img: e.target.value})}
+                                    disabled
+                                  />
+                                )}
                               </div>
                               <div className="space-y-1">
                                 <label className="text-[10px] font-black uppercase ml-1">遮罩類型</label>
@@ -3030,11 +3033,14 @@ function AppContent() {
                                         currentImage={editingCourse.img}
                                         onUpload={(url) => setEditingCourse({...editingCourse, img: url})}
                                       />
-                                      <input 
-                                        type="url" required placeholder="或輸入 URL"
-                                        className="w-full border-4 border-black p-4 rounded-xl font-bold mt-2"
-                                        value={editingCourse.img} onChange={e => setEditingCourse({...editingCourse, img: e.target.value})}
-                                      />
+                                      {editingCourse.img && (
+                                        <input 
+                                          type="url" placeholder="圖片 URL（已自動設置）" 
+                                          className="w-full border-4 border-gray-300 p-4 rounded-xl font-bold mt-2 bg-gray-50"
+                                          value={editingCourse.img} onChange={e => setEditingCourse({...editingCourse, img: e.target.value})}
+                                          disabled
+                                        />
+                                      )}
                                     </div>
                                     <div className="space-y-2">
                                       <label className="text-xs font-black uppercase ml-1">遮罩類型</label>
@@ -3417,11 +3423,14 @@ function AppContent() {
                                   currentImage={newTutor.img}
                                   onUpload={(url) => setNewTutor({...newTutor, img: url})}
                                 />
-                                <input 
-                                  type="url" placeholder="或輸入 URL" required
-                                  className="w-full border-2 border-black p-3 rounded-xl font-bold text-sm mt-2"
-                                  value={newTutor.img} onChange={e => setNewTutor({...newTutor, img: e.target.value})}
-                                />
+                                {newTutor.img && (
+                                  <input 
+                                    type="url" placeholder="圖片 URL（已自動設置）" 
+                                    className="w-full border-2 border-gray-300 p-3 rounded-xl font-bold text-sm mt-2 bg-gray-50"
+                                    value={newTutor.img} onChange={e => setNewTutor({...newTutor, img: e.target.value})}
+                                    disabled
+                                  />
+                                )}
                               </div>
                               <div className="md:col-span-2 space-y-1">
                                 <label className="text-[10px] font-black uppercase ml-1">簡介</label>
@@ -3484,11 +3493,14 @@ function AppContent() {
                                   currentImage={newTestimonial.img}
                                   onUpload={(url) => setNewTestimonial({...newTestimonial, img: url})}
                                 />
-                                <input 
-                                  type="url" placeholder="或輸入 URL" required
-                                  className="w-full border-2 border-black p-3 rounded-xl font-bold text-sm mt-2"
-                                  value={newTestimonial.img} onChange={e => setNewTestimonial({...newTestimonial, img: e.target.value})}
-                                />
+                                {newTestimonial.img && (
+                                  <input 
+                                    type="url" placeholder="圖片 URL（已自動設置）" 
+                                    className="w-full border-2 border-gray-300 p-3 rounded-xl font-bold text-sm mt-2 bg-gray-50"
+                                    value={newTestimonial.img} onChange={e => setNewTestimonial({...newTestimonial, img: e.target.value})}
+                                    disabled
+                                  />
+                                )}
                               </div>
                               <div className="md:col-span-2 space-y-1">
                                 <label className="text-[10px] font-black uppercase ml-1">感想內容</label>
@@ -3560,11 +3572,14 @@ function AppContent() {
                                   currentImage={newActivity.img}
                                   onUpload={(url) => setNewActivity({...newActivity, img: url})}
                                 />
-                                <input 
-                                  type="url" placeholder="或輸入 URL" required
-                                  className="w-full border-2 border-black p-3 rounded-xl font-bold text-sm mt-2"
-                                  value={newActivity.img} onChange={e => setNewActivity({...newActivity, img: e.target.value})}
-                                />
+                                {newActivity.img && (
+                                  <input 
+                                    type="url" placeholder="圖片 URL（已自動設置）" 
+                                    className="w-full border-2 border-gray-300 p-3 rounded-xl font-bold text-sm mt-2 bg-gray-50"
+                                    value={newActivity.img} onChange={e => setNewActivity({...newActivity, img: e.target.value})}
+                                    disabled
+                                  />
+                                )}
                               </div>
                               <div className="md:col-span-2 space-y-1">
                                 <label className="text-[10px] font-black uppercase ml-1">標籤 (逗號分隔)</label>
