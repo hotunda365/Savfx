@@ -1,0 +1,236 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ===============================================================
+    // Assumed Data Model
+    // ===============================================================
+    //
+    // Collection: settings
+    // Document ID: global
+    // Fields:
+    //   - siteName: string (required)
+    //   - heroTitle: string (required)
+    //   - heroSubtitle: string (optional)
+    //   - contactEmail: string (optional)
+    //   - contactPhone: string (optional)
+    //
+    // Collection: courses
+    // Document ID: courseId
+    // Fields:
+    //   - id: number (required)
+    //   - name: string (required)
+    //   - type: string (required, enum: Diploma, Short Course)
+    //   - mandatory: list (required)
+    //   - minUnits: number (required)
+    //   - allowExtra: bool (required)
+    //   - title: string (required)
+    //   - subtitle: string (optional)
+    //   - desc: string (required)
+    //   - mask: string (required)
+    //   - img: string (required)
+    //
+    // Collection: units
+    // Document ID: unitId
+    // Fields:
+    //   - id: number (required)
+    //   - name: string (required)
+    //   - isMandatory: bool (optional)
+    //   - price: number (optional)
+    //
+    // Collection: activities
+    // Document ID: activityId
+    // Fields:
+    //   - id: number (required)
+    //   - date: string (required)
+    //   - title: string (required)
+    //   - content: string (required)
+    //   - img: string (required)
+    //   - tags: list (optional)
+    //
+    // Collection: tutors
+    // Document ID: tutorId
+    // Fields:
+    //   - name: string (required)
+    //   - role: string (required)
+    //   - desc: string (required)
+    //   - img: string (required)
+    //
+    // Collection: testimonials
+    // Document ID: testimonialId
+    // Fields:
+    //   - name: string (required)
+    //   - text: string (required)
+    //   - img: string (required)
+    //
+    // Collection: groupCourses
+    // Document ID: auto
+    // Fields:
+    //   - title: string (required)
+    //   - desc: string (required)
+    //   - mask: string (required)
+    //   - img: string (required)
+    //
+    // ===============================================================
+
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (request.auth.token.email == "admin@savfx.edu.hk" ||
+         request.auth.token.email == "hello@theprizm.app" ||
+         (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+          get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin'));
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    function validStringLength(field, minLen, maxLen) {
+      return request.resource.data[field] is string &&
+        request.resource.data[field].size() >= minLen &&
+        request.resource.data[field].size() <= maxLen;
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+
+    function isValidGroupCourse(data) {
+      return hasRequiredFields(['title', 'desc', 'mask', 'img']) &&
+             hasOnlyAllowedFields(['title', 'desc', 'mask', 'img']) &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.desc is string && data.desc.size() > 0 && data.desc.size() < 1000 &&
+             data.mask is string &&
+             data.img is string;
+    }
+
+    function isValidSettings(data) {
+      return hasRequiredFields(['siteName', 'heroTitle']) &&
+             data.siteName is string && data.siteName.size() > 0 && data.siteName.size() < 200 &&
+             data.heroTitle is string && data.heroTitle.size() > 0 && data.heroTitle.size() < 1000;
+    }
+
+    function isValidCourse(data) {
+      return hasRequiredFields(['name', 'type', 'mandatory', 'minUnits', 'allowExtra', 'title', 'desc', 'mask', 'img']) &&
+             hasOnlyAllowedFields(['id', 'name', 'type', 'mandatory', 'minUnits', 'allowExtra', 'title', 'subtitle', 'desc', 'mask', 'img']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 500 &&
+             data.type in ['Diploma', 'Short Course'] &&
+             data.mandatory is list &&
+             data.minUnits is number &&
+             data.allowExtra is bool &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 500 &&
+             data.desc is string && data.desc.size() > 0 && data.desc.size() < 5000 &&
+             data.mask is string &&
+             data.img is string;
+    }
+
+    function isValidUnit(data) {
+      return hasRequiredFields(['id', 'name']) &&
+             hasOnlyAllowedFields(['id', 'name', 'isMandatory', 'price']) &&
+             (data.id is number || data.id is string) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 500 &&
+             (!('isMandatory' in data) || data.isMandatory is bool) &&
+             (!('price' in data) || data.price is number);
+    }
+
+    function isValidActivity(data) {
+      return hasRequiredFields(['id', 'date', 'title', 'content', 'img', 'tags']) &&
+             hasOnlyAllowedFields(['id', 'date', 'title', 'content', 'img', 'tags']) &&
+             data.id is number &&
+             data.date is string &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 500 &&
+             data.content is string && data.content.size() > 0 && data.content.size() < 10000 &&
+             data.img is string &&
+             data.tags is list;
+    }
+
+    function isValidTutor(data) {
+      return hasRequiredFields(['name', 'role', 'desc', 'img']) &&
+             hasOnlyAllowedFields(['id', 'name', 'role', 'desc', 'img']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 200 &&
+             data.role is string && data.role.size() > 0 && data.role.size() < 200 &&
+             data.desc is string && data.desc.size() > 0 && data.desc.size() < 2000 &&
+             data.img is string;
+    }
+
+    function isValidTestimonial(data) {
+      return hasRequiredFields(['name', 'text', 'img']) &&
+             hasOnlyAllowedFields(['id', 'name', 'text', 'img']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 200 &&
+             data.text is string && data.text.size() > 0 && data.text.size() < 2000 &&
+             data.img is string;
+    }
+
+    // ===============================================================
+    // Rules
+    // ===============================================================
+
+    match /settings/global {
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidSettings(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /groupCourses/{courseId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidGroupCourse(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /courses/{courseId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidCourse(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /units/{unitId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidUnit(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /activities/{activityId} {
+      allow read: if true;
+      allow create, update: if true; // TEMPORARY FOR MIGRATION
+      allow delete: if isAdmin();
+    }
+
+    match /tutors/{tutorId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidTutor(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /testimonials/{testimonialId} {
+      allow read: if true;
+      allow create, update: if isAdmin() && isValidTestimonial(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /images/{imageId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /users/{userId} {
+      allow read: if isAuthenticated() && request.auth.uid == userId;
+      allow write: if isAdmin();
+    }
+    
+    match /{path=**} {
+      allow read, write: if false;
+    }
+  }
+}

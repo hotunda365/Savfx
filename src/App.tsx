@@ -1,0 +1,3862 @@
+/**
+ * @license
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+import React, { useState, useEffect, Component } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { 
+  Monitor, 
+  GraduationCap, 
+  BookOpen, 
+  FileText, 
+  Cloud, 
+  MousePointer2, 
+  Battery, 
+  Film, 
+  Box, 
+  MessageSquare, 
+  Mail, 
+  Phone, 
+  ChevronRight, 
+  Play, 
+  CheckCircle2,
+  Menu,
+  X,
+  Users,
+  Briefcase,
+  Settings,
+  Plus,
+  Trash2,
+  Edit2,
+  Save,
+  LogIn,
+  LogOut,
+  ArrowLeft,
+  XCircle,
+  LayoutGrid,
+  AlertCircle,
+  Camera,
+  Upload,
+  Loader2,
+  Database
+} from 'lucide-react';
+import { 
+  onSnapshot, 
+  collection, 
+  doc, 
+  setDoc, 
+  updateDoc, 
+  deleteDoc, 
+  query, 
+  orderBy,
+  getDoc,
+  getDocs,
+  addDoc,
+  writeBatch
+} from 'firebase/firestore';
+import { 
+  ref, 
+  uploadBytes, 
+  uploadBytesResumable,
+  getDownloadURL 
+} from 'firebase/storage';
+import { 
+  signInWithEmailAndPassword, 
+  createUserWithEmailAndPassword,
+  onAuthStateChanged, 
+  signOut,
+  User
+} from 'firebase/auth';
+import { db, auth, storage } from './firebase';
+
+enum OperationType {
+  CREATE = 'create',
+  UPDATE = 'update',
+  DELETE = 'delete',
+  LIST = 'list',
+  GET = 'get',
+  WRITE = 'write',
+}
+
+interface FirestoreErrorInfo {
+  error: string;
+  operationType: OperationType;
+  path: string | null;
+  authInfo: {
+    userId: string | undefined;
+    email: string | null | undefined;
+    emailVerified: boolean | undefined;
+    isAnonymous: boolean | undefined;
+    tenantId: string | null | undefined;
+    providerInfo: {
+      providerId: string;
+      displayName: string | null;
+      email: string | null;
+      photoUrl: string | null;
+    }[];
+  }
+}
+
+function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const errInfo: FirestoreErrorInfo = {
+    error: error instanceof Error ? error.message : String(error),
+    authInfo: {
+      userId: auth.currentUser?.uid,
+      email: auth.currentUser?.email,
+      emailVerified: auth.currentUser?.emailVerified,
+      isAnonymous: auth.currentUser?.isAnonymous,
+      tenantId: auth.currentUser?.tenantId,
+      providerInfo: auth.currentUser?.providerData.map(provider => ({
+        providerId: provider.providerId,
+        displayName: provider.displayName,
+        email: provider.email,
+        photoUrl: provider.photoURL
+      })) || []
+    },
+    operationType,
+    path
+  }
+  console.error('Firestore Error: ', JSON.stringify(errInfo));
+  throw new Error(JSON.stringify(errInfo));
+}
+
+// --- Custom Masks (SVG Paths) ---
+const SVGMasks = () => (
+  <svg width="0" height="0" className="absolute">
+    <defs>
+      <clipPath id="mask-graduation-cap" clipPathUnits="objectBoundingBox">
+        <path d="M0.5,0 L0,0.3 L0.5,0.6 L1,0.3 Z M0.1,0.4 V0.7 C0.1,0.8 0.3,0.9 0.5,0.9 C0.7,0.9 0.9,0.8 0.9,0.7 V0.4 L0.5,0.65 Z M0.9,0.3 L0.9,0.6" />
+      </clipPath>
+      <clipPath id="mask-book" clipPathUnits="objectBoundingBox">
+        <path d="M0.1,0.1 H0.9 V0.9 H0.1 Z M0.2,0.2 V0.8 H0.8 V0.2 Z" />
+      </clipPath>
+      <clipPath id="mask-dream" clipPathUnits="objectBoundingBox">
+        <path d="M0.5,0.1 C0.2,0.1 0,0.3 0,0.5 C0,0.6 0.1,0.7 0.2,0.8 C0.2,0.9 0.1,1 0,1 C0.1,1 0.3,0.9 0.4,0.8 C0.4,0.8 0.5,0.9 0.5,0.9 C0.8,0.9 1,0.7 1,0.5 C1,0.3 0.8,0.1 0.5,0.1" />
+      </clipPath>
+      <clipPath id="mask-film" clipPathUnits="objectBoundingBox">
+        <path d="M0,0.2 H1 V0.9 H0 Z M0.1,0 L0.2,0.2 H0.3 L0.2,0 Z M0.4,0 L0.5,0.2 H0.6 L0.5,0 Z M0.7,0 L0.8,0.2 H0.9 L0.8,0 Z" />
+      </clipPath>
+      <clipPath id="mask-notebook" clipPathUnits="objectBoundingBox">
+        <path d="M0.1,0.1 H0.9 V0.7 H0.1 Z M0,0.75 H1 V0.85 C1,0.9 0.9,0.95 0.85,0.95 H0.15 C0.1,0.95 0,0.9 0,0.85 Z" />
+      </clipPath>
+      <clipPath id="mask-cloud" clipPathUnits="objectBoundingBox">
+        <path d="M0.25,0.4 C0.1,0.4 0,0.5 0,0.65 C0,0.8 0.1,0.9 0.25,0.9 H0.75 C0.9,0.9 1,0.8 1,0.65 C1,0.5 0.9,0.4 0.75,0.4 C0.75,0.2 0.6,0.1 0.45,0.1 C0.35,0.1 0.25,0.2 0.25,0.4" />
+      </clipPath>
+    </defs>
+  </svg>
+);
+
+// --- Components ---
+
+const BlueShape = ({ className = "" }: { className?: string }) => (
+  <div className={`absolute pointer-events-none ${className}`}>
+    <div className="w-full h-full border-[12px] border-[#0055FF] rounded-tl-[100%] rounded-tr-[100%] rounded-br-[100%] rounded-bl-none overflow-hidden bg-transparent opacity-20" />
+  </div>
+);
+
+const MaskedImage = ({ src, maskId, className = "" }: { src: string, maskId: string, className?: string }) => (
+  <div className={`relative overflow-hidden ${className}`} style={{ clipPath: `url(#${maskId})` }}>
+    <img src={src} alt="Masked" className="w-full h-full object-cover transition-transform duration-500 hover:scale-110" referrerPolicy="no-referrer" />
+  </div>
+);
+
+const SectionTitle = ({ children, subtitle, reverse = false }: { children: React.ReactNode, subtitle?: string, reverse?: boolean }) => (
+  <div className="mb-12 text-center">
+    {subtitle && !reverse && <p className="text-black/60 font-black uppercase tracking-widest text-xs mb-2">{subtitle}</p>}
+    <motion.h2 
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      className="text-4xl md:text-6xl font-black uppercase tracking-tighter text-black mb-2 leading-tight"
+    >
+      {children}
+    </motion.h2>
+    {subtitle && reverse && <p className="text-black/60 font-black uppercase tracking-widest text-xs mt-2">{subtitle}</p>}
+    <div className="w-24 h-2 bg-black mx-auto mt-4" />
+  </div>
+);
+
+interface ErrorBoundaryProps {
+  children: React.ReactNode;
+}
+
+interface ErrorBoundaryState {
+  hasError: boolean;
+  error: Error | null;
+}
+
+class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
+  constructor(props: ErrorBoundaryProps) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+
+  componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
+    console.error("ErrorBoundary caught an error", error, errorInfo);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-[#FFEF00] flex items-center justify-center p-6 text-center">
+          <div className="max-w-md bg-white border-8 border-black p-10 rounded-[3rem] shadow-[20px_20px_0px_rgba(0,0,0,1)]">
+            <h1 className="text-4xl font-black mb-6 uppercase tracking-tighter">Oops!</h1>
+            <p className="text-xl font-bold mb-8">
+              Something went wrong. Please try refreshing the page.
+            </p>
+            <button 
+              onClick={() => window.location.reload()}
+              className="bg-black text-[#FFEF00] px-8 py-4 rounded-full font-black uppercase tracking-widest hover:scale-105 transition-transform"
+            >
+              Refresh Page
+            </button>
+            <div className="mt-8 p-4 bg-red-50 text-red-600 text-xs text-left overflow-auto rounded-xl border-2 border-red-100 max-h-40">
+              {this.state.error?.toString()}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return this.props.children;
+  }
+}
+
+export default function App() {
+  return (
+    <ErrorBoundary>
+      <AppContent />
+    </ErrorBoundary>
+  );
+}
+
+function AppContent() {
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  const [selectedCourse, setSelectedCourse] = useState<number>(2);
+  const [selectedUnits, setSelectedUnits] = useState<number[]>([]);
+  const [briefingForm, setBriefingForm] = useState({ email: '', phone: '' });
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  
+  // --- Firebase State ---
+  const [user, setUser] = useState<User | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [showAdminPanel, setShowAdminPanel] = useState(false);
+  const [adminActiveTab, setAdminActiveTab] = useState('overview');
+  const [adminUnitsSubTab, setAdminUnitsSubTab] = useState<'list' | 'combinations'>('list');
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [loginPassword, setLoginPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
+  // --- State ---
+  const [siteSettings, setSiteSettings] = useState(() => {
+    const saved = localStorage.getItem('savfx_settings_draft');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error("Failed to parse settings draft:", e);
+      }
+    }
+    return {
+      siteName: 'SAVFX',
+      heroTitle: '掌握 AI 視覺技術<br />開啟動畫新紀元',
+      heroSubtitle: '全港首個專為創意人設計的 AI 動畫與多媒體課程，從零開始，助你成為業界頂尖專家。',
+      contactEmail: 'info@savfx.edu.hk',
+      contactPhone: '+852 2345 6789',
+      address: '香港九龍...',
+      facebookUrl: 'https://facebook.com/savfx',
+      instagramUrl: 'https://instagram.com/savfx',
+      heroTagline: 'Professional AI Animation School',
+      heroEst: 'EST. 2024',
+      heroImages: [] as string[],
+      coursesIntroTitle: '課程介紹',
+      coursesIntroSubtitle: '專業文憑與證書課程',
+      personalCourseTitle: '個人課程',
+      personalCourseSubtitle: '選擇您的專業路徑與單元組合',
+      groupCourseTitle: '團體課程',
+      groupCourseSubtitle: '適合學校、社福機構及私人團體',
+      businessCoopTitle: '商業合作',
+      businessCoopSubtitle: '專業動畫製作與 AI 方案',
+      businessCoopContent: '我們承接各類商業動畫製作。結合傳統藝術與尖端 AI 技術，為您的品牌提供最具競爭力的視覺方案。',
+      businessCoopFeatures: [
+        '專業角色設計與建模',
+        'AI 輔助高效動畫流程',
+        '影視級後期合成特效'
+      ],
+      briefingTitle: '課程簡介會',
+      briefingSubtitle: '留下您的聯絡資料，我們將把 YouTube 簡介會影片傳送給您。',
+      partnersTitle: '曾合作機構'
+    };
+  });
+
+  // Sync settings to localStorage as draft
+  useEffect(() => {
+    localStorage.setItem('savfx_settings_draft', JSON.stringify(siteSettings));
+  }, [siteSettings]);
+  const [settingsLoadStatus, setSettingsLoadStatus] = useState<'loading' | 'success' | 'error' | 'not-found'>('loading');
+  const [isSavingSettings, setIsSavingSettings] = useState(false);
+  const [isSavingUnits, setIsSavingUnits] = useState(false);
+  const [isSavingCourses, setIsSavingCourses] = useState(false);
+  const [isSavingActivities, setIsSavingActivities] = useState(false);
+  const [isSavingTutors, setIsSavingTutors] = useState(false);
+  const [isSavingTestimonials, setIsSavingTestimonials] = useState(false);
+  const [isSavingGroupCourses, setIsSavingGroupCourses] = useState(false);
+  const [dataLoaded, setDataLoaded] = useState({
+    settings: false,
+    units: false,
+    courses: false,
+    activities: false,
+    tutors: false,
+    testimonials: false,
+    groupCourses: false
+  });
+
+  const handleSeedData = async () => {
+    showConfirm("初始化資料", "這將會為您的網站建立預設的單元與課程組合。確定要繼續嗎？", async () => {
+      setIsSavingUnits(true);
+      try {
+        const batch = writeBatch(db);
+        
+        // Default Units
+        const defaultUnits = [
+          { name: "色彩學", price: 3000, isMandatory: false },
+          { name: "水彩", price: 3000, isMandatory: false },
+          { name: "漫畫設計", price: 3000, isMandatory: true },
+          { name: "2D動畫1", price: 3000, isMandatory: true },
+          { name: "2D動畫作品2", price: 3000, isMandatory: true },
+          { name: "3D 機械動畫", price: 3000, isMandatory: true },
+          { name: "3D虛擬骨骼1", price: 3000, isMandatory: false },
+          { name: "電腦合成", price: 3000, isMandatory: false },
+          { name: "3D動畫作品1", price: 3000, isMandatory: false },
+          { name: "AI應用3：2D 動畫", price: 3000, isMandatory: false }
+        ];
+
+        defaultUnits.forEach((unit, i) => {
+          batch.set(doc(db, 'units', i.toString()), { id: i, ...unit });
+        });
+
+        // Default Courses
+        const defaultCourses = [
+          { id: 1, name: "專業證書課程", type: "Certificate", mandatory: [2, 3, 4, 5], minUnits: 4, allowExtra: false, title: "專業證書課程", subtitle: "Professional Certificate", desc: "快速提升 AI 視覺應用能力", mask: "mask-graduation-cap", img: "course-1" },
+          { id: 2, name: "一年制文憑課程", type: "Diploma", mandatory: [2, 3, 4, 5], minUnits: 16, allowExtra: true, title: "一年制文憑課程", subtitle: "One-Year Diploma", desc: "全面掌握動畫與特效技術", mask: "mask-book", img: "course-2" }
+        ];
+
+        defaultCourses.forEach(course => {
+          batch.set(doc(db, 'courses', course.id.toString()), course);
+        });
+
+        // Default Group Courses
+        const defaultGroupCourses = [
+          { title: "學校工作坊", desc: "為中小學設計的 AI 動畫體驗課程", mask: "mask-cloud", img: "https://picsum.photos/seed/school/800/600" },
+          { title: "社福機構合作", desc: "透過視覺藝術提升學員創意與自信", mask: "mask-dream", img: "https://picsum.photos/seed/charity/800/600" },
+          { title: "企業培訓", desc: "提升團隊 AI 工具應用效率與視覺傳達能力", mask: "mask-star", img: "https://picsum.photos/seed/corp/800/600" }
+        ];
+
+        defaultGroupCourses.forEach((gc, i) => {
+          batch.set(doc(db, 'groupCourses', `default-${i}`), gc);
+        });
+
+        await batch.commit();
+        showToast("資料初始化成功！");
+      } catch (error) {
+        handleFirestoreError(error, OperationType.WRITE, 'seed');
+      } finally {
+        setIsSavingUnits(false);
+      }
+    });
+  };
+
+  // --- State with LocalStorage Caching ---
+  const getInitialList = <T,>(key: string, defaultValue: T[]): T[] => {
+    const saved = localStorage.getItem(`savfx_cache_${key}`);
+    if (saved) {
+      try { return JSON.parse(saved); } catch (e) { console.error(`Failed to parse ${key} cache:`, e); }
+    }
+    return defaultValue;
+  };
+
+  const [activities, setActivities] = useState<any[]>(() => getInitialList('activities', []));
+  const [groupCourses, setGroupCourses] = useState<any[]>(() => getInitialList('groupCourses', []));
+  const [unitNames, setUnitNames] = useState<any[]>(() => getInitialList('units', []));
+  const [adminUnitNames, setAdminUnitNames] = useState<any[]>(() => getInitialList('units', []));
+  const [courses, setCourses] = useState<any[]>(() => getInitialList('courses', []));
+  const [tutors, setTutors] = useState<any[]>(() => getInitialList('tutors', []));
+  const [testimonials, setTestimonials] = useState<any[]>(() => getInitialList('testimonials', []));
+
+  // Persistence Effects
+  useEffect(() => { localStorage.setItem('savfx_cache_activities', JSON.stringify(activities)); }, [activities]);
+  useEffect(() => { localStorage.setItem('savfx_cache_groupCourses', JSON.stringify(groupCourses)); }, [groupCourses]);
+  useEffect(() => { localStorage.setItem('savfx_cache_units', JSON.stringify(unitNames)); }, [unitNames]);
+  useEffect(() => { localStorage.setItem('savfx_cache_courses', JSON.stringify(courses)); }, [courses]);
+  useEffect(() => { localStorage.setItem('savfx_cache_tutors', JSON.stringify(tutors)); }, [tutors]);
+  useEffect(() => { localStorage.setItem('savfx_cache_testimonials', JSON.stringify(testimonials)); }, [testimonials]);
+  const [confirmModal, setConfirmModal] = useState<{
+    show: boolean;
+    title: string;
+    message: string;
+    onConfirm: () => Promise<void> | void;
+    loading: boolean;
+  }>({
+    show: false,
+    title: '',
+    message: '',
+    onConfirm: () => {},
+    loading: false,
+  });
+  const [toast, setToast] = useState<{
+    show: boolean;
+    message: string;
+    type: 'success' | 'error';
+  }>({
+    show: false,
+    message: '',
+    type: 'success',
+  });
+
+  const [adminGroupCourseForm, setAdminGroupCourseForm] = useState({
+    title: '',
+    desc: '',
+    mask: 'mask-cloud',
+    img: ''
+  });
+  const [adminEditingGroupCourseId, setAdminEditingGroupCourseId] = useState<string | null>(null);
+
+  const showConfirm = (title: string, message: string, onConfirm: () => Promise<void> | void) => {
+    setConfirmModal({ show: true, title, message, onConfirm, loading: false });
+  };
+
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ show: true, message, type });
+    setTimeout(() => setToast(prev => ({ ...prev, show: false })), 3000);
+  };
+
+  const FileUploader = ({ onUpload, currentImage, label }: { onUpload: (url: string) => void, currentImage?: string, label: string }) => {
+    const [uploading, setUploading] = useState(false);
+    const [progress, setProgress] = useState(0);
+
+    const compressImage = (file: File): Promise<Blob> => {
+      return new Promise((resolve) => {
+        const timeout = setTimeout(() => {
+          console.warn("Compression timed out, using original file");
+          resolve(file);
+        }, 3000);
+
+        const reader = new FileReader();
+        reader.onerror = () => {
+          clearTimeout(timeout);
+          resolve(file);
+        };
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+          const img = new Image();
+          img.onerror = () => {
+            clearTimeout(timeout);
+            resolve(file);
+          };
+          img.src = event.target?.result as string;
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            let width = img.width;
+            let height = img.height;
+
+            const MAX_SIZE = 1200;
+            if (width > height) {
+              if (width > MAX_SIZE) {
+                height *= MAX_SIZE / width;
+                width = MAX_SIZE;
+              }
+            } else {
+              if (height > MAX_SIZE) {
+                width *= MAX_SIZE / height;
+                height = MAX_SIZE;
+              }
+            }
+
+            console.log(`Resizing image to: ${width}x${height}`);
+            canvas.width = width;
+            canvas.height = height;
+            const ctx = canvas.getContext('2d');
+            ctx?.drawImage(img, 0, 0, width, height);
+            
+            canvas.toBlob((blob) => {
+              clearTimeout(timeout);
+              if (blob) {
+                console.log(`Compressed blob size: ${(blob.size / 1024).toFixed(2)} KB`);
+                resolve(blob);
+              } else {
+                console.warn("Canvas toBlob failed, using original file");
+                resolve(file);
+              }
+            }, 'image/jpeg', 0.8);
+          };
+        };
+      });
+    };
+
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      console.log(`[Uploader] Starting Firebase Storage upload for: ${file.name}`);
+      
+      if (!auth.currentUser) {
+        console.error("[Uploader] No user logged in");
+        showToast("請先登入後再上傳", "error");
+        return;
+      }
+
+      setUploading(true);
+      setProgress(10);
+      
+      try {
+        // 1. Compression
+        let blobToUpload: Blob = file;
+        try {
+          console.log("[Uploader] Compressing...");
+          blobToUpload = await compressImage(file);
+          setProgress(30);
+        } catch (err) {
+          console.warn("[Uploader] Compression failed, using original", err);
+          setProgress(30);
+        }
+
+        // 2. Upload to Firebase Storage
+        console.log("[Uploader] Uploading to Firebase Storage...");
+        const storageRef = ref(storage, `uploads/${auth.currentUser.uid}/${Date.now()}_${file.name}`);
+        const uploadTask = uploadBytesResumable(storageRef, blobToUpload);
+        
+        // Store task for cancellation if needed
+        (window as any).currentUploadTask = uploadTask;
+
+        uploadTask.on('state_changed', 
+          (snapshot) => {
+            const p = (snapshot.bytesTransferred / snapshot.totalBytes) * 60 + 30; // 30% to 90%
+            setProgress(p);
+            console.log(`[Uploader] Progress: ${p.toFixed(0)}%`);
+          }, 
+          (error) => {
+            console.error("[Uploader] Storage error:", error);
+            let msg = error.message;
+            if (error.code === 'storage/unauthorized') msg = "權限不足，請檢查 Firebase Storage 規則";
+            if (error.code === 'storage/retry-limit-exceeded') msg = "上傳逾時，請檢查網路或 Storage 是否已啟用";
+            showToast(`上傳失敗: ${msg}`, "error");
+            setUploading(false);
+            setProgress(0);
+          }, 
+          async () => {
+            try {
+              const downloadURL = await getDownloadURL(uploadTask.snapshot.ref);
+              setProgress(100);
+              console.log("[Uploader] Success! Download URL:", downloadURL);
+              onUpload(downloadURL);
+              showToast("圖片上傳成功");
+            } catch (err: any) {
+              console.error("[Uploader] Error getting download URL:", err);
+              showToast("取得圖片連結失敗", "error");
+            } finally {
+              setUploading(false);
+              setProgress(0);
+            }
+          }
+        );
+      } catch (error: any) {
+        console.error("[Uploader] Error:", error);
+        showToast(`處理失敗: ${error.message || "未知錯誤"}`, "error");
+        setUploading(false);
+        setProgress(0);
+      }
+    };
+
+    const cancelUpload = () => {
+      if ((window as any).currentUploadTask) {
+        (window as any).currentUploadTask.cancel();
+        setUploading(false);
+        setProgress(0);
+      }
+    };
+
+    return (
+      <div className="space-y-2">
+        <label className="block text-[10px] font-black uppercase tracking-widest opacity-60 ml-1">{label}</label>
+        <div className="flex items-center gap-4">
+          <div className="w-16 h-16 border-2 border-black rounded-xl overflow-hidden bg-gray-100 shrink-0 relative">
+            {currentImage ? (
+              <img src={currentImage} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-black/20">
+                <Camera size={24} />
+              </div>
+            )}
+            {uploading && (
+              <div className="absolute inset-0 bg-black/60 flex items-center justify-center flex-col gap-1">
+                <div className="text-[10px] font-black text-white">{progress}%</div>
+                <div className="w-8 h-1 bg-white/20 rounded-full overflow-hidden">
+                  <div className="h-full bg-white" style={{ width: `${progress}%` }} />
+                </div>
+              </div>
+            )}
+          </div>
+          <div className="flex-1 space-y-2">
+            <label className="block cursor-pointer">
+              <div className="bg-white border-2 border-black p-3 rounded-xl font-bold text-center hover:bg-gray-50 transition-colors flex flex-col items-center justify-center gap-1 text-xs min-h-[52px]">
+                {uploading ? (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <Loader2 className="animate-spin" size={16} />
+                      <span>正在上傳... {progress}%</span>
+                    </div>
+                    <div className="w-full h-1 bg-gray-100 rounded-full mt-1 overflow-hidden">
+                      <div 
+                        className="h-full bg-black transition-all duration-300" 
+                        style={{ width: `${progress}%` }}
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <Upload size={16} />
+                    <span>選擇圖片</span>
+                  </div>
+                )}
+              </div>
+              <input type="file" className="hidden" accept="image/*" onChange={handleFileChange} disabled={uploading} />
+            </label>
+            {uploading && (
+              <button 
+                onClick={cancelUpload}
+                className="w-full text-[10px] font-black uppercase text-red-500 hover:text-red-600 transition-colors"
+              >
+                取消上傳
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // --- Auth Effect ---
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setUser(user);
+      if (user && (user.email === 'admin@savfx.edu.hk' || user.email === 'hello@theprizm.app')) {
+        setIsAdmin(true);
+      } else {
+        setIsAdmin(false);
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Ensure mandatory units are always selected
+  useEffect(() => {
+    if (courses.length > 0 && unitNames.length > 0) {
+      const currentCourse = courses.find(c => c.id === selectedCourse) || courses[1];
+      if (currentCourse) {
+        const globalMandatory = unitNames.filter(u => u.isMandatory).map(u => u.id);
+        const allMandatory = [...new Set([...(currentCourse.mandatory || []), ...globalMandatory])];
+        
+        const missing = allMandatory.filter(id => !selectedUnits.includes(id));
+        if (missing.length > 0) {
+          setSelectedUnits(prev => [...new Set([...prev, ...allMandatory])]);
+        }
+      }
+    }
+  }, [selectedCourse, courses, unitNames, selectedUnits]);
+
+  // --- Data Fetching Effects ---
+  useEffect(() => {
+    console.log("Initializing Firestore listeners...");
+    
+    // Settings still use onSnapshot for live preview in admin
+    const unsubSettings = onSnapshot(doc(db, 'settings', 'global'), (doc) => {
+      if (doc.exists()) {
+        const data = doc.data() as any;
+        setSiteSettings(data);
+        localStorage.setItem('savfx_settings_draft', JSON.stringify(data));
+        setSettingsLoadStatus('success');
+      } else {
+        setSettingsLoadStatus('not-found');
+        // If not found in DB but we have draft, we keep draft
+        setSiteSettings(prev => {
+          if (prev.heroImages.length > 0) return prev;
+          return {
+            ...prev,
+            heroImages: [
+              'https://picsum.photos/seed/hero-0/400/400',
+              'https://picsum.photos/seed/hero-1/400/400',
+              'https://picsum.photos/seed/hero-2/400/400',
+              'https://picsum.photos/seed/hero-3/400/400',
+              'https://picsum.photos/seed/hero-4/400/400',
+              'https://picsum.photos/seed/hero-5/400/400'
+            ]
+          };
+        });
+      }
+      setDataLoaded(prev => ({ ...prev, settings: true }));
+    }, (error) => {
+      if (error.message?.includes('Quota limit exceeded')) {
+        console.warn("Settings fetch failed (Quota). Keeping local draft.");
+      } else {
+        console.error("Settings listener error:", error);
+      }
+      setSettingsLoadStatus('error');
+      setDataLoaded(prev => ({ ...prev, settings: true }));
+    });
+    
+    // One-time fetches for less dynamic content to save quota
+    const fetchData = async () => {
+      const fetchCollection = async (
+        name: string, 
+        fetcher: () => Promise<void>, 
+        loadedKey: keyof typeof dataLoaded
+      ) => {
+        try {
+          await fetcher();
+          setDataLoaded(prev => ({ ...prev, [loadedKey]: true }));
+        } catch (error: any) {
+          if (error.message?.includes('Quota exceeded') || error.message?.includes('Quota limit exceeded')) {
+            console.warn(`[Silent Mode] Quota exceeded for ${name}. Using local cache version.`);
+          } else {
+            console.error(`Error fetching ${name}:`, error);
+          }
+          setDataLoaded(prev => ({ ...prev, [loadedKey]: true }));
+        }
+      };
+
+      // Activities
+      fetchCollection('activities', async () => {
+        const actSnap = await getDocs(query(collection(db, 'activities'), orderBy('id', 'desc')));
+        setActivities(actSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      }, 'activities');
+
+      // Group Courses
+      fetchCollection('groupCourses', async () => {
+        const gcSnap = await getDocs(collection(db, 'groupCourses'));
+        setGroupCourses(gcSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      }, 'groupCourses');
+
+      // Units
+      fetchCollection('units', async () => {
+        const unitSnap = await getDocs(query(collection(db, 'units'), orderBy('id', 'asc')));
+        const units = unitSnap.docs.map(doc => doc.data());
+        setUnitNames(units);
+        setAdminUnitNames(units);
+      }, 'units');
+
+      // Courses
+      fetchCollection('courses', async () => {
+        const courseSnap = await getDocs(collection(db, 'courses'));
+        const coursesData = courseSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setCourses(coursesData);
+        if (coursesData.length > 0 && adminSelectedCourseId === null) {
+          setAdminSelectedCourseId(coursesData[0].id.toString());
+        }
+      }, 'courses');
+
+      // Tutors
+      fetchCollection('tutors', async () => {
+        const tutorSnap = await getDocs(collection(db, 'tutors'));
+        setTutors(tutorSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      }, 'tutors');
+
+      // Testimonials
+      fetchCollection('testimonials', async () => {
+        const testSnap = await getDocs(collection(db, 'testimonials'));
+        setTestimonials(testSnap.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      }, 'testimonials');
+    };
+
+    fetchData();
+
+    // Fallback timeout
+    const timeout = setTimeout(() => {
+      setDataLoaded(prev => {
+        const allLoaded = Object.values(prev).every(v => v);
+        if (!allLoaded) {
+          console.warn("Firestore data loading timed out. Unlocking UI...");
+          return {
+            settings: true,
+            units: true,
+            courses: true,
+            activities: true,
+            tutors: true,
+            testimonials: true,
+            groupCourses: true
+          };
+        }
+        return prev;
+      });
+    }, 8000);
+
+    return () => {
+      unsubSettings();
+      clearTimeout(timeout);
+    };
+  }, []);
+
+  const handleLogin = async () => {
+    const email = 'admin@savfx.edu.hk';
+    try {
+      await signInWithEmailAndPassword(auth, email, loginPassword);
+      setShowLoginModal(false);
+      setLoginPassword('');
+      setLoginError('');
+    } catch (error: any) {
+      if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+        // Check if user exists by trying to sign in (Firebase doesn't give user-not-found easily for security)
+        // In this simple local management, we'll allow creation if it's the first time
+        if (loginPassword === 'admin123') {
+          try {
+            await createUserWithEmailAndPassword(auth, email, loginPassword);
+            setShowLoginModal(false);
+            setLoginPassword('');
+            setLoginError('');
+            showToast("管理員帳號已成功初始化，密碼為 admin123");
+          } catch (createError: any) {
+            // If user already exists, it will fail here, then we know it was just a wrong password
+            if (createError.code === 'auth/email-already-in-use') {
+              setLoginError('密碼錯誤');
+            } else {
+              setLoginError('登入失敗: ' + createError.message);
+            }
+          }
+        } else {
+          setLoginError('密碼錯誤 (首次登入請使用 admin123)');
+        }
+      } else if (error.code === 'auth/wrong-password') {
+        setLoginError('密碼錯誤');
+      } else {
+        setLoginError('登入失敗: ' + error.message);
+      }
+    }
+  };
+
+  const handleLogout = () => signOut(auth);
+
+  const [newActivity, setNewActivity] = useState({ title: '', content: '', date: '', img: '', tags: '#SAVFX, #AI, #動畫' });
+  const [newTutor, setNewTutor] = useState({ name: '', role: '', desc: '', img: '' });
+  const [newTestimonial, setNewTestimonial] = useState({ name: '', text: '', img: '' });
+  const [newCourse, setNewCourse] = useState({ 
+    name: '', 
+    type: 'Diploma', 
+    mandatory: [] as number[], 
+    minUnits: 16, 
+    allowExtra: true,
+    title: '',
+    subtitle: '',
+    desc: '',
+    mask: 'mask-book',
+    img: ''
+  });
+  const [adminSelectedCourseId, setAdminSelectedCourseId] = useState<any>(null);
+  const [adminSelectedUnitIndex, setAdminSelectedUnitIndex] = useState<number | null>(null);
+  const [showAddCombinationModal, setShowAddCombinationModal] = useState(false);
+  const [showEditCombinationModal, setShowEditCombinationModal] = useState(false);
+  const [editingCourse, setEditingCourse] = useState<any>(null);
+  const [showAddForm, setShowAddForm] = useState(false);
+
+  const handleAddCourse = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingCourses(true);
+    const id = Date.now();
+    const course = {
+      ...newCourse,
+      id
+    };
+    try {
+      await setDoc(doc(db, 'courses', id.toString()), course);
+      // Manually update local state
+      setCourses(prev => [...prev, course]);
+      setShowAddCombinationModal(false);
+      setAdminSelectedCourseId(id.toString()); // Use string ID
+      setNewCourse({ 
+        name: '', 
+        type: 'Diploma', 
+        mandatory: [], 
+        minUnits: 4, // Default to 4 for personal combinations
+        allowExtra: true,
+        title: '',
+        subtitle: '',
+        desc: '',
+        mask: 'mask-book',
+        img: 'https://picsum.photos/seed/course/800/600'
+      });
+      showToast("課程已新增");
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, `courses/${id}`);
+    } finally {
+      setIsSavingCourses(false);
+    }
+  };
+
+  const handleUpdateCourse = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingCourse) return;
+    setIsSavingCourses(true);
+    try {
+      await updateDoc(doc(db, 'courses', editingCourse.id.toString()), editingCourse);
+      // Manually update local state
+      setCourses(prev => prev.map(c => c.id === editingCourse.id ? editingCourse : c));
+      setShowEditCombinationModal(false);
+      setEditingCourse(null);
+      showToast("課程已更新");
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `courses/${editingCourse.id}`);
+    } finally {
+      setIsSavingCourses(false);
+    }
+  };
+
+  const handleDeleteCourse = async (id: string) => {
+    showConfirm("確定刪除", "確定刪除此課程？", async () => {
+      try {
+        await deleteDoc(doc(db, 'courses', id));
+        // Manually update local state
+        setCourses(prev => prev.filter(c => c.id.toString() !== id.toString()));
+        showToast("課程已刪除");
+      } catch (error: any) {
+        console.error("Error deleting course:", error);
+        showToast(error.message || "刪除失敗", "error");
+      }
+    });
+  };
+
+  const toggleCourseMandatory = async (courseId: string, unitId: number) => {
+    const course = courses.find(c => c.id.toString() === courseId.toString());
+    if (!course) return;
+    
+    let newMandatory = [...(course.mandatory || [])];
+    if (newMandatory.includes(unitId)) {
+      newMandatory = newMandatory.filter(id => id !== unitId);
+    } else {
+      newMandatory.push(unitId);
+    }
+    
+    // Remove id from data before saving to avoid duplication if it's already doc.id
+    const { id, ...courseData } = course;
+    try {
+      await setDoc(doc(db, 'courses', courseId.toString()), { ...courseData, mandatory: newMandatory });
+      // Manually update local state
+      setCourses(prev => prev.map(c => c.id.toString() === courseId.toString() ? { ...c, mandatory: newMandatory } : c));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `courses/${courseId}`);
+    }
+  };
+
+  const setAllCourseMandatory = async (courseId: string, selectAll: boolean) => {
+    const course = courses.find(c => c.id.toString() === courseId.toString());
+    if (!course) return;
+    
+    const newMandatory = selectAll ? unitNames.map((_, i) => i) : [];
+    
+    const { id, ...courseData } = course;
+    try {
+      await setDoc(doc(db, 'courses', courseId.toString()), { ...courseData, mandatory: newMandatory });
+      // Manually update local state
+      setCourses(prev => prev.map(c => c.id.toString() === courseId.toString() ? { ...c, mandatory: newMandatory } : c));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `courses/${courseId}`);
+    }
+  };
+
+  const handleAddActivity = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingActivities(true);
+    const id = Date.now();
+    const activity = {
+      ...newActivity,
+      id,
+      tags: newActivity.tags.split(',').map(t => t.trim()).filter(t => t !== '')
+    };
+    try {
+      await setDoc(doc(db, 'activities', id.toString()), activity);
+      // Manually update local state
+      setActivities(prev => [activity, ...prev]);
+      setNewActivity({ title: '', content: '', date: '', img: '', tags: '#SAVFX, #AI, #動畫' });
+      setShowAddForm(false);
+      showToast("活動已新增");
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, `activities/${id}`);
+    } finally {
+      setIsSavingActivities(false);
+    }
+  };
+
+  const handleDeleteActivity = async (id: string) => {
+    showConfirm("確定刪除", "確定刪除此活動？", async () => {
+      try {
+        await deleteDoc(doc(db, 'activities', id));
+        // Manually update local state
+        setActivities(prev => prev.filter(a => a.id !== id));
+        showToast("活動已刪除");
+      } catch (error: any) {
+        console.error("Error deleting activity:", error);
+        showToast(error.message || "刪除失敗", "error");
+      }
+    });
+  };
+
+  const handleAddTutor = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingTutors(true);
+    const id = Date.now().toString();
+    try {
+      await setDoc(doc(db, 'tutors', id), newTutor);
+      // Manually update local state
+      setTutors(prev => [...prev, { id, ...newTutor }]);
+      setNewTutor({ name: '', role: '', desc: '', img: '' });
+      showToast("導師已新增");
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, `tutors/${id}`);
+    } finally {
+      setIsSavingTutors(false);
+    }
+  };
+
+  const handleDeleteTutor = async (id: string) => {
+    showConfirm("確定刪除", "確定刪除此導師？", async () => {
+      try {
+        await deleteDoc(doc(db, 'tutors', id));
+        // Manually update local state
+        setTutors(prev => prev.filter(t => t.id !== id));
+        showToast("導師已刪除");
+      } catch (error: any) {
+        console.error("Error deleting tutor:", error);
+        showToast(error.message || "刪除失敗", "error");
+      }
+    });
+  };
+
+  const handleAddTestimonial = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingTestimonials(true);
+    const id = Date.now().toString();
+    try {
+      await setDoc(doc(db, 'testimonials', id), newTestimonial);
+      // Manually update local state
+      setTestimonials(prev => [...prev, { id, ...newTestimonial }]);
+      setNewTestimonial({ name: '', text: '', img: '' });
+      showToast("感想已新增");
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, `testimonials/${id}`);
+    } finally {
+      setIsSavingTestimonials(false);
+    }
+  };
+
+  const handleDeleteTestimonial = async (id: string) => {
+    showConfirm("確定刪除", "確定刪除此學員感想？", async () => {
+      try {
+        await deleteDoc(doc(db, 'testimonials', id));
+        // Manually update local state
+        setTestimonials(prev => prev.filter(t => t.id !== id));
+        showToast("感想已刪除");
+      } catch (error: any) {
+        console.error("Error deleting testimonial:", error);
+        showToast(error.message || "刪除失敗", "error");
+      }
+    });
+  };
+
+  const heroImage = "https://picsum.photos/seed/interview/1200/1200";
+
+  const currentCourse = courses.find(c => c.id === selectedCourse) || courses[1] || { mandatory: [], allowExtra: false, name: '', minUnits: 0 };
+
+  const handleCourseChange = (courseId: number) => {
+    const course = courses.find(c => c.id === courseId);
+    if (course) {
+      setSelectedCourse(courseId);
+      const globalMandatory = unitNames.filter(u => u.isMandatory).map(u => u.id);
+      setSelectedUnits([...new Set([...course.mandatory, ...globalMandatory])]);
+    }
+  };
+
+  const toggleUnit = (id: number) => {
+    if (!currentCourse || !currentCourse.mandatory) return;
+    
+    const isGlobalMandatory = unitNames[id]?.isMandatory;
+    if (currentCourse.mandatory.includes(id) || isGlobalMandatory) return; // Cannot unselect mandatory units
+
+    if (selectedUnits.includes(id)) {
+      setSelectedUnits(selectedUnits.filter(u => u !== id));
+    } else {
+      setSelectedUnits([...selectedUnits, id]);
+    }
+  };
+
+  const calculateTotalPrice = () => {
+    let total = 0;
+    // Filter to only include units that actually exist in the database
+    const validSelected = selectedUnits.filter(idx => idx < unitNames.length);
+    
+    // Pricing logic:
+    // Units 1-4 (indices 0-3): $1600
+    // Others: $3000
+    // Discount: If total units > 16, units beyond the 16th one get 20% off
+    
+    // Sort to ensure consistent pricing (cheaper units first to be fair, or mandatory first?)
+    // Usually, we count the first 16 units at full price, then the rest at discount.
+    // To be consistent, we sort by index.
+    const sortedSelected = [...validSelected].sort((a, b) => a - b);
+    
+    sortedSelected.forEach((idx, order) => {
+      let unitPrice = (idx < 4) ? 1600 : 3000;
+      
+      // If total units > 16, the 17th unit onwards gets 20% off
+      if (validSelected.length > 16 && order >= 16) {
+        unitPrice *= 0.8;
+      }
+      
+      total += unitPrice;
+    });
+    
+    return total;
+  };
+
+  const totalPrice = calculateTotalPrice();
+
+  const handleBriefingSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitted(true);
+    setTimeout(() => setIsSubmitted(false), 3000);
+  };
+
+  return (
+    <div className="min-h-screen bg-[#FFEF00] font-sans selection:bg-black selection:text-[#FFEF00] relative">
+      {/* Background Pattern */}
+      <div className="fixed inset-0 pointer-events-none opacity-[0.03]" 
+           style={{ backgroundImage: 'radial-gradient(#000 1px, transparent 1px)', backgroundSize: '20px 20px' }}></div>
+      <div className="fixed inset-0 pointer-events-none opacity-[0.02]" 
+           style={{ backgroundImage: 'linear-gradient(45deg, #000 25%, transparent 25%, transparent 50%, #000 50%, #000 75%, transparent 75%, transparent)', backgroundSize: '100px 100px' }}></div>
+      
+      <SVGMasks />
+      
+      {/* Login Modal */}
+      {showLoginModal && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] flex items-center justify-center p-6">
+          <motion.div 
+            initial={{ scale: 0.9, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            className="bg-[#FFEF00] border-8 border-black p-8 rounded-3xl max-w-md w-full shadow-[16px_16px_0px_rgba(0,0,0,1)]"
+          >
+            <h2 className="text-3xl font-black mb-6 uppercase">管理員登入</h2>
+            <div className="space-y-4">
+              <input 
+                type="password" 
+                placeholder="請輸入管理密碼"
+                className="w-full border-4 border-black p-4 rounded-xl font-bold text-lg"
+                value={loginPassword}
+                onChange={e => setLoginPassword(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && handleLogin()}
+              />
+              {loginError && <p className="text-red-600 font-black text-sm">{loginError}</p>}
+              <div className="flex gap-4 pt-4">
+                <button 
+                  onClick={handleLogin}
+                  className="flex-1 bg-black text-[#FFEF00] py-4 rounded-full font-black uppercase text-lg hover:scale-105 transition-transform"
+                >
+                  登入
+                </button>
+                <button 
+                  onClick={() => {
+                    setShowLoginModal(false);
+                    setLoginPassword('');
+                    setLoginError('');
+                  }}
+                  className="flex-1 bg-white border-4 border-black py-4 rounded-full font-black uppercase text-lg hover:scale-105 transition-transform"
+                >
+                  取消
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      <AnimatePresence mode="wait">
+        {!showAdminPanel ? (
+          <motion.div
+            key="main-site"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+          >
+            {/* Navigation */}
+      <nav className="fixed top-0 w-full z-50 bg-[#FFEF00] border-b border-black px-6 py-4">
+        <div className="max-w-7xl mx-auto flex justify-between items-center">
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <svg width="60" height="40" viewBox="0 0 120 80" className="stroke-[#0055FF] stroke-[4] fill-none">
+                <path d="M10,50 L20,30 L35,45 L50,20 L65,45 L80,30 L90,50 L95,80 L5,80 Z" strokeLinejoin="round" />
+                <circle cx="30" cy="60" r="3" fill="#0055FF" />
+                <circle cx="70" cy="60" r="3" fill="#0055FF" />
+              </svg>
+              <h1 className="text-2xl sm:text-4xl font-black tracking-tighter text-black">{siteSettings.siteName}</h1>
+            </div>
+          </div>
+          
+          <div className="hidden md:flex gap-8 font-bold text-base text-black items-center">
+            <a href="#courses-intro" className="hover:opacity-70 transition-opacity">課程介紹</a>
+            <a href="#courses" className="hover:opacity-70 transition-opacity">個人課程</a>
+            <a href="#tutors" className="hover:opacity-70 transition-opacity">導師簡介</a>
+            <a href="#activities" className="hover:opacity-70 transition-opacity">活動重溫</a>
+            <a href="#contact" className="hover:opacity-70 transition-opacity">聯絡我們</a>
+            {isAdmin && (
+              <button 
+                onClick={() => setShowAdminPanel(true)}
+                className="flex items-center gap-2 bg-black text-[#FFEF00] px-4 py-2 rounded-full hover:scale-105 transition-transform"
+              >
+                <Settings size={18} /> 管理
+              </button>
+            )}
+            {!isAdmin ? (
+              <button onClick={() => setShowLoginModal(true)} className="hover:opacity-70 transition-opacity flex items-center gap-1">
+                <LogIn size={18} /> 登入
+              </button>
+            ) : (
+              <button onClick={handleLogout} className="hover:opacity-70 transition-opacity flex items-center gap-1">
+                <LogOut size={18} /> 登出
+              </button>
+            )}
+          </div>
+
+          <button className="md:hidden" onClick={() => setIsMenuOpen(!isMenuOpen)}>
+            {isMenuOpen ? <X /> : <Menu />}
+          </button>
+        </div>
+      </nav>
+
+      {/* Mobile Menu */}
+      <AnimatePresence>
+        {isMenuOpen && (
+          <motion.div 
+            initial={{ opacity: 0, x: '100%' }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: '100%' }}
+            className="fixed inset-0 z-40 bg-[#FFEF00] flex flex-col items-center justify-center gap-8 text-3xl font-black uppercase"
+          >
+            <a href="#courses-intro" onClick={() => setIsMenuOpen(false)}>課程介紹</a>
+            <a href="#courses" onClick={() => setIsMenuOpen(false)}>個人課程</a>
+            <a href="#tutors" onClick={() => setIsMenuOpen(false)}>導師簡介</a>
+            <a href="#activities" onClick={() => setIsMenuOpen(false)}>活動重溫</a>
+            <a href="#contact" onClick={() => setIsMenuOpen(false)}>聯絡我們</a>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Hero Section */}
+      <header className="pt-32 pb-20 px-6 min-h-screen flex items-center relative overflow-hidden bg-[#FFEF00]">
+        {/* Decorative Shapes */}
+        <BlueShape className="w-64 h-64 -top-20 -left-20 rotate-12" />
+        <BlueShape className="w-96 h-96 -bottom-32 -right-32 -rotate-12" />
+        
+        {/* Diagonal Stripe Pattern */}
+        <div className="absolute inset-0 pointer-events-none opacity-[0.08]" 
+             style={{ backgroundImage: 'linear-gradient(45deg, #000 25%, transparent 25%, transparent 50%, #000 50%, #000 75%, transparent 75%, transparent)', backgroundSize: '60px 60px' }}></div>
+
+        <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-12 items-center w-full relative z-10">
+          <motion.div
+            initial={{ opacity: 0, x: -50 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="flex flex-col"
+          >
+            <div className="inline-block bg-black text-[#FFEF00] px-4 py-1 self-start font-black text-sm mb-6 uppercase tracking-widest">
+              {siteSettings.heroTagline || 'Professional AI Animation School'}
+            </div>
+            <h1 className="text-4xl sm:text-5xl md:text-7xl lg:text-[110px] font-black leading-tight tracking-tighter mb-8 text-black uppercase">
+              {siteSettings.heroTitle.split('<br />').map((line, i) => (
+                <React.Fragment key={i}>
+                  {line}
+                  {i < siteSettings.heroTitle.split('<br />').length - 1 && <br />}
+                </React.Fragment>
+              ))}
+            </h1>
+            <div className="relative">
+              <h2 className="text-white font-black text-[80px] sm:text-[120px] md:text-[140px] lg:text-[200px] leading-tight tracking-tighter drop-shadow-[8px_8px_0px_rgba(0,0,0,1)] mb-8 select-none">
+                {siteSettings.siteName}
+              </h2>
+              <div className="absolute -top-4 -right-4 bg-[#0055FF] text-white px-3 py-1 font-black text-xs rotate-12">
+                {siteSettings.heroEst || 'EST. 2024'}
+              </div>
+            </div>
+            <p className="text-xl md:text-2xl font-black max-w-lg text-black leading-tight border-l-8 border-black pl-6">
+              {siteSettings.heroSubtitle}
+            </p>
+          </motion.div>
+
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="grid grid-cols-2 sm:grid-cols-3 gap-4 md:gap-10"
+          >
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="relative aspect-square group">
+                {/* Corner Accents */}
+                {i === 0 && (
+                  <div className="absolute -top-4 -left-4 w-12 h-12 border-t-[12px] border-l-[12px] border-[#0055FF] z-20" />
+                )}
+                {i === 5 && (
+                  <div className="absolute -bottom-4 -right-4 w-12 h-12 border-b-[12px] border-r-[12px] border-[#0055FF] z-20" />
+                )}
+                
+                {/* The Shape */}
+                <div className="w-full h-full border-[8px] border-black rounded-tl-[100%] rounded-tr-[100%] rounded-br-[100%] rounded-bl-none overflow-hidden bg-white shadow-[8px_8px_0px_rgba(0,55,255,0.2)] transition-all group-hover:shadow-[12px_12px_0px_rgba(0,0,0,1)] group-hover:-translate-x-1 group-hover:-translate-y-1">
+                  <img 
+                    src={siteSettings.heroImages?.[i] || `https://picsum.photos/seed/hero-${i}/400/400`} 
+                    className="w-full h-full object-cover transition-all duration-500" 
+                    referrerPolicy="no-referrer" 
+                  />
+                </div>
+              </div>
+            ))}
+          </motion.div>
+        </div>
+      </header>
+
+      {/* Lightbox Modal */}
+      <AnimatePresence>
+        {isLightboxOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-4 md:p-12"
+            onClick={() => setIsLightboxOpen(false)}
+          >
+            <motion.button
+              className="absolute top-8 right-8 text-white hover:text-[#FFEF00] transition-colors"
+              onClick={() => setIsLightboxOpen(false)}
+            >
+              <X size={48} strokeWidth={3} />
+            </motion.button>
+            <motion.img
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              src={heroImage}
+              alt="Full Screen Interview"
+              className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl border-4 border-white/20"
+              referrerPolicy="no-referrer"
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Individual Courses */}
+      <section id="courses-intro" className="py-20 bg-white border-y-8 border-black">
+        <div className="max-w-7xl mx-auto px-6">
+          <SectionTitle subtitle={siteSettings.coursesIntroSubtitle || "專業文憑與證書課程"}>{siteSettings.coursesIntroTitle || "課程介紹"}</SectionTitle>
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+            {courses.map((course, i) => (
+              <motion.div 
+                key={i}
+                whileHover={{ y: -10 }}
+                className="bg-[#FFEF00] border-4 border-black p-8 flex flex-col items-center text-center rounded-3xl"
+              >
+                <MaskedImage 
+                  src={(course.img?.startsWith('http') || course.img?.startsWith('data:')) ? course.img : `https://picsum.photos/seed/${course.img || 'course'}/400/400`} 
+                  maskId={course.mask || 'mask-cloud'} 
+                  className="w-40 h-40 mb-6 bg-white border-2 border-black"
+                />
+                <h3 className="text-xl font-black leading-tight mb-1">{course.title || course.name}</h3>
+                {course.subtitle && <p className="text-sm font-black mb-2">{course.subtitle}</p>}
+                <p className="font-bold text-black/70 mb-6 text-sm">{course.desc}</p>
+                <button className="mt-auto bg-black text-[#FFEF00] w-full py-3 font-bold uppercase rounded-full text-sm">查看詳情</button>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Course Selection Tool */}
+      <section id="courses" className="py-24 px-6 bg-[#FFEF00] relative overflow-hidden">
+        {/* Background Pattern */}
+        <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle, black 2px, transparent 0)', backgroundSize: '24px 24px' }} />
+        
+        <div className="max-w-7xl mx-auto relative z-10">
+          <SectionTitle subtitle={siteSettings.personalCourseSubtitle || "選擇您的專業路徑與單元組合"}>{siteSettings.personalCourseTitle || "個人課程"}</SectionTitle>
+          
+          {/* Course Selector Tabs */}
+          <div className="flex flex-wrap gap-2 sm:gap-4 mb-16 justify-center">
+            {courses.map(course => (
+              <button
+                key={course.id}
+                onClick={() => handleCourseChange(course.id)}
+                className={`px-6 sm:px-10 py-3 sm:py-5 rounded-full font-black text-xs sm:text-sm transition-all border-[4px] shadow-lg ${
+                  selectedCourse === course.id 
+                    ? 'bg-black text-[#FFEF00] border-black scale-105' 
+                    : 'bg-white text-black border-black hover:bg-black/5'
+                }`}
+              >
+                {course.name}
+              </button>
+            ))}
+          </div>
+
+          <div className="bg-black text-[#FFEF00] p-6 sm:p-10 md:p-16 border-[6px] sm:border-[10px] border-white shadow-[10px_10px_0px_rgba(0,0,0,1)] sm:shadow-[20px_20px_0px_rgba(0,0,0,1)] rounded-[2rem] sm:rounded-[4rem] relative">
+            <div className="grid lg:grid-cols-2 gap-16 items-start">
+              <div className="space-y-10">
+                <h3 className="text-3xl sm:text-4xl md:text-5xl font-black leading-tight tracking-tighter">{currentCourse.name}</h3>
+                
+                <div className="space-y-6">
+                  <p className="text-xl font-bold leading-relaxed opacity-90">
+                    {selectedCourse === 1 
+                      ? "本證書課程包含 4 個核心 AI 單元，旨在快速提升您的 AI 視覺應用能力。" 
+                      : "本一年制文憑課程包含核心必修單元，並允許學生根據興趣自由加選其他單元。"}
+                  </p>
+                  
+                  <ul className="space-y-3">
+                    <li className="flex items-center gap-3 text-lg font-black">
+                      <div className="w-2 h-2 bg-[#FFEF00] rounded-full" />
+                      單元 1-4：$1,600 / 每個
+                    </li>
+                    <li className="flex items-center gap-3 text-lg font-black">
+                      <div className="w-2 h-2 bg-[#FFEF00] rounded-full" />
+                      其他單元：$3,000 / 每個
+                    </li>
+                    {currentCourse.allowExtra && (
+                      <li className="flex items-center gap-3 text-lg font-black">
+                        <div className="w-2 h-2 bg-[#FFEF00] rounded-full" />
+                        超過 16 個單元後，額外單元享 8 折優惠！
+                      </li>
+                    )}
+                  </ul>
+                </div>
+
+                <div className="flex items-end gap-4">
+                  <div className="text-6xl sm:text-8xl font-black leading-none">{selectedUnits.filter(idx => idx < unitNames.length).length}</div>
+                  <div className="text-xl sm:text-2xl font-black mb-2">
+                    <span className="opacity-60">/ {unitNames.length}</span>
+                    <br />
+                    已選單元
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="text-sm font-black uppercase tracking-widest opacity-70">預計總學費</div>
+                  <div className="flex flex-wrap items-center gap-4 sm:gap-6">
+                    <div className="text-5xl sm:text-7xl font-black text-white tracking-tighter">${totalPrice.toLocaleString()}</div>
+                    {selectedUnits.filter(idx => idx < unitNames.length).length > 16 && currentCourse.allowExtra && (
+                      <div className="bg-[#00FF00]/20 text-[#00FF00] text-xs font-black px-3 py-1.5 rounded-md border border-[#00FF00]/30 uppercase tracking-widest">
+                        已享 8 折
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="flex items-center gap-3">
+                    {selectedUnits.filter(idx => idx < unitNames.length).length < currentCourse.minUnits ? (
+                      <div className="text-red-500 text-sm font-black flex items-center gap-2 bg-red-500/10 px-4 py-2 rounded-full border border-red-500/20">
+                        <X size={18} /> 還差 {currentCourse.minUnits - selectedUnits.filter(idx => idx < unitNames.length).length} 個單元即可報名
+                      </div>
+                    ) : (
+                      <div className="text-[#00FF00] text-sm font-black flex items-center gap-2 bg-[#00FF00]/10 px-4 py-2 rounded-full border border-[#00FF00]/20">
+                        <CheckCircle2 size={18} /> 已達最低報名要求
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="w-full bg-white/10 h-6 rounded-full overflow-hidden border-2 border-white/5">
+                  <motion.div 
+                    className="bg-[#FFEF00] h-full shadow-[0_0_20px_rgba(255,239,0,0.4)]"
+                    initial={{ width: 0 }}
+                    animate={{ width: `${(selectedUnits.filter(idx => idx < unitNames.length).length / unitNames.length) * 100}%` }}
+                    transition={{ type: "spring", stiffness: 50 }}
+                  />
+                </div>
+
+                <div className="flex flex-wrap gap-3 pt-4">
+                  <button 
+                    onClick={() => {
+                      const allIndices = unitNames.map((_, i) => i);
+                      setSelectedUnits([...new Set([...selectedUnits, ...allIndices])]);
+                    }}
+                    className="px-6 py-3 rounded-full font-black text-xs transition-all border-[3px] border-white bg-white text-black hover:bg-[#FFEF00] hover:border-[#FFEF00] shadow-md"
+                  >
+                    全選單元
+                  </button>
+                  <button 
+                    onClick={() => {
+                      const globalMandatory = unitNames.filter(u => u.isMandatory).map(u => u.id);
+                      const courseMandatory = currentCourse.mandatory || [];
+                      setSelectedUnits([...new Set([...courseMandatory, ...globalMandatory])]);
+                    }}
+                    className="px-6 py-3 rounded-full font-black text-xs transition-all border-[3px] border-white bg-white text-black hover:bg-[#FFEF00] hover:border-[#FFEF00] shadow-md"
+                  >
+                    重設必修
+                  </button>
+                  <button 
+                    onClick={() => {
+                      const indices = [0, 1, 2, 3];
+                      setSelectedUnits([...new Set([...selectedUnits, ...indices])]);
+                    }}
+                    className="px-6 py-3 rounded-full font-black text-xs transition-all border-[3px] border-white bg-white text-black hover:bg-[#FFEF00] hover:border-[#FFEF00] shadow-md"
+                  >
+                    選取單元 1-4
+                  </button>
+                </div>
+              </div>
+              
+              <div className="relative">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 max-h-[700px] overflow-y-auto p-8 bg-[#1A1A1A] custom-scrollbar rounded-[3rem] border-4 border-white/10 shadow-inner">
+                  {unitNames.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center text-center p-12 w-full col-span-full min-h-[400px]">
+                      <BookOpen size={64} className="mb-6 opacity-20 text-white" />
+                      <p className="font-black text-xl opacity-50 text-white">正在載入單元資料...</p>
+                    </div>
+                  ) : (
+                    <>
+                      {unitNames.map((unit, i) => {
+                        const isMandatory = currentCourse.mandatory.includes(i) || unit.isMandatory;
+                        const isSelected = selectedUnits.includes(i);
+                        const isHighlighted = isSelected || isMandatory;
+                        
+                        return (
+                          <motion.button
+                            key={i}
+                            whileHover={isMandatory ? {} : { scale: 1.05, y: -2 }}
+                            whileTap={isMandatory ? {} : { scale: 0.95 }}
+                            onClick={() => toggleUnit(i)}
+                            disabled={isMandatory}
+                            className={`p-4 border-[3px] flex flex-col items-center justify-center font-black text-[13px] transition-all rounded-2xl min-h-[85px] h-auto text-center leading-tight relative shadow-xl ${
+                              isHighlighted 
+                                ? 'bg-[#FFEF00] text-black border-white shadow-[#FFEF00]/30' 
+                                : 'bg-[#2A2A2A] border-white/10 hover:border-white/30 text-white/80 hover:text-white'
+                            } ${isMandatory ? 'cursor-default' : 'cursor-pointer'}`}
+                          >
+                            <span className="block">{unit.name}</span>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-[10px] opacity-40">(U{i+1})</span>
+                              {unit.price > 0 && (
+                                <span className="text-[10px] font-black text-black/60 bg-black/5 px-1.5 rounded-md">
+                                  ${unit.price}
+                                </span>
+                              )}
+                            </div>
+                            {isMandatory && (
+                              <div className="absolute top-2 right-2 flex items-center gap-1 bg-black text-[#FFEF00] px-1.5 py-0.5 rounded-md text-[8px] font-black uppercase tracking-tighter border border-white/20 shadow-sm">
+                                必修
+                              </div>
+                            )}
+                          </motion.button>
+                        );
+                      })}
+                    </>
+                  )}
+                </div>
+                {/* Custom Scrollbar Indicator */}
+                <div className="absolute top-8 right-2 bottom-8 w-1.5 bg-white/5 rounded-full overflow-hidden">
+                  <div className="w-full bg-[#FFEF00] rounded-full" style={{ height: '30%', marginTop: '10%' }} />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Group Courses */}
+      <section className="py-20 bg-white border-y-8 border-black">
+        <div className="max-w-7xl mx-auto px-6">
+          <SectionTitle subtitle={siteSettings.groupCourseSubtitle || "適合學校、社福機構及私人團體"}>{siteSettings.groupCourseTitle || "團體課程"}</SectionTitle>
+          <div className="grid md:grid-cols-3 gap-8">
+            {groupCourses.length === 0 ? (
+              [
+                { title: "3D Printing 工作坊", desc: "親手體驗 3D 打印技術與建模", mask: "mask-book", img: "3d-print" },
+                { title: "小學生動畫工作坊", desc: "啟發創意，製作屬於自己的短片", mask: "mask-dream", img: "kids-anim" },
+                { title: "動畫輪工作坊", mask: "mask-film", desc: "探索傳統動畫與現代技術的結合", img: "zoetrope" }
+              ].map((item, i) => (
+                <motion.div 
+                  key={i}
+                  whileHover={{ y: -10 }}
+                  className="bg-black text-[#FFEF00] border-4 border-black p-8 flex flex-col items-center text-center rounded-3xl"
+                >
+                  <MaskedImage 
+                    src={`https://picsum.photos/seed/group-${i}/400/400`} 
+                    maskId={item.mask} 
+                    className="w-48 h-48 mb-6 bg-white border-2 border-[#FFEF00]"
+                  />
+                  <h3 className="text-2xl font-black mb-2">{item.title}</h3>
+                  <p className="font-bold opacity-70 mb-6">{item.desc}</p>
+                  <button className="mt-auto bg-[#FFEF00] text-black w-full py-3 font-bold uppercase rounded-full text-sm">立即預約</button>
+                </motion.div>
+              ))
+            ) : (
+              groupCourses.map((item, i) => (
+                <motion.div 
+                  key={i}
+                  whileHover={{ y: -10 }}
+                  className="bg-black text-[#FFEF00] border-4 border-black p-8 flex flex-col items-center text-center rounded-3xl"
+                >
+                  <MaskedImage 
+                    src={(item.img?.startsWith('http') || item.img?.startsWith('data:')) ? item.img : `https://picsum.photos/seed/group-${i}/400/400`} 
+                    maskId={item.mask || 'mask-cloud'} 
+                    className="w-48 h-48 mb-6 bg-white border-2 border-[#FFEF00]"
+                  />
+                  <h3 className="text-2xl font-black mb-2">{item.title}</h3>
+                  <p className="font-bold opacity-70 mb-6">{item.desc}</p>
+                  <button className="mt-auto bg-[#FFEF00] text-black w-full py-3 font-bold uppercase rounded-full text-sm">立即預約</button>
+                </motion.div>
+              ))
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* Business Cooperation */}
+      <section className="py-20 px-6">
+        <div className="max-w-7xl mx-auto">
+          <SectionTitle subtitle={siteSettings.businessCoopSubtitle || "專業動畫製作與 AI 方案"}>{siteSettings.businessCoopTitle || "商業合作"}</SectionTitle>
+          <div className="bg-[#FFEF00] text-black p-8 md:p-12 border-8 border-black rounded-[3rem]">
+            <div className="grid md:grid-cols-2 gap-12 items-center">
+              <div>
+                <h3 className="text-4xl font-black mb-6">{siteSettings.businessCoopTitle || "2D / 3D / AI 動畫專案"}</h3>
+                <p className="text-xl font-bold mb-8">
+                  {siteSettings.businessCoopContent || "我們承接各類商業動畫製作。結合傳統藝術與尖端 AI 技術，為您的品牌提供最具競爭力的視覺方案。"}
+                </p>
+                <div className="space-y-4 mb-8">
+                  {(siteSettings.businessCoopFeatures || [
+                    '專業角色設計與建模',
+                    'AI 輔助高效動畫流程',
+                    '影視級後期合成特效'
+                  ]).map((feature, i) => (
+                    <div key={i} className="flex items-center gap-3 font-black uppercase">
+                      <CheckCircle2 className="text-black" /> {feature}
+                    </div>
+                  ))}
+                </div>
+                <button className="bg-black text-[#FFEF00] px-10 py-4 font-black uppercase rounded-full text-lg">
+                  開始專案洽談
+                </button>
+              </div>
+              <div className="grid grid-cols-1 gap-4">
+                <div className="aspect-video bg-black rounded-2xl overflow-hidden border-4 border-black shadow-lg">
+                  <iframe 
+                    className="w-full h-full"
+                    src="https://www.youtube.com/embed/dQw4w9WgXcQ" 
+                    title="YouTube video player" 
+                    frameBorder="0" 
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                    allowFullScreen
+                  ></iframe>
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="aspect-video bg-black rounded-xl overflow-hidden border-2 border-black">
+                    <img src="https://picsum.photos/seed/biz1/400/225" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                  </div>
+                  <div className="aspect-video bg-black rounded-xl overflow-hidden border-2 border-black">
+                    <img src="https://picsum.photos/seed/biz2/400/225" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Briefing Session Form */}
+      <section className="py-20 px-6 bg-[#FFEF00]">
+        <div className="max-w-3xl mx-auto bg-white border-8 border-black p-12 text-center relative rounded-[3rem]">
+          <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-20 h-20 bg-black rounded-full flex items-center justify-center">
+            <Play className="text-[#FFEF00] fill-[#FFEF00] w-8 h-8 ml-1" />
+          </div>
+          <h2 className="text-4xl font-black mb-4 mt-4">{siteSettings.briefingTitle || "課程簡介會"}</h2>
+          <p className="font-bold mb-8">{siteSettings.briefingSubtitle || "留下您的聯絡資料，我們將把 YouTube 簡介會影片傳送給您。"}</p>
+          
+          <form onSubmit={handleBriefingSubmit} className="space-y-4">
+            <input 
+              type="email" 
+              placeholder="您的 Email" 
+              required
+              className="w-full border-4 border-black p-4 font-bold focus:outline-none focus:bg-[#FFEF00]/10 rounded-xl"
+              value={briefingForm.email}
+              onChange={e => setBriefingForm({...briefingForm, email: e.target.value})}
+            />
+            <input 
+              type="tel" 
+              placeholder="您的電話號碼" 
+              required
+              className="w-full border-4 border-black p-4 font-bold focus:outline-none focus:bg-[#FFEF00]/10 rounded-xl"
+              value={briefingForm.phone}
+              onChange={e => setBriefingForm({...briefingForm, phone: e.target.value})}
+            />
+            <button 
+              type="submit" 
+              className="w-full bg-black text-[#FFEF00] py-4 font-black uppercase text-xl hover:scale-[1.02] transition-transform rounded-full"
+            >
+              獲取簡介會影片
+            </button>
+          </form>
+
+          {isSubmitted && (
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-6 text-green-600 font-black"
+            >
+              提交成功！請留意您的電郵。
+            </motion.div>
+          )}
+        </div>
+      </section>
+
+      {/* Testimonials */}
+      <section className="py-20 bg-white">
+        <div className="max-w-7xl mx-auto px-6">
+          <SectionTitle subtitle="聽聽學員怎麼說">學員感想</SectionTitle>
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-12">
+            {testimonials.map((t, i) => (
+              <div key={i} className="flex flex-col items-center">
+                <MaskedImage 
+                  src={(t.img.startsWith('http') || t.img.startsWith('data:')) ? t.img : `https://picsum.photos/seed/${t.img}/300/300`} 
+                  maskId="mask-dream" 
+                  className="w-40 h-40 mb-6 bg-[#FFEF00]"
+                />
+                <div className="bg-[#FFEF00] p-6 border-4 border-black relative rounded-2xl">
+                  <p className="italic font-bold mb-4">"{t.text}"</p>
+                  <div className="font-black">— {t.name}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Tutor Profiles */}
+      <section id="tutors" className="py-20 bg-[#FFEF00] border-y-8 border-black">
+        <div className="max-w-7xl mx-auto px-6">
+          <SectionTitle subtitle="業界頂尖專家親自授課">導師簡介</SectionTitle>
+          <div className="grid md:grid-cols-2 gap-12">
+            {tutors.map((tutor, i) => (
+              <motion.div 
+                key={i} 
+                whileHover={{ scale: 1.02 }}
+                className="bg-white border-4 border-black p-6 md:p-8 flex flex-col xl:flex-row gap-6 md:gap-8 items-start rounded-3xl group shadow-[8px_8px_0px_rgba(0,0,0,1)] h-full"
+              >
+                <div className="relative w-32 h-32 flex-shrink-0 mx-auto xl:mx-0">
+                  <MaskedImage 
+                    src={(tutor.img.startsWith('http') || tutor.img.startsWith('data:')) ? tutor.img : `https://picsum.photos/seed/${tutor.img}/300/300`} 
+                    maskId="mask-notebook" 
+                    className="w-full h-full bg-black transition-all duration-500 object-cover"
+                  />
+                  <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-[#0055FF] rounded-full border-2 border-black" />
+                </div>
+                <div className="flex-1 w-full flex flex-col min-w-0">
+                  <h3 className="text-2xl font-black group-hover:text-[#0055FF] transition-colors text-center xl:text-left">{tutor.name}</h3>
+                  <div className="text-[#FFEF00] bg-black px-2 py-1 inline-block text-xs font-black mb-4 uppercase tracking-tighter self-center xl:self-start">{tutor.role}</div>
+                  <div className="font-bold text-black/70 leading-relaxed whitespace-pre-line max-h-[250px] overflow-y-auto pr-4" style={{ scrollbarWidth: 'thin' }}>
+                    {tutor.desc}
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Activity Review */}
+      <section id="activities" className="py-20 bg-[#F5F5F5] overflow-hidden border-t-8 border-black">
+        <div className="max-w-7xl mx-auto px-6">
+            <div className="flex justify-between items-end mb-12">
+              <SectionTitle subtitle="精彩瞬間與技術分享">活動重溫</SectionTitle>
+            </div>
+
+          {isAdmin && showAddForm && (
+            <motion.div 
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-12 bg-white border-4 border-black p-8 rounded-3xl shadow-xl"
+            >
+              <form onSubmit={handleAddActivity} className="grid md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <input 
+                    type="text" 
+                    placeholder="標題" 
+                    required
+                    className="w-full border-2 border-black p-3 rounded-xl font-bold"
+                    value={newActivity.title}
+                    onChange={e => setNewActivity({...newActivity, title: e.target.value})}
+                  />
+                  <input 
+                    type="text" 
+                    placeholder="日期 (如: 2025年9月10日)" 
+                    required
+                    className="w-full border-2 border-black p-3 rounded-xl font-bold"
+                    value={newActivity.date}
+                    onChange={e => setNewActivity({...newActivity, date: e.target.value})}
+                  />
+                  <FileUploader 
+                    label="活動圖片"
+                    currentImage={newActivity.img}
+                    onUpload={(url) => setNewActivity({...newActivity, img: url})}
+                  />
+                  <input 
+                    type="url" 
+                    placeholder="或輸入 URL" 
+                    required
+                    className="w-full border-2 border-black p-3 rounded-xl font-bold mt-2"
+                    value={newActivity.img}
+                    onChange={e => setNewActivity({...newActivity, img: e.target.value})}
+                  />
+                  <input 
+                    type="text" 
+                    placeholder="標籤 (逗號分隔)" 
+                    required
+                    className="w-full border-2 border-black p-3 rounded-xl font-bold"
+                    value={newActivity.tags}
+                    onChange={e => setNewActivity({...newActivity, tags: e.target.value})}
+                  />
+                </div>
+                <div className="space-y-4">
+                  <textarea 
+                    placeholder="內容描述" 
+                    required
+                    rows={5}
+                    className="w-full border-2 border-black p-3 rounded-xl font-bold"
+                    value={newActivity.content}
+                    onChange={e => setNewActivity({...newActivity, content: e.target.value})}
+                  />
+                  <button type="submit" className="w-full bg-black text-[#FFEF00] py-3 rounded-full font-black uppercase">發佈活動</button>
+                </div>
+              </form>
+            </motion.div>
+          )}
+
+          <div className="columns-1 md:columns-2 lg:columns-3 gap-8 space-y-8">
+            {activities.map((activity) => (
+              <motion.div 
+                key={activity.id}
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                className="break-inside-avoid bg-white border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] hover:shadow-[12px_12px_0px_rgba(0,85,255,1)] transition-all duration-300 group rounded-3xl overflow-hidden flex flex-col mb-8"
+              >
+                {/* Image Container */}
+                <div className="relative overflow-hidden bg-gray-200 border-b-4 border-black">
+                  <img 
+                    src={activity.img} 
+                    alt={activity.title} 
+                    className="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-110"
+                    referrerPolicy="no-referrer"
+                  />
+                  {isAdmin && (
+                    <button 
+                      onClick={() => handleDeleteActivity(activity.id)}
+                      className="absolute top-4 right-4 bg-red-600 text-white p-2 rounded-full hover:scale-110 transition-transform z-10"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  )}
+                  {/* SAVFX Logo Overlay */}
+                  <div className="absolute top-4 left-4 flex items-center gap-1 bg-black text-[#FFEF00] px-3 py-1 rounded-full border-2 border-white/20">
+                    <svg width="20" height="14" viewBox="0 0 120 80" className="stroke-[#FFEF00] stroke-[12] fill-none">
+                      <path d="M10,50 L20,30 L35,45 L50,20 L65,45 L80,30 L90,50 L95,80 L5,80 Z" strokeLinejoin="round" />
+                    </svg>
+                    <span className="text-[10px] font-black tracking-tighter">SAVFX</span>
+                  </div>
+                  <div className="absolute bottom-4 right-4 bg-[#0055FF] text-white px-3 py-1 text-[10px] font-black uppercase tracking-widest rounded-full">
+                    {activity.date}
+                  </div>
+                </div>
+
+                {/* Content */}
+                <div className="p-8 flex flex-col flex-grow bg-white">
+                  <h3 className="text-2xl font-black text-black mb-4 leading-tight group-hover:text-[#0055FF] transition-colors">
+                    {activity.title}
+                  </h3>
+                  <p className="text-black/70 text-base font-bold leading-snug mb-8 line-clamp-6">
+                    {activity.content}
+                  </p>
+                  
+                  {/* Tags */}
+                  <div className="mt-auto flex flex-wrap gap-2">
+                    {activity.tags?.slice(0, 5).map((tag, idx) => (
+                      <span key={idx} className="text-[10px] font-black bg-black/5 px-2 py-1 rounded uppercase hover:bg-black hover:text-[#FFEF00] transition-colors">
+                        {tag.replace('#', '')}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Partners */}
+      <section className="py-20 bg-white border-t-8 border-black">
+        <div className="max-w-7xl mx-auto px-6 text-center">
+          <h3 className="text-2xl font-black uppercase mb-12">{siteSettings.partnersTitle || "曾合作機構"}</h3>
+          <div className="flex flex-wrap justify-center gap-12 opacity-50 hover:opacity-100 transition-all">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <img 
+                key={i} 
+                src={`https://picsum.photos/seed/logo-${i}/120/60`} 
+                alt="Partner" 
+                className="h-12 object-contain"
+                referrerPolicy="no-referrer"
+              />
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Footer */}
+      <footer id="contact" className="bg-black text-[#FFEF00] py-20 px-6">
+        <div className="max-w-7xl mx-auto grid md:grid-cols-3 gap-12">
+          <div>
+            <h2 className="text-3xl sm:text-4xl font-black mb-6 tracking-tighter">{siteSettings.siteName}</h2>
+            <p className="font-bold text-white/60 mb-8">
+              引領 AI 視覺藝術新時代。<br />
+              專業、創新、靈活。
+            </p>
+            <div className="flex gap-4">
+              {siteSettings.facebookUrl && (
+                <a 
+                  href={siteSettings.facebookUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="w-10 h-10 border-2 border-[#FFEF00] rounded-full flex items-center justify-center hover:bg-[#FFEF00] hover:text-black transition-colors cursor-pointer"
+                >
+                  <Film size={20} />
+                </a>
+              )}
+              {siteSettings.instagramUrl && (
+                <a 
+                  href={siteSettings.instagramUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="w-10 h-10 border-2 border-[#FFEF00] rounded-full flex items-center justify-center hover:bg-[#FFEF00] hover:text-black transition-colors cursor-pointer"
+                >
+                  <Monitor size={20} />
+                </a>
+              )}
+            </div>
+          </div>
+          
+          <div className="space-y-4">
+            <h4 className="text-xl font-black uppercase mb-6">聯絡我們</h4>
+            <div className="flex items-center gap-4">
+              <Phone className="text-white" />
+              <span className="font-bold">{siteSettings.contactPhone}</span>
+            </div>
+            <div className="flex items-center gap-4">
+              <Mail className="text-white" />
+              <span className="font-bold">{siteSettings.contactEmail}</span>
+            </div>
+            <div className="flex items-center gap-4">
+              <MessageSquare className="text-white" />
+              <span className="font-bold">WhatsApp 查詢</span>
+            </div>
+            {siteSettings.address && (
+              <div className="flex items-start gap-4">
+                <LayoutGrid className="text-white mt-1 shrink-0" size={20} />
+                <span className="font-bold">{siteSettings.address}</span>
+              </div>
+            )}
+          </div>
+
+          <div>
+            <h4 className="text-xl font-black uppercase mb-6">訂閱最新資訊</h4>
+            <div className="flex gap-2">
+              <input 
+                type="email" 
+                placeholder="Email" 
+                className="bg-white/10 border-2 border-white/20 p-3 flex-1 font-bold focus:outline-none focus:border-[#FFEF00] rounded-full px-6"
+              />
+              <button className="bg-[#FFEF00] text-black px-6 font-black uppercase rounded-full">GO</button>
+            </div>
+          </div>
+        </div>
+        <div className="max-w-7xl mx-auto mt-20 pt-8 border-t-2 border-white/10 text-center text-sm font-bold text-white/40">
+          &copy; 2026 {siteSettings.siteName} 銅馬動畫及視覺特效教育. ALL RIGHTS RESERVED.
+        </div>
+      </footer>
+
+      {/* Floating Action Button */}
+      <motion.button 
+        whileHover={{ scale: 1.1 }}
+        whileTap={{ scale: 0.9 }}
+        className="fixed bottom-8 right-8 bg-black text-[#FFEF00] w-16 h-16 rounded-full flex items-center justify-center shadow-2xl z-50 border-4 border-white"
+      >
+        <MousePointer2 />
+      </motion.button>
+
+      <style>{`
+        .custom-scrollbar::-webkit-scrollbar {
+          width: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+          background: rgba(255, 255, 255, 0.1);
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+          background: #FFEF00;
+          border-radius: 10px;
+        }
+      `}</style>
+          </motion.div>
+        ) : (
+          <motion.div
+            key="admin-panel"
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            className="min-h-screen bg-white flex flex-col md:flex-row relative z-10"
+          >
+            {/* Sidebar */}
+            <div className="w-full md:w-64 bg-black text-white p-8 flex flex-col gap-2 shrink-0">
+              <div className="flex items-center justify-between mb-8">
+                <h2 className="text-2xl font-black uppercase tracking-tighter text-[#FFEF00]">後台管理</h2>
+                <button onClick={() => setShowAdminPanel(false)} className="md:hidden text-white flex items-center gap-1 text-xs font-bold">
+                  <ArrowLeft size={16} /> 返回
+                </button>
+              </div>
+              
+              {[
+                { id: 'overview', label: '總覽', icon: Monitor },
+                { id: 'landing-page', label: '首頁管理', icon: LayoutGrid },
+                { id: 'settings', label: '基本設定', icon: Settings },
+                { id: 'courses', label: '課程管理', icon: GraduationCap },
+                { id: 'units', label: '個人課程管理', icon: BookOpen },
+                { id: 'group-courses', label: '團體課程管理', icon: Users },
+                { id: 'tutors', label: '導師管理', icon: Users },
+                { id: 'testimonials', label: '學員感想', icon: MessageSquare },
+                { id: 'activities', label: '活動管理', icon: Film },
+                { id: 'danger', label: '系統維護', icon: Trash2 },
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => {
+                    setAdminActiveTab(tab.id);
+                    if (tab.id === 'units') {
+                      setAdminUnitNames([...unitNames]);
+                    }
+                  }}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${
+                    adminActiveTab === tab.id 
+                    ? 'bg-[#FFEF00] text-black scale-105 shadow-[4px_4px_0px_rgba(255,255,255,0.3)]' 
+                    : 'hover:bg-white/10 text-white/70 hover:text-white'
+                  }`}
+                >
+                  <tab.icon size={20} />
+                  {tab.label}
+                </button>
+              ))}
+              
+              <div className="mt-auto pt-8 border-t border-white/10 space-y-2">
+                <button 
+                  onClick={() => setShowAdminPanel(false)}
+                  className="flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-[#FFEF00] hover:bg-white/10 w-full transition-all"
+                >
+                  <ArrowLeft size={20} /> 返回前台
+                </button>
+                <button 
+                  onClick={handleLogout}
+                  className="flex items-center gap-3 px-4 py-3 rounded-xl font-bold text-red-400 hover:bg-red-400/10 w-full transition-all"
+                >
+                  <LogOut size={20} /> 登出系統
+                </button>
+              </div>
+            </div>
+
+            {/* Main Content Area */}
+            <div className="flex-1 overflow-y-auto p-8 md:p-12 custom-scrollbar bg-gray-50">
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={adminActiveTab}
+                    initial={{ opacity: 0, x: 10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    exit={{ opacity: 0, x: -10 }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    {adminActiveTab === 'overview' && (
+                      <div className="space-y-8">
+                        <div className="bg-black text-[#FFEF00] p-8 rounded-[2rem] shadow-[8px_8px_0px_rgba(0,85,255,1)] relative overflow-hidden">
+                          <div className="relative z-10">
+                            <h3 className="text-4xl font-black mb-2 uppercase">儀表板總覽</h3>
+                            <p className="font-bold opacity-80">歡迎回來，管理員。目前系統運行正常。</p>
+                          </div>
+                          <div className="absolute top-0 right-0 w-64 h-64 bg-[#0055FF] rounded-full -translate-y-1/2 translate-x-1/3 opacity-20 blur-3xl" />
+                        </div>
+                        
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+                          {[
+                            { label: '單元總數', value: unitNames.length, icon: BookOpen, color: 'bg-blue-500', tab: 'units' },
+                            { label: '課程數量', value: courses.length, icon: GraduationCap, color: 'bg-green-500', tab: 'courses' },
+                            { label: '導師人數', value: tutors.length, icon: Users, color: 'bg-purple-500', tab: 'tutors' },
+                            { label: '活動記錄', value: activities.length, icon: Film, color: 'bg-orange-500', tab: 'activities' },
+                          ].map((stat, i) => (
+                            <button 
+                              key={i} 
+                              onClick={() => setAdminActiveTab(stat.tab)}
+                              className="bg-white border-4 border-black p-6 rounded-2xl shadow-[4px_4px_0px_rgba(0,0,0,1)] hover:scale-105 transition-transform text-left"
+                            >
+                              <div className={`w-10 h-10 ${stat.color} text-white rounded-lg flex items-center justify-center mb-4`}>
+                                <stat.icon size={20} />
+                              </div>
+                              <p className="text-xs font-black uppercase text-black/50">{stat.label}</p>
+                              <p className="text-3xl font-black">{stat.value}</p>
+                            </button>
+                          ))}
+                        </div>
+
+                        <div className="grid md:grid-cols-2 gap-8">
+                          <div className="bg-white border-4 border-black p-8 rounded-[2rem] shadow-[8px_8px_0px_rgba(0,0,0,1)]">
+                            <h4 className="text-xl font-black mb-6 uppercase flex items-center gap-2">
+                              <Database size={20} /> 系統初始化
+                            </h4>
+                            <p className="text-sm font-bold text-black/60 mb-6">
+                              如果您的網站還沒有任何單元或課程資料，可以使用此功能快速建立預設資料。
+                            </p>
+                            <button 
+                              onClick={handleSeedData}
+                              disabled={isSavingUnits}
+                              className={`w-full bg-black text-[#FFEF00] py-4 rounded-xl font-black flex items-center justify-center gap-2 hover:scale-105 transition-transform ${isSavingUnits ? 'opacity-70 cursor-not-allowed' : ''}`}
+                            >
+                              {isSavingUnits ? <Loader2 className="animate-spin" size={20} /> : <Database size={20} />}
+                              {isSavingUnits ? '正在初始化...' : '初始化預設資料'}
+                            </button>
+                          </div>
+
+                          <div className="bg-white border-4 border-black p-8 rounded-[2rem] shadow-[8px_8px_0px_rgba(0,0,0,1)]">
+                            <h4 className="text-xl font-black mb-6 uppercase flex items-center gap-2">
+                              <MousePointer2 size={20} /> 快速操作
+                            </h4>
+                            <div className="grid grid-cols-2 gap-4">
+                              <button 
+                                onClick={() => setAdminActiveTab('activities')}
+                                className="flex flex-col items-center justify-center p-4 bg-gray-50 border-2 border-black rounded-xl hover:bg-[#FFEF00]/10 transition-colors gap-2"
+                              >
+                                <Plus size={24} />
+                                <span className="font-bold text-sm">新增活動</span>
+                              </button>
+                              <button 
+                                onClick={() => setAdminActiveTab('tutors')}
+                                className="flex flex-col items-center justify-center p-4 bg-gray-50 border-2 border-black rounded-xl hover:bg-[#FFEF00]/10 transition-colors gap-2"
+                              >
+                                <Users size={24} />
+                                <span className="font-bold text-sm">管理導師</span>
+                              </button>
+                              <button 
+                                onClick={() => setAdminActiveTab('settings')}
+                                className="flex flex-col items-center justify-center p-4 bg-gray-50 border-2 border-black rounded-xl hover:bg-[#FFEF00]/10 transition-colors gap-2"
+                              >
+                                <Settings size={24} />
+                                <span className="font-bold text-sm">網站設定</span>
+                              </button>
+                              <button 
+                                onClick={() => setShowAdminPanel(false)}
+                                className="flex flex-col items-center justify-center p-4 bg-gray-50 border-2 border-black rounded-xl hover:bg-[#FFEF00]/10 transition-colors gap-2"
+                              >
+                                <Monitor size={24} />
+                                <span className="font-bold text-sm">查看前台</span>
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="bg-[#0055FF] text-white p-8 rounded-[2rem] border-4 border-black flex flex-col justify-center">
+                            <h4 className="text-xl font-black mb-4 uppercase">系統狀態</h4>
+                            <div className="space-y-4">
+                              <div className="flex items-center gap-3">
+                                <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse" />
+                                <p className="font-bold">Firebase 資料庫連線正常</p>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <div className="w-3 h-3 bg-green-400 rounded-full" />
+                                <p className="font-bold">身份驗證服務已啟動</p>
+                              </div>
+                              <div className="pt-4 border-t border-white/20">
+                                <p className="text-sm font-bold opacity-70">最後同步時間: {new Date().toLocaleTimeString()}</p>
+                                <p className="text-sm font-bold opacity-70">當前用戶: {user?.email}</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {adminActiveTab === 'courses' && (
+                      <section>
+                        <h3 className="text-3xl font-black mb-8 flex items-center gap-3">
+                          <GraduationCap size={32} /> 課程管理
+                        </h3>
+                        <div className="grid md:grid-cols-2 gap-6 mb-12">
+                          {courses.length > 0 ? (
+                            courses.map(c => (
+                              <div key={c.id} className="bg-white border-4 border-black p-6 rounded-3xl flex gap-4 items-center shadow-[4px_4px_0px_rgba(0,0,0,1)]">
+                                <div className="w-12 h-12 bg-black text-[#FFEF00] rounded-xl flex items-center justify-center font-black">
+                                  {c.type === 'Diploma' ? 'D' : 'C'}
+                                </div>
+                                <div className="flex-1">
+                                  <p className="font-black text-lg">{c.name}</p>
+                                  <p className="text-xs font-bold text-black/60 uppercase tracking-widest">{c.type} • {c.mandatory?.length || 0} 必修單元</p>
+                                </div>
+                                <button onClick={() => handleDeleteCourse(c.id.toString())} className="text-red-600 p-2 hover:bg-red-50 rounded-full transition-colors">
+                                  <Trash2 size={20} />
+                                </button>
+                              </div>
+                            ))
+                          ) : (
+                            <div className="md:col-span-2 text-center py-12 bg-black/5 rounded-[2rem] border-4 border-dashed border-black/10">
+                              <GraduationCap size={48} className="mx-auto mb-4 opacity-20" />
+                              <p className="font-black text-xl text-black/40">尚未建立任何課程</p>
+                            </div>
+                          )}
+                        </div>
+                        
+                        <div className="bg-white border-4 border-black p-8 rounded-3xl shadow-[8px_8px_0px_rgba(0,0,0,1)]">
+                          <h4 className="text-xl font-black mb-6 uppercase">新增課程</h4>
+                          <form onSubmit={handleAddCourse} className="space-y-4">
+                            <div className="grid md:grid-cols-2 gap-4">
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase ml-1">課程名稱</label>
+                                <input 
+                                  type="text" placeholder="課程名稱" required
+                                  className="w-full border-2 border-black p-3 rounded-xl font-bold text-sm"
+                                  value={newCourse.name} onChange={e => setNewCourse({...newCourse, name: e.target.value})}
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase ml-1">課程類型</label>
+                                <select 
+                                  className="w-full border-2 border-black p-3 rounded-xl font-bold text-sm bg-white"
+                                  value={newCourse.type} onChange={e => setNewCourse({...newCourse, type: e.target.value})}
+                                >
+                                  <option value="Diploma">文憑 (Diploma)</option>
+                                  <option value="Certificate">證書 (Certificate)</option>
+                                </select>
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase ml-1">最低單元要求</label>
+                                <input 
+                                  type="number" required
+                                  className="w-full border-2 border-black p-3 rounded-xl font-bold text-sm"
+                                  value={newCourse.minUnits} onChange={e => setNewCourse({...newCourse, minUnits: parseInt(e.target.value)})}
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase ml-1">允許額外加選</label>
+                                <select 
+                                  className="w-full border-2 border-black p-3 rounded-xl font-bold text-sm bg-white"
+                                  value={newCourse.allowExtra ? 'true' : 'false'} 
+                                  onChange={e => setNewCourse({...newCourse, allowExtra: e.target.value === 'true'})}
+                                >
+                                  <option value="true">是</option>
+                                  <option value="false">否</option>
+                                </select>
+                              </div>
+                              <div className="md:col-span-2 space-y-1">
+                                <label className="text-[10px] font-black uppercase ml-1 flex justify-between items-center">
+                                  <span>必修單元 (已選擇 {newCourse.mandatory.length} 個)</span>
+                                </label>
+                                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-2 max-h-[150px] overflow-y-auto p-3 border-2 border-black rounded-xl custom-scrollbar bg-gray-50">
+                                  {unitNames.map((unit, i) => (
+                                    <label key={i} className={`flex items-center gap-2 p-2 rounded-lg border transition-all cursor-pointer ${
+                                      newCourse.mandatory.includes(i) 
+                                      ? 'bg-black text-[#FFEF00] border-black' 
+                                      : 'bg-white text-black border-black/10 hover:border-black'
+                                    }`}>
+                                      <input 
+                                        type="checkbox" 
+                                        className="hidden"
+                                        checked={newCourse.mandatory.includes(i)} 
+                                        onChange={e => {
+                                          const newMandatory = e.target.checked 
+                                            ? [...newCourse.mandatory, i] 
+                                            : newCourse.mandatory.filter(id => id !== i);
+                                          setNewCourse({...newCourse, mandatory: newMandatory});
+                                        }}
+                                      />
+                                      <div className="flex flex-col min-w-0">
+                                        <span className="text-[10px] font-black truncate">{unit.name}</span>
+                                        {unit.price > 0 && <span className="text-[8px] font-black opacity-40">${unit.price}</span>}
+                                      </div>
+                                    </label>
+                                  ))}
+                                </div>
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase ml-1">首頁顯示標題</label>
+                                <input 
+                                  type="text" placeholder="首頁標題" required
+                                  className="w-full border-2 border-black p-3 rounded-xl font-bold text-sm"
+                                  value={newCourse.title} onChange={e => setNewCourse({...newCourse, title: e.target.value})}
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase ml-1">首頁顯示副標題</label>
+                                <input 
+                                  type="text" placeholder="首頁副標題"
+                                  className="w-full border-2 border-black p-3 rounded-xl font-bold text-sm"
+                                  value={newCourse.subtitle} onChange={e => setNewCourse({...newCourse, subtitle: e.target.value})}
+                                />
+                              </div>
+                              <div className="md:col-span-2 space-y-1">
+                                <label className="text-[10px] font-black uppercase ml-1">課程簡介</label>
+                                <textarea 
+                                  placeholder="課程簡介..." required
+                                  className="w-full border-2 border-black p-3 rounded-xl font-bold text-sm"
+                                  rows={2}
+                                  value={newCourse.desc} onChange={e => setNewCourse({...newCourse, desc: e.target.value})}
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <FileUploader 
+                                  label="課程圖片"
+                                  currentImage={newCourse.img}
+                                  onUpload={(url) => setNewCourse({...newCourse, img: url})}
+                                />
+                                <input 
+                                  type="url" placeholder="或輸入 URL" required
+                                  className="w-full border-2 border-black p-3 rounded-xl font-bold text-sm mt-2"
+                                  value={newCourse.img} onChange={e => setNewCourse({...newCourse, img: e.target.value})}
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase ml-1">遮罩類型</label>
+                                <select 
+                                  className="w-full border-2 border-black p-3 rounded-xl font-bold text-sm bg-white"
+                                  value={newCourse.mask} onChange={e => setNewCourse({...newCourse, mask: e.target.value})}
+                                >
+                                  <option value="mask-cloud">雲朵</option>
+                                  <option value="mask-book">書本</option>
+                                  <option value="mask-dream">夢想</option>
+                                  <option value="mask-film">底片</option>
+                                  <option value="mask-notebook">筆記本</option>
+                                </select>
+                              </div>
+                            </div>
+                            <button type="submit" className="w-full bg-black text-[#FFEF00] py-4 rounded-full font-black uppercase text-sm hover:scale-[1.02] transition-transform">新增課程</button>
+                          </form>
+                        </div>
+                      </section>
+                    )}
+
+                    {adminActiveTab === 'landing-page' && (
+                      <section className="space-y-12">
+                        <div>
+                          <h3 className="text-3xl font-black mb-8 flex items-center gap-3">
+                            <LayoutGrid size={32} /> 首頁區塊管理
+                          </h3>
+                          <div className="bg-white border-4 border-black p-8 rounded-3xl shadow-[8px_8px_0px_rgba(0,0,0,1)] space-y-8">
+                            <div className="grid md:grid-cols-2 gap-6">
+                              <div className="space-y-2">
+                                <label className="text-xs font-black uppercase">Hero 標題 (可用 &lt;br /&gt; 換行)</label>
+                                <input 
+                                  type="text" 
+                                  className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                  value={siteSettings.heroTitle}
+                                  onChange={e => setSiteSettings({...siteSettings, heroTitle: e.target.value})}
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <label className="text-xs font-black uppercase">Hero 標籤 (Tagline)</label>
+                                <input 
+                                  type="text" 
+                                  className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                  value={siteSettings.heroTagline}
+                                  onChange={e => setSiteSettings({...siteSettings, heroTagline: e.target.value})}
+                                />
+                              </div>
+                              <div className="md:col-span-2 space-y-2">
+                                <label className="text-xs font-black uppercase">Hero 副標題</label>
+                                <textarea 
+                                  className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                  rows={3}
+                                  value={siteSettings.heroSubtitle}
+                                  onChange={e => setSiteSettings({...siteSettings, heroSubtitle: e.target.value})}
+                                />
+                              </div>
+                            </div>
+
+                            <div className="space-y-4">
+                              <label className="text-xs font-black uppercase block">Hero 圖片 (6 張)</label>
+                              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                {[0, 1, 2, 3, 4, 5].map(i => (
+                                  <div key={i} className="space-y-2">
+                                    <FileUploader 
+                                      label={`圖片 ${i+1}`}
+                                      currentImage={siteSettings.heroImages?.[i]}
+                                      onUpload={(url) => {
+                                        const newImages = [...(siteSettings.heroImages || [])];
+                                        newImages[i] = url;
+                                        setSiteSettings({...siteSettings, heroImages: newImages});
+                                      }}
+                                    />
+                                    <input 
+                                      type="text" 
+                                      placeholder="或輸入 URL"
+                                      className="w-full border-2 border-black p-2 rounded-lg text-[10px] font-bold"
+                                      value={siteSettings.heroImages?.[i] || ''}
+                                      onChange={e => {
+                                        const newImages = [...(siteSettings.heroImages || [])];
+                                        newImages[i] = e.target.value;
+                                        setSiteSettings({...siteSettings, heroImages: newImages});
+                                      }}
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div>
+                          <h3 className="text-2xl font-black mb-6 uppercase tracking-tight">各區塊標題與內容</h3>
+                          <div className="grid md:grid-cols-2 gap-6 bg-white border-4 border-black p-8 rounded-3xl shadow-[8px_8px_0px_rgba(0,0,0,1)]">
+                            <div className="space-y-2">
+                              <label className="text-xs font-black uppercase">課程介紹 - 標題</label>
+                              <input 
+                                type="text" 
+                                className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                value={siteSettings.coursesIntroTitle}
+                                onChange={e => setSiteSettings({...siteSettings, coursesIntroTitle: e.target.value})}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-xs font-black uppercase">課程介紹 - 副標題</label>
+                              <input 
+                                type="text" 
+                                className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                value={siteSettings.coursesIntroSubtitle}
+                                onChange={e => setSiteSettings({...siteSettings, coursesIntroSubtitle: e.target.value})}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-xs font-black uppercase">個人課程 - 標題</label>
+                              <input 
+                                type="text" 
+                                className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                value={siteSettings.personalCourseTitle}
+                                onChange={e => setSiteSettings({...siteSettings, personalCourseTitle: e.target.value})}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-xs font-black uppercase">個人課程 - 副標題</label>
+                              <input 
+                                type="text" 
+                                className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                value={siteSettings.personalCourseSubtitle}
+                                onChange={e => setSiteSettings({...siteSettings, personalCourseSubtitle: e.target.value})}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-xs font-black uppercase">團體課程 - 標題</label>
+                              <input 
+                                type="text" 
+                                className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                value={siteSettings.groupCourseTitle}
+                                onChange={e => setSiteSettings({...siteSettings, groupCourseTitle: e.target.value})}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-xs font-black uppercase">團體課程 - 副標題</label>
+                              <input 
+                                type="text" 
+                                className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                value={siteSettings.groupCourseSubtitle}
+                                onChange={e => setSiteSettings({...siteSettings, groupCourseSubtitle: e.target.value})}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-xs font-black uppercase">商業合作 - 標題</label>
+                              <input 
+                                type="text" 
+                                className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                value={siteSettings.businessCoopTitle}
+                                onChange={e => setSiteSettings({...siteSettings, businessCoopTitle: e.target.value})}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-xs font-black uppercase">商業合作 - 副標題</label>
+                              <input 
+                                type="text" 
+                                className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                value={siteSettings.businessCoopSubtitle}
+                                onChange={e => setSiteSettings({...siteSettings, businessCoopSubtitle: e.target.value})}
+                              />
+                            </div>
+                            <div className="md:col-span-2 space-y-2">
+                              <label className="text-xs font-black uppercase">商業合作 - 內容詳情</label>
+                              <textarea 
+                                className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                rows={3}
+                                value={siteSettings.businessCoopContent}
+                                onChange={e => setSiteSettings({...siteSettings, businessCoopContent: e.target.value})}
+                              />
+                            </div>
+                            <div className="md:col-span-2 space-y-4">
+                              <label className="text-xs font-black uppercase block">商業合作 - 特色列表 (3 項)</label>
+                              <div className="grid md:grid-cols-3 gap-4">
+                                {[0, 1, 2].map(i => (
+                                  <input 
+                                    key={i}
+                                    type="text" 
+                                    placeholder={`特色 ${i+1}`}
+                                    className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                    value={siteSettings.businessCoopFeatures?.[i] || ''}
+                                    onChange={e => {
+                                      const newFeatures = [...(siteSettings.businessCoopFeatures || [])];
+                                      newFeatures[i] = e.target.value;
+                                      setSiteSettings({...siteSettings, businessCoopFeatures: newFeatures});
+                                    }}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+
+                            <div className="space-y-2">
+                              <label className="text-xs font-black uppercase">課程簡介會 - 標題</label>
+                              <input 
+                                type="text" 
+                                className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                value={siteSettings.briefingTitle}
+                                onChange={e => setSiteSettings({...siteSettings, briefingTitle: e.target.value})}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-xs font-black uppercase">課程簡介會 - 副標題</label>
+                              <input 
+                                type="text" 
+                                className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                value={siteSettings.briefingSubtitle}
+                                onChange={e => setSiteSettings({...siteSettings, briefingSubtitle: e.target.value})}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-xs font-black uppercase">曾合作機構 - 標題</label>
+                              <input 
+                                type="text" 
+                                className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                value={siteSettings.partnersTitle}
+                                onChange={e => setSiteSettings({...siteSettings, partnersTitle: e.target.value})}
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="pt-4">
+                            <button 
+                              onClick={async () => {
+                                if (settingsLoadStatus === 'error') {
+                                  showToast("注意：雲端連線失敗，目前為『草稿模式』。系統正嘗試強制儲存...", "warning");
+                                }
+                                setIsSavingSettings(true);
+                                const saveTimeout = setTimeout(() => {
+                                  setIsSavingSettings(false);
+                                  showToast("儲存逾時，請檢查網路連線", "error");
+                                }, 15000);
+                                try {
+                                  await setDoc(doc(db, 'settings', 'global'), siteSettings);
+                                  clearTimeout(saveTimeout);
+                                  showToast("首頁設定已儲存！");
+                                } catch (error) {
+                                  clearTimeout(saveTimeout);
+                                  handleFirestoreError(error, OperationType.WRITE, 'settings/global');
+                                } finally {
+                                  setIsSavingSettings(false);
+                                }
+                              }}
+                              disabled={isSavingSettings || !dataLoaded.settings}
+                              className={`w-full bg-black text-[#FFEF00] py-6 rounded-full font-black text-xl flex items-center justify-center gap-3 hover:scale-[1.02] transition-transform shadow-[8px_8px_0px_rgba(0,85,255,1)] ${isSavingSettings || !dataLoaded.settings ? 'opacity-70 cursor-not-allowed' : ''}`}
+                            >
+                              {isSavingSettings ? <Loader2 className="animate-spin" size={24} /> : <Save size={24} />}
+                              {!dataLoaded.settings ? '正在載入資料...' : (isSavingSettings ? '正在儲存...' : '儲存首頁設定')}
+                            </button>
+                        </div>
+                      </section>
+                    )}
+
+                    {adminActiveTab === 'settings' && (
+                      <section className="space-y-12">
+                        <div>
+                          <h3 className="text-3xl font-black mb-8 flex items-center gap-3">
+                            <Settings size={32} /> 公司基本資料
+                          </h3>
+                          <div className="grid md:grid-cols-2 gap-6 bg-white border-4 border-black p-8 rounded-3xl shadow-[8px_8px_0px_rgba(0,0,0,1)]">
+                            <div className="space-y-2">
+                              <label className="text-xs font-black uppercase">公司名稱 / 網站名稱</label>
+                              <input 
+                                type="text" 
+                                className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                value={siteSettings.siteName}
+                                onChange={e => setSiteSettings({...siteSettings, siteName: e.target.value})}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-xs font-black uppercase">成立年份 (EST.)</label>
+                              <input 
+                                type="text" 
+                                className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                value={siteSettings.heroEst}
+                                onChange={e => setSiteSettings({...siteSettings, heroEst: e.target.value})}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-xs font-black uppercase">聯絡電郵</label>
+                              <input 
+                                type="email" 
+                                className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                value={siteSettings.contactEmail}
+                                onChange={e => setSiteSettings({...siteSettings, contactEmail: e.target.value})}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-xs font-black uppercase">聯絡電話</label>
+                              <input 
+                                type="text" 
+                                className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                value={siteSettings.contactPhone}
+                                onChange={e => setSiteSettings({...siteSettings, contactPhone: e.target.value})}
+                              />
+                            </div>
+                            <div className="md:col-span-2 space-y-2">
+                              <label className="text-xs font-black uppercase">公司地址</label>
+                              <input 
+                                type="text" 
+                                className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                value={siteSettings.address || ''}
+                                onChange={e => setSiteSettings({...siteSettings, address: e.target.value})}
+                                placeholder="例如: 香港九龍..."
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-xs font-black uppercase">Facebook 連結</label>
+                              <input 
+                                type="url" 
+                                className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                value={siteSettings.facebookUrl || ''}
+                                onChange={e => setSiteSettings({...siteSettings, facebookUrl: e.target.value})}
+                                placeholder="https://facebook.com/..."
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-xs font-black uppercase">Instagram 連結</label>
+                              <input 
+                                type="url" 
+                                className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                value={siteSettings.instagramUrl || ''}
+                                onChange={e => setSiteSettings({...siteSettings, instagramUrl: e.target.value})}
+                                placeholder="https://instagram.com/..."
+                              />
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="pt-4">
+                            <button 
+                              onClick={async () => {
+                                if (settingsLoadStatus === 'error') {
+                                  showToast("注意：雲端連線失敗，目前為『草稿模式』。系統正嘗試強制儲存...", "warning");
+                                }
+                                setIsSavingSettings(true);
+                                const saveTimeout = setTimeout(() => {
+                                  setIsSavingSettings(false);
+                                  showToast("儲存逾時，請檢查網路連線", "error");
+                                }, 15000);
+                                try {
+                                  await setDoc(doc(db, 'settings', 'global'), siteSettings);
+                                  clearTimeout(saveTimeout);
+                                  showToast("基本資料已儲存！");
+                                } catch (error) {
+                                  clearTimeout(saveTimeout);
+                                  handleFirestoreError(error, OperationType.WRITE, 'settings/global');
+                                } finally {
+                                  setIsSavingSettings(false);
+                                }
+                              }}
+                              disabled={isSavingSettings || !dataLoaded.settings}
+                              className={`w-full bg-black text-[#FFEF00] py-6 rounded-full font-black text-xl flex items-center justify-center gap-3 hover:scale-[1.02] transition-transform shadow-[8px_8px_0px_rgba(0,85,255,1)] ${isSavingSettings || !dataLoaded.settings ? 'opacity-70 cursor-not-allowed' : ''}`}
+                            >
+                              {isSavingSettings ? <Loader2 className="animate-spin" size={24} /> : <Save size={24} />}
+                              {!dataLoaded.settings ? '正在載入資料...' : (isSavingSettings ? '正在儲存...' : '儲存公司資料')}
+                            </button>
+                        </div>
+                      </section>
+                    )}
+
+                    {adminActiveTab === 'units' && (
+                      <section>
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+                          <div className="flex items-center gap-3">
+                            <BookOpen size={32} />
+                            <h3 className="text-3xl font-black">個人課程管理</h3>
+                          </div>
+                          
+                          <div className="flex items-center gap-4">
+                            <div className="flex bg-black/5 p-1 rounded-2xl border-2 border-black">
+                              <button 
+                                onClick={() => setAdminUnitsSubTab('list')}
+                                className={`px-6 py-2 rounded-xl font-black transition-all text-sm ${adminUnitsSubTab === 'list' ? 'bg-black text-[#FFEF00]' : 'text-black/40 hover:text-black'}`}
+                              >
+                                單元清單
+                              </button>
+                              <button 
+                                onClick={() => setAdminUnitsSubTab('combinations')}
+                                className={`px-6 py-2 rounded-xl font-black transition-all text-sm ${adminUnitsSubTab === 'combinations' ? 'bg-black text-[#FFEF00]' : 'text-black/40 hover:text-black'}`}
+                              >
+                                個人課程組合
+                              </button>
+                            </div>
+                            
+                            {adminUnitsSubTab === 'list' && (
+                              <button 
+                                onClick={() => setAdminUnitNames([...adminUnitNames, { name: "新單元", isMandatory: false, price: 0 }])}
+                                className="bg-black text-[#FFEF00] px-6 py-2 rounded-full font-black flex items-center gap-2 hover:scale-105 transition-transform text-sm"
+                              >
+                                <Plus size={20} /> 新增單元
+                              </button>
+                            )}
+                            
+                            {adminUnitsSubTab === 'combinations' && (
+                              <button 
+                                onClick={() => {
+                                  setNewCourse({
+                                    name: '',
+                                    type: 'Short Course',
+                                    mandatory: [],
+                                    minUnits: 4,
+                                    allowExtra: true,
+                                    title: '',
+                                    subtitle: '',
+                                    desc: '',
+                                    mask: 'mask-cloud',
+                                    img: 'https://picsum.photos/seed/course/800/600'
+                                  });
+                                  setShowAddCombinationModal(true);
+                                }}
+                                className="bg-black text-[#FFEF00] px-6 py-2 rounded-full font-black flex items-center gap-2 hover:scale-105 transition-transform text-sm"
+                              >
+                                <Plus size={20} /> 新增個人課程組合
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                        
+                        {adminUnitsSubTab === 'list' ? (
+                          <div className="bg-white border-[6px] border-black p-10 rounded-[3rem] shadow-[12px_12px_0px_rgba(0,0,0,1)] relative overflow-hidden">
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 mb-10">
+                              {adminUnitNames.map((unit, i) => (
+                                <div key={i} className="flex items-center gap-4 bg-white p-4 rounded-2xl border-[3px] border-black group hover:bg-[#FFEF00]/5 transition-all shadow-[4px_4px_0px_rgba(0,0,0,1)]">
+                                  <div className="flex items-center justify-center bg-black text-[#FFEF00] w-12 h-10 rounded-xl font-black text-sm shrink-0">
+                                    U{i+1}
+                                  </div>
+                                  <div className="flex flex-col flex-1 gap-1">
+                                    <input 
+                                      type="text" 
+                                      className="bg-transparent font-black text-lg outline-none placeholder:text-black/20"
+                                      placeholder="請輸入單元名稱"
+                                      value={unit.name}
+                                      onChange={(e) => {
+                                        const newUnits = [...adminUnitNames];
+                                        newUnits[i] = { ...unit, name: e.target.value };
+                                        setAdminUnitNames(newUnits);
+                                      }}
+                                    />
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-xs font-bold text-black/40">價格:</span>
+                                      <input 
+                                        type="number" 
+                                        className="bg-transparent font-bold text-sm outline-none w-24 border-b border-black/10 focus:border-black"
+                                        placeholder="價格"
+                                        value={unit.price || 0}
+                                        onChange={(e) => {
+                                          const newUnits = [...adminUnitNames];
+                                          newUnits[i] = { ...unit, price: Number(e.target.value) };
+                                          setAdminUnitNames(newUnits);
+                                        }}
+                                      />
+                                    </div>
+                                  </div>
+                                  <button
+                                    onClick={() => {
+                                      const newUnits = [...adminUnitNames];
+                                      newUnits[i] = { ...unit, isMandatory: !unit.isMandatory };
+                                      setAdminUnitNames(newUnits);
+                                    }}
+                                    className={`px-3 py-1 rounded-lg font-black text-xs transition-all border-2 ${
+                                      unit.isMandatory 
+                                      ? 'bg-black text-[#FFEF00] border-black' 
+                                      : 'bg-white text-black border-black/20 hover:border-black'
+                                    }`}
+                                  >
+                                    {unit.isMandatory ? '必修' : '選修'}
+                                  </button>
+                                  <button 
+                                    onClick={() => {
+                                      showConfirm("確定刪除", `確定要刪除單元 U${i+1} 嗎？`, () => {
+                                        setAdminUnitNames(prev => prev.filter((_, idx) => idx !== i));
+                                      });
+                                    }}
+                                    className="text-red-500 opacity-0 group-hover:opacity-100 transition-all hover:scale-125 p-2"
+                                  >
+                                    <Trash2 size={24} />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                            
+                            <button 
+                              onClick={async () => {
+                                setIsSavingUnits(true);
+                                try {
+                                  const batch = writeBatch(db);
+                                  
+                                  // First, get all current units to see what needs to be deleted
+                                  const snapshot = await getDocs(collection(db, 'units'));
+                                  const existingIds = snapshot.docs.map(doc => doc.id);
+                                  
+                                  // Save current units
+                                  for (let i = 0; i < adminUnitNames.length; i++) {
+                                    batch.set(doc(db, 'units', i.toString()), { id: i, ...adminUnitNames[i] });
+                                  }
+                                  
+                                  // Delete units that are no longer in the list
+                                  const newIds = adminUnitNames.map((_, i) => i.toString());
+                                  const toDelete = existingIds.filter(id => !newIds.includes(id));
+                                  
+                                  for (const id of toDelete) {
+                                    batch.delete(doc(db, 'units', id));
+                                  }
+                                  
+                                  await batch.commit();
+                                  // Manually update local state
+                                  setUnitNames([...adminUnitNames]);
+                                  showToast("單元已更新！");
+                                } catch (error) {
+                                  handleFirestoreError(error, OperationType.WRITE, 'units');
+                                } finally {
+                                  setIsSavingUnits(false);
+                                }
+                              }}
+                              disabled={isSavingUnits || !dataLoaded.units}
+                              className={`w-full bg-black text-[#FFEF00] py-6 rounded-full font-black flex items-center justify-center gap-3 hover:scale-[1.01] active:scale-[0.99] transition-all text-xl shadow-[0_10px_20px_rgba(0,0,0,0.2)] ${isSavingUnits || !dataLoaded.units ? 'opacity-70 cursor-not-allowed' : ''}`}
+                            >
+                              {isSavingUnits ? <Loader2 className="animate-spin" size={28} /> : <Save size={28} />}
+                              {!dataLoaded.units ? '正在載入資料...' : (isSavingUnits ? '正在儲存...' : '儲存所有單元')}
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="grid md:grid-cols-4 gap-8">
+                            {/* Course List (Combinations) */}
+                            <div className="md:col-span-1 space-y-4">
+                              <h4 className="text-sm font-black uppercase text-black/40 ml-2">選擇課程組合</h4>
+                              <div className="flex flex-col gap-2 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+                                {courses.length > 0 ? (
+                                  courses.map((course) => (
+                                    <button
+                                      key={course.id}
+                                      onClick={() => setAdminSelectedCourseId(course.id.toString())}
+                                      className={`w-full text-left px-6 py-4 rounded-2xl font-black transition-all border-4 ${
+                                        adminSelectedCourseId?.toString() === course.id.toString()
+                                        ? 'bg-black text-[#FFEF00]'
+                                        : 'bg-white text-black border-black/10 hover:border-black'
+                                      }`}
+                                    >
+                                      <div className="flex items-center gap-3">
+                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-[10px] ${
+                                          adminSelectedCourseId?.toString() === course.id.toString() ? 'bg-[#FFEF00] text-black' : 'bg-black text-[#FFEF00]'
+                                        }`}>
+                                          {course.type === 'Diploma' ? 'D' : 'S'}
+                                        </div>
+                                        <span className="truncate flex-1">{course.name}</span>
+                                      </div>
+                                    </button>
+                                  ))
+                                ) : (
+                                  <div className="text-center py-8 bg-black/5 rounded-2xl border-2 border-dashed border-black/10">
+                                    <p className="text-sm font-bold text-black/40">尚未建立課程組合</p>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Unit Selection for Course */}
+                            <div className="md:col-span-3">
+                              {adminSelectedCourseId !== null ? (
+                                <div className="bg-white border-[6px] border-black p-10 rounded-[3rem] shadow-[12px_12px_0px_rgba(0,0,0,1)]">
+                                  {(() => {
+                                    const selectedCourse = courses.find(c => c.id.toString() === adminSelectedCourseId.toString());
+                                    if (!selectedCourse) return null;
+                                    
+                                    return (
+                                      <>
+                                        <div className="flex items-center justify-between mb-8">
+                                          <div>
+                                            <h4 className="text-2xl font-black">
+                                              {selectedCourse.name}
+                                            </h4>
+                                            <p className="text-sm font-bold text-black/40">設定此課程組合包含的單元 (必修)</p>
+                                          </div>
+                                          <div className="flex items-center gap-4">
+                                            <button 
+                                              onClick={() => {
+                                                setEditingCourse({...selectedCourse});
+                                                setShowEditCombinationModal(true);
+                                              }}
+                                              className="text-blue-500 hover:bg-blue-50 p-2 rounded-xl transition-all"
+                                            >
+                                              <Edit2 size={24} />
+                                            </button>
+                                            <button 
+                                              onClick={() => handleDeleteCourse(selectedCourse.id.toString())}
+                                              className="text-red-500 hover:bg-red-50 p-2 rounded-xl transition-all"
+                                            >
+                                              <Trash2 size={24} />
+                                            </button>
+                                          </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                          {unitNames.map((unit, i) => {
+                                            const isMandatory = selectedCourse.mandatory?.includes(i);
+                                            const isGlobalMandatory = unit.isMandatory;
+                                            
+                                            // Only show selected units in the combination view
+                                            if (!isMandatory && !isGlobalMandatory) return null;
+                                            
+                                            return (
+                                              <div
+                                                key={i}
+                                                className={`flex items-center gap-4 p-4 rounded-2xl border-[3px] transition-all text-left bg-black text-[#FFEF00] border-black shadow-[4px_4px_0px_rgba(0,0,0,1)]`}
+                                              >
+                                                <div className={`w-10 h-8 rounded-lg flex items-center justify-center font-black text-xs bg-[#FFEF00] text-black`}>
+                                                  U{i+1}
+                                                </div>
+                                                <div className="flex-1">
+                                                  <div className="flex items-center justify-between">
+                                                    <p className="font-black text-sm leading-tight truncate">{unit.name}</p>
+                                                    {unit.price > 0 && <p className="text-[10px] font-black opacity-60">${unit.price}</p>}
+                                                  </div>
+                                                  {isGlobalMandatory && <p className="text-[10px] font-bold opacity-60">全域必修</p>}
+                                                </div>
+                                                <CheckCircle2 size={20} />
+                                              </div>
+                                            );
+                                          })}
+                                        </div>
+                                      </>
+                                    );
+                                  })()}
+                                </div>
+                              ) : (
+                                <div className="h-full min-h-[400px] bg-black/5 border-4 border-dashed border-black/20 rounded-[3rem] flex flex-col items-center justify-center text-black/40">
+                                  <LayoutGrid size={64} className="mb-4 opacity-20" />
+                                  <p className="font-black text-xl">請從左側選擇一個課程組合進行管理</p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Edit Combination Modal */}
+                        <AnimatePresence>
+                          {showEditCombinationModal && editingCourse && (
+                            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                              <motion.div 
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                onClick={() => setShowEditCombinationModal(false)}
+                                className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+                              />
+                              <motion.div 
+                                initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                                className="relative bg-white border-[6px] border-black p-8 rounded-[3rem] w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-[12px_12px_0px_rgba(0,0,0,1)]"
+                              >
+                                <button 
+                                  onClick={() => setShowEditCombinationModal(false)}
+                                  className="absolute top-6 right-6 p-2 hover:bg-black/5 rounded-full"
+                                >
+                                  <X size={24} />
+                                </button>
+                                
+                                <h3 className="text-3xl font-black mb-6 uppercase">編輯個人課程組合</h3>
+                                
+                                <form onSubmit={handleUpdateCourse} className="space-y-6">
+                                  <div className="grid md:grid-cols-2 gap-6">
+                                    <div className="space-y-2">
+                                      <label className="text-xs font-black uppercase ml-1">組合名稱</label>
+                                      <input 
+                                        type="text" required placeholder="例如: AI 基礎課程"
+                                        className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                        value={editingCourse.name} onChange={e => setEditingCourse({...editingCourse, name: e.target.value})}
+                                      />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <label className="text-xs font-black uppercase ml-1">類型</label>
+                                      <select 
+                                        className="w-full border-4 border-black p-4 rounded-xl font-bold bg-white"
+                                        value={editingCourse.type} onChange={e => setEditingCourse({...editingCourse, type: e.target.value as any})}
+                                      >
+                                        <option value="Diploma">文憑 (Diploma)</option>
+                                        <option value="Short Course">短期課程 (Short Course)</option>
+                                      </select>
+                                    </div>
+                                  </div>
+                                  
+                                  <div className="space-y-3">
+                                    <label className="text-xs font-black uppercase ml-1 flex justify-between items-center">
+                                      <span>選擇包含單元 (必修)</span>
+                                      <span className="text-black/40">{editingCourse.mandatory.length} 個已選擇</span>
+                                    </label>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[200px] overflow-y-auto p-2 border-2 border-black/10 rounded-xl custom-scrollbar">
+                                      {unitNames.map((unit, i) => (
+                                        <label key={i} className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all cursor-pointer ${
+                                          editingCourse.mandatory.includes(i) || unit.isMandatory
+                                          ? 'bg-black text-[#FFEF00] border-black' 
+                                          : 'bg-white text-black border-black/10 hover:border-black'
+                                        } ${unit.isMandatory ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                                          <input 
+                                            type="checkbox" 
+                                            className="hidden"
+                                            disabled={unit.isMandatory}
+                                            checked={editingCourse.mandatory.includes(i) || unit.isMandatory} 
+                                            onChange={e => {
+                                              const newMandatory = e.target.checked 
+                                                ? [...editingCourse.mandatory, i] 
+                                                : editingCourse.mandatory.filter((id: number) => id !== i);
+                                              setEditingCourse({...editingCourse, mandatory: newMandatory});
+                                            }}
+                                          />
+                                          <div className={`w-8 h-6 rounded flex items-center justify-center font-black text-[10px] ${
+                                            editingCourse.mandatory.includes(i) || unit.isMandatory ? 'bg-[#FFEF00] text-black' : 'bg-black text-[#FFEF00]'
+                                          }`}>
+                                            U{i+1}
+                                          </div>
+                                          <div className="flex flex-col flex-1 min-w-0">
+                                            <span className="text-xs font-bold truncate">{unit.name}</span>
+                                            {unit.price > 0 && <span className="text-[10px] font-black opacity-40">${unit.price}</span>}
+                                          </div>
+                                          {(editingCourse.mandatory.includes(i) || unit.isMandatory) && <CheckCircle2 size={16} />}
+                                        </label>
+                                      ))}
+                                    </div>
+                                  </div>
+
+                                  <div className="grid md:grid-cols-2 gap-6">
+                                    <div className="space-y-2">
+                                      <label className="text-xs font-black uppercase ml-1">首頁顯示標題</label>
+                                      <input 
+                                        type="text" required placeholder="首頁標題"
+                                        className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                        value={editingCourse.title} onChange={e => setEditingCourse({...editingCourse, title: e.target.value})}
+                                      />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <label className="text-xs font-black uppercase ml-1">首頁顯示副標題</label>
+                                      <input 
+                                        type="text" placeholder="首頁副標題"
+                                        className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                        value={editingCourse.subtitle} onChange={e => setEditingCourse({...editingCourse, subtitle: e.target.value})}
+                                      />
+                                    </div>
+                                  </div>
+
+                                  <div className="space-y-2">
+                                    <label className="text-xs font-black uppercase ml-1">課程簡介</label>
+                                    <textarea 
+                                      required placeholder="課程簡介..."
+                                      className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                      rows={3}
+                                      value={editingCourse.desc} onChange={e => setEditingCourse({...editingCourse, desc: e.target.value})}
+                                    />
+                                  </div>
+
+                                  <div className="grid md:grid-cols-2 gap-6">
+                                    <div className="space-y-2">
+                                      <FileUploader 
+                                        label="課程圖片"
+                                        currentImage={editingCourse.img}
+                                        onUpload={(url) => setEditingCourse({...editingCourse, img: url})}
+                                      />
+                                      <input 
+                                        type="url" required placeholder="或輸入 URL"
+                                        className="w-full border-4 border-black p-4 rounded-xl font-bold mt-2"
+                                        value={editingCourse.img} onChange={e => setEditingCourse({...editingCourse, img: e.target.value})}
+                                      />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <label className="text-xs font-black uppercase ml-1">遮罩類型</label>
+                                      <select 
+                                        className="w-full border-4 border-black p-4 rounded-xl font-bold bg-white"
+                                        value={editingCourse.mask} onChange={e => setEditingCourse({...editingCourse, mask: e.target.value})}
+                                      >
+                                        <option value="mask-cloud">雲朵</option>
+                                        <option value="mask-book">書本</option>
+                                        <option value="mask-dream">夢想</option>
+                                        <option value="mask-film">底片</option>
+                                        <option value="mask-notebook">筆記本</option>
+                                      </select>
+                                    </div>
+                                  </div>
+                                  
+                                  <button 
+                                    type="submit" 
+                                    disabled={isSavingCourses}
+                                    className={`w-full bg-black text-[#FFEF00] py-6 rounded-full font-black uppercase text-xl hover:scale-[1.02] transition-transform shadow-[0_10px_20px_rgba(0,0,0,0.2)] ${isSavingCourses ? 'opacity-70 cursor-not-allowed' : ''}`}
+                                  >
+                                    {isSavingCourses ? <Loader2 className="animate-spin inline-block mr-2" size={24} /> : null}
+                                    {isSavingCourses ? '正在儲存...' : '儲存修改'}
+                                  </button>
+                                </form>
+                              </motion.div>
+                            </div>
+                          )}
+                        </AnimatePresence>
+
+                        {/* Add Combination Modal */}
+                        <AnimatePresence>
+                          {showAddCombinationModal && (
+                            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                              <motion.div 
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                exit={{ opacity: 0 }}
+                                onClick={() => setShowAddCombinationModal(false)}
+                                className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+                              />
+                              <motion.div 
+                                initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                                animate={{ opacity: 1, scale: 1, y: 0 }}
+                                exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                                className="relative bg-white border-[6px] border-black p-8 rounded-[3rem] w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-[12px_12px_0px_rgba(0,0,0,1)]"
+                              >
+                                <button 
+                                  onClick={() => setShowAddCombinationModal(false)}
+                                  className="absolute top-6 right-6 p-2 hover:bg-black/5 rounded-full"
+                                >
+                                  <X size={24} />
+                                </button>
+                                
+                                <h3 className="text-3xl font-black mb-6 uppercase">新增個人課程組合</h3>
+                                
+                                <form onSubmit={handleAddCourse} className="space-y-6">
+                                  <div className="grid md:grid-cols-2 gap-6">
+                                    <div className="space-y-2">
+                                      <label className="text-xs font-black uppercase ml-1">組合名稱</label>
+                                      <input 
+                                        type="text" required placeholder="例如: AI 基礎課程"
+                                        className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                        value={newCourse.name} onChange={e => setNewCourse({...newCourse, name: e.target.value})}
+                                      />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <label className="text-xs font-black uppercase ml-1">類型</label>
+                                      <select 
+                                        className="w-full border-4 border-black p-4 rounded-xl font-bold bg-white"
+                                        value={newCourse.type} onChange={e => setNewCourse({...newCourse, type: e.target.value as any})}
+                                      >
+                                        <option value="Diploma">文憑 (Diploma)</option>
+                                        <option value="Short Course">短期課程 (Short Course)</option>
+                                      </select>
+                                    </div>
+                                  </div>
+                                  
+                                  <div className="space-y-3">
+                                    <label className="text-xs font-black uppercase ml-1 flex justify-between items-center">
+                                      <span>選擇包含單元 (必修)</span>
+                                      <span className="text-black/40">{newCourse.mandatory.length} 個已選擇</span>
+                                    </label>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[200px] overflow-y-auto p-2 border-2 border-black/10 rounded-xl custom-scrollbar">
+                                      {unitNames.map((unit, i) => (
+                                        <label key={i} className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all cursor-pointer ${
+                                          newCourse.mandatory.includes(i) 
+                                          ? 'bg-black text-[#FFEF00] border-black' 
+                                          : 'bg-white text-black border-black/10 hover:border-black'
+                                        }`}>
+                                          <input 
+                                            type="checkbox" 
+                                            className="hidden"
+                                            checked={newCourse.mandatory.includes(i)} 
+                                            onChange={e => {
+                                              const newMandatory = e.target.checked 
+                                                ? [...newCourse.mandatory, i] 
+                                                : newCourse.mandatory.filter(id => id !== i);
+                                              setNewCourse({...newCourse, mandatory: newMandatory});
+                                            }}
+                                          />
+                                          <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                                            newCourse.mandatory.includes(i) ? 'bg-[#FFEF00] border-[#FFEF00]' : 'border-black/20'
+                                          }`}>
+                                            {newCourse.mandatory.includes(i) && <CheckCircle2 size={14} className="text-black" />}
+                                          </div>
+                                          <div className="flex flex-col min-w-0">
+                                            <span className="text-sm font-black truncate">{unit.name}</span>
+                                            {unit.price > 0 && <span className="text-[10px] font-black opacity-40">${unit.price}</span>}
+                                          </div>
+                                        </label>
+                                      ))}
+                                    </div>
+                                  </div>
+
+                                  <div className="grid md:grid-cols-2 gap-6">
+                                    <div className="space-y-2">
+                                      <label className="text-xs font-black uppercase ml-1">首頁標題</label>
+                                      <input 
+                                        type="text" required placeholder="首頁顯示標題"
+                                        className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                        value={newCourse.title} onChange={e => setNewCourse({...newCourse, title: e.target.value})}
+                                      />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <label className="text-xs font-black uppercase ml-1">首頁副標題</label>
+                                      <input 
+                                        type="text" placeholder="首頁顯示副標題"
+                                        className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                        value={newCourse.subtitle} onChange={e => setNewCourse({...newCourse, subtitle: e.target.value})}
+                                      />
+                                    </div>
+                                  </div>
+
+                                  <div className="space-y-2">
+                                    <label className="text-xs font-black uppercase ml-1">課程簡介</label>
+                                    <textarea 
+                                      required placeholder="簡短介紹此課程組合..."
+                                      className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                      rows={2}
+                                      value={newCourse.desc} onChange={e => setNewCourse({...newCourse, desc: e.target.value})}
+                                    />
+                                  </div>
+                                  
+                                  <button 
+                                    type="submit"
+                                    disabled={isSavingCourses}
+                                    className={`w-full bg-black text-[#FFEF00] py-6 rounded-full font-black text-xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_10px_20px_rgba(0,0,0,0.2)] ${isSavingCourses ? 'opacity-70 cursor-not-allowed' : ''}`}
+                                  >
+                                    {isSavingCourses ? <Loader2 className="animate-spin inline-block mr-2" size={24} /> : null}
+                                    {isSavingCourses ? '正在建立...' : '建立課程組合'}
+                                  </button>
+                                </form>
+                              </motion.div>
+                            </div>
+                          )}
+                        </AnimatePresence>
+
+                      </section>
+                    )}
+
+                    {adminActiveTab === 'group-courses' && (
+                      <section>
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+                          <div className="flex items-center gap-3">
+                            <Users size={32} />
+                            <h3 className="text-3xl font-black">團體課程管理</h3>
+                          </div>
+                          <button 
+                            onClick={() => {
+                              setAdminEditingGroupCourseId(null);
+                              setAdminGroupCourseForm({ title: '', desc: '', mask: 'mask-cloud', img: '' });
+                            }}
+                            className="bg-black text-[#FFEF00] px-6 py-3 rounded-full font-black flex items-center gap-2 hover:scale-105 transition-transform"
+                          >
+                            <Plus size={20} /> 新增團體課程
+                          </button>
+                        </div>
+
+                        <div className="grid lg:grid-cols-3 gap-8">
+                          <div className="lg:col-span-1">
+                            <div className="bg-white border-4 border-black p-8 rounded-3xl shadow-[8px_8px_0px_rgba(0,0,0,1)] sticky top-8">
+                              <h4 className="text-xl font-black mb-6 uppercase tracking-tight">
+                                {adminEditingGroupCourseId ? '編輯團體課程' : '新增團體課程'}
+                              </h4>
+                              <div className="space-y-6">
+                                <div className="space-y-2">
+                                  <label className="text-xs font-black uppercase">課程名稱</label>
+                                  <input 
+                                    type="text" 
+                                    className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                    value={adminGroupCourseForm.title}
+                                    onChange={e => setAdminGroupCourseForm({...adminGroupCourseForm, title: e.target.value})}
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <label className="text-xs font-black uppercase">課程描述</label>
+                                  <textarea 
+                                    className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                    rows={3}
+                                    value={adminGroupCourseForm.desc}
+                                    onChange={e => setAdminGroupCourseForm({...adminGroupCourseForm, desc: e.target.value})}
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <label className="text-xs font-black uppercase">遮罩類型 (Mask ID)</label>
+                                  <select 
+                                    className="w-full border-4 border-black p-4 rounded-xl font-bold appearance-none bg-white"
+                                    value={adminGroupCourseForm.mask}
+                                    onChange={e => setAdminGroupCourseForm({...adminGroupCourseForm, mask: e.target.value})}
+                                  >
+                                    <option value="mask-cloud">Cloud</option>
+                                    <option value="mask-dream">Dream</option>
+                                    <option value="mask-book">Book</option>
+                                    <option value="mask-film">Film</option>
+                                    <option value="mask-star">Star</option>
+                                  </select>
+                                </div>
+                                <div className="space-y-2">
+                                  <FileUploader 
+                                    label="課程圖片"
+                                    currentImage={adminGroupCourseForm.img}
+                                    onUpload={(url) => setAdminGroupCourseForm({...adminGroupCourseForm, img: url})}
+                                  />
+                                  <input 
+                                    type="text" 
+                                    placeholder="或輸入 URL"
+                                    className="w-full border-4 border-black p-4 rounded-xl font-bold mt-2"
+                                    value={adminGroupCourseForm.img}
+                                    onChange={e => setAdminGroupCourseForm({...adminGroupCourseForm, img: e.target.value})}
+                                  />
+                                </div>
+                                <button 
+                                  onClick={async () => {
+                                    if (!adminGroupCourseForm.title || !adminGroupCourseForm.desc) {
+                                      showToast("請填寫完整資訊", "error");
+                                      return;
+                                    }
+                                    setIsSavingGroupCourses(true);
+                                    try {
+                                      if (adminEditingGroupCourseId) {
+                                        await updateDoc(doc(db, 'groupCourses', adminEditingGroupCourseId), adminGroupCourseForm);
+                                        // Manually update local state
+                                        setGroupCourses(prev => prev.map(gc => gc.id === adminEditingGroupCourseId ? { ...gc, ...adminGroupCourseForm } : gc));
+                                        showToast("已更新團體課程");
+                                      } else {
+                                        const docRef = await addDoc(collection(db, 'groupCourses'), adminGroupCourseForm);
+                                        // Manually update local state
+                                        setGroupCourses(prev => [...prev, { id: docRef.id, ...adminGroupCourseForm }]);
+                                        showToast("已新增團體課程");
+                                      }
+                                      setAdminGroupCourseForm({ title: '', desc: '', mask: 'mask-cloud', img: '' });
+                                      setAdminEditingGroupCourseId(null);
+                                    } catch (error) {
+                                      handleFirestoreError(error, OperationType.WRITE, adminEditingGroupCourseId ? `groupCourses/${adminEditingGroupCourseId}` : 'groupCourses');
+                                    } finally {
+                                      setIsSavingGroupCourses(false);
+                                    }
+                                  }}
+                                  disabled={isSavingGroupCourses}
+                                  className={`w-full bg-black text-[#FFEF00] py-4 rounded-full font-black flex items-center justify-center gap-2 hover:scale-[1.02] transition-transform ${isSavingGroupCourses ? 'opacity-70 cursor-not-allowed' : ''}`}
+                                >
+                                  {isSavingGroupCourses ? <Loader2 className="animate-spin" size={20} /> : <Save size={20} />}
+                                  {isSavingGroupCourses ? '正在儲存...' : (adminEditingGroupCourseId ? '更新課程' : '儲存課程')}
+                                </button>
+                                {adminEditingGroupCourseId && (
+                                  <button 
+                                    onClick={() => {
+                                      setAdminEditingGroupCourseId(null);
+                                      setAdminGroupCourseForm({ title: '', desc: '', mask: 'mask-cloud', img: '' });
+                                    }}
+                                    className="w-full border-4 border-black py-4 rounded-full font-black flex items-center justify-center gap-2 hover:bg-gray-100 transition-all"
+                                  >
+                                    取消編輯
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="lg:col-span-2 space-y-4">
+                            {groupCourses.map((item) => (
+                              <div key={item.id} className="bg-white border-4 border-black p-6 rounded-3xl shadow-[4px_4px_0px_rgba(0,0,0,1)] flex items-center gap-6">
+                                <div className="w-24 h-24 shrink-0 border-2 border-black rounded-xl overflow-hidden bg-gray-100">
+                                  <img src={item.img || `https://picsum.photos/seed/${item.id}/200/200`} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                                </div>
+                                <div className="flex-1">
+                                  <h4 className="text-xl font-black">{item.title}</h4>
+                                  <p className="text-sm font-bold text-black/60 line-clamp-2">{item.desc}</p>
+                                  <div className="mt-2 flex items-center gap-2">
+                                    <span className="text-[10px] font-black uppercase bg-black text-[#FFEF00] px-2 py-0.5 rounded">Mask: {item.mask}</span>
+                                  </div>
+                                </div>
+                                <div className="flex flex-col gap-2">
+                                  <button 
+                                    onClick={() => {
+                                      setAdminEditingGroupCourseId(item.id);
+                                      setAdminGroupCourseForm({
+                                        title: item.title,
+                                        desc: item.desc,
+                                        mask: item.mask || 'mask-cloud',
+                                        img: item.img || ''
+                                      });
+                                    }}
+                                    className="p-3 bg-blue-500 text-white rounded-xl hover:scale-110 transition-transform shadow-[2px_2px_0px_rgba(0,0,0,1)]"
+                                  >
+                                    <Edit2 size={20} />
+                                  </button>
+                                  <button 
+                                    onClick={() => {
+                                      showConfirm("刪除團體課程", `確定要刪除「${item.title}」嗎？`, async () => {
+                                        try {
+                                          await deleteDoc(doc(db, 'groupCourses', item.id));
+                                          // Manually update local state
+                                          setGroupCourses(prev => prev.filter(gc => gc.id !== item.id));
+                                          showToast("已刪除團體課程");
+                                        } catch (error) {
+                                          handleFirestoreError(error, OperationType.DELETE, `groupCourses/${item.id}`);
+                                        }
+                                      });
+                                    }}
+                                    className="p-3 bg-red-500 text-white rounded-xl hover:scale-110 transition-transform shadow-[2px_2px_0px_rgba(0,0,0,1)]"
+                                  >
+                                    <Trash2 size={20} />
+                                  </button>
+                                </div>
+                              </div>
+                            ))}
+                            {groupCourses.length === 0 && (
+                              <div className="bg-white border-4 border-dashed border-black/20 p-12 rounded-[3rem] text-center">
+                                <Users size={48} className="mx-auto mb-4 opacity-20" />
+                                <p className="font-black text-black/30">尚無團體課程資料</p>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </section>
+                    )}
+
+                    {adminActiveTab === 'tutors' && (
+                      <section>
+                        <h3 className="text-3xl font-black mb-8 flex items-center gap-3">
+                          <Users size={32} /> 導師管理
+                        </h3>
+                        <div className="grid md:grid-cols-2 gap-6 mb-12">
+                          {tutors.map(t => (
+                            <div key={t.id} className="bg-white border-4 border-black p-6 rounded-3xl flex gap-4 items-center shadow-[4px_4px_0px_rgba(0,0,0,1)]">
+                              <img src={t.img} className="w-16 h-16 rounded-full border-2 border-black object-cover" referrerPolicy="no-referrer" />
+                              <div className="flex-1">
+                                <p className="font-black text-lg">{t.name}</p>
+                                <p className="text-xs font-bold text-black/60 uppercase tracking-widest">{t.role}</p>
+                              </div>
+                              <button onClick={() => handleDeleteTutor(t.id)} className="text-red-600 p-2 hover:bg-red-50 rounded-full transition-colors">
+                                <Trash2 size={20} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                        
+                        <div className="bg-white border-4 border-black p-8 rounded-3xl shadow-[8px_8px_0px_rgba(0,0,0,1)]">
+                          <h4 className="text-xl font-black mb-6 uppercase">新增導師</h4>
+                          <form onSubmit={handleAddTutor} className="space-y-4">
+                            <div className="grid md:grid-cols-2 gap-4">
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase ml-1">姓名</label>
+                                <input 
+                                  type="text" placeholder="導師姓名" required
+                                  className="w-full border-2 border-black p-3 rounded-xl font-bold text-sm"
+                                  value={newTutor.name} onChange={e => setNewTutor({...newTutor, name: e.target.value})}
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase ml-1">職位</label>
+                                <input 
+                                  type="text" placeholder="例如: AI 動畫總監" required
+                                  className="w-full border-2 border-black p-3 rounded-xl font-bold text-sm"
+                                  value={newTutor.role} onChange={e => setNewTutor({...newTutor, role: e.target.value})}
+                                />
+                              </div>
+                              <div className="md:col-span-2 space-y-1">
+                                <FileUploader 
+                                  label="導師圖片"
+                                  currentImage={newTutor.img}
+                                  onUpload={(url) => setNewTutor({...newTutor, img: url})}
+                                />
+                                <input 
+                                  type="url" placeholder="或輸入 URL" required
+                                  className="w-full border-2 border-black p-3 rounded-xl font-bold text-sm mt-2"
+                                  value={newTutor.img} onChange={e => setNewTutor({...newTutor, img: e.target.value})}
+                                />
+                              </div>
+                              <div className="md:col-span-2 space-y-1">
+                                <label className="text-[10px] font-black uppercase ml-1">簡介</label>
+                                <textarea 
+                                  placeholder="導師背景介紹..." required
+                                  className="w-full border-2 border-black p-3 rounded-xl font-bold text-sm"
+                                  rows={3}
+                                  value={newTutor.desc} onChange={e => setNewTutor({...newTutor, desc: e.target.value})}
+                                />
+                              </div>
+                            </div>
+                            <button 
+                              type="submit" 
+                              disabled={isSavingTutors}
+                              className={`w-full bg-black text-[#FFEF00] py-4 rounded-full font-black uppercase text-sm hover:scale-[1.02] transition-transform flex items-center justify-center gap-2 ${isSavingTutors ? 'opacity-70 cursor-not-allowed' : ''}`}
+                            >
+                              {isSavingTutors ? <Loader2 className="animate-spin" size={20} /> : null}
+                              {isSavingTutors ? '正在新增...' : '新增導師'}
+                            </button>
+                          </form>
+                        </div>
+                      </section>
+                    )}
+
+                    {adminActiveTab === 'testimonials' && (
+                      <section>
+                        <h3 className="text-3xl font-black mb-8 flex items-center gap-3">
+                          <MessageSquare size={32} /> 學員感想管理
+                        </h3>
+                        <div className="grid md:grid-cols-2 gap-6 mb-12">
+                          {testimonials.map(t => (
+                            <div key={t.id} className="bg-white border-4 border-black p-6 rounded-3xl flex gap-4 items-start shadow-[4px_4px_0px_rgba(0,0,0,1)]">
+                              <img src={t.img} className="w-12 h-12 rounded-full border-2 border-black object-cover" referrerPolicy="no-referrer" />
+                              <div className="flex-1">
+                                <p className="font-black">{t.name}</p>
+                                <p className="text-xs font-bold text-black/60 line-clamp-2 mt-1">{t.text}</p>
+                              </div>
+                              <button onClick={() => handleDeleteTestimonial(t.id)} className="text-red-600 p-2 hover:bg-red-50 rounded-full transition-colors">
+                                <Trash2 size={20} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                        
+                        <div className="bg-white border-4 border-black p-8 rounded-3xl shadow-[8px_8px_0px_rgba(0,0,0,1)]">
+                          <h4 className="text-xl font-black mb-6 uppercase">新增學員感想</h4>
+                          <form onSubmit={handleAddTestimonial} className="space-y-4">
+                            <div className="grid md:grid-cols-2 gap-4">
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase ml-1">學員姓名</label>
+                                <input 
+                                  type="text" placeholder="姓名" required
+                                  className="w-full border-2 border-black p-3 rounded-xl font-bold text-sm"
+                                  value={newTestimonial.name} onChange={e => setNewTestimonial({...newTestimonial, name: e.target.value})}
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <FileUploader 
+                                  label="學員頭像"
+                                  currentImage={newTestimonial.img}
+                                  onUpload={(url) => setNewTestimonial({...newTestimonial, img: url})}
+                                />
+                                <input 
+                                  type="url" placeholder="或輸入 URL" required
+                                  className="w-full border-2 border-black p-3 rounded-xl font-bold text-sm mt-2"
+                                  value={newTestimonial.img} onChange={e => setNewTestimonial({...newTestimonial, img: e.target.value})}
+                                />
+                              </div>
+                              <div className="md:col-span-2 space-y-1">
+                                <label className="text-[10px] font-black uppercase ml-1">感想內容</label>
+                                <textarea 
+                                  placeholder="學員分享內容..." required
+                                  className="w-full border-2 border-black p-3 rounded-xl font-bold text-sm"
+                                  rows={3}
+                                  value={newTestimonial.text} onChange={e => setNewTestimonial({...newTestimonial, text: e.target.value})}
+                                />
+                              </div>
+                            </div>
+                            <button 
+                              type="submit" 
+                              disabled={isSavingTestimonials}
+                              className={`w-full bg-black text-[#FFEF00] py-4 rounded-full font-black uppercase text-sm hover:scale-[1.02] transition-transform flex items-center justify-center gap-2 ${isSavingTestimonials ? 'opacity-70 cursor-not-allowed' : ''}`}
+                            >
+                              {isSavingTestimonials ? <Loader2 className="animate-spin" size={20} /> : null}
+                              {isSavingTestimonials ? '正在新增...' : '新增感想'}
+                            </button>
+                          </form>
+                        </div>
+                      </section>
+                    )}
+
+                    {adminActiveTab === 'activities' && (
+                      <section>
+                        <h3 className="text-3xl font-black mb-8 flex items-center gap-3">
+                          <Film size={32} /> 活動管理
+                        </h3>
+                        <div className="grid grid-cols-1 gap-4 mb-12">
+                          {activities.map(a => (
+                            <div key={a.id} className="bg-white border-4 border-black p-6 rounded-3xl flex gap-6 items-center shadow-[4px_4px_0px_rgba(0,0,0,1)]">
+                              <img src={a.img} className="w-24 h-24 rounded-xl border-2 border-black object-cover" referrerPolicy="no-referrer" />
+                              <div className="flex-1">
+                                <p className="text-xs font-black text-[#0055FF] mb-1">{a.date}</p>
+                                <p className="font-black text-xl line-clamp-1">{a.title}</p>
+                                <p className="text-sm font-bold text-black/60 line-clamp-1 mt-1">{a.content}</p>
+                              </div>
+                              <button onClick={() => handleDeleteActivity(a.id)} className="text-red-600 p-3 hover:bg-red-50 rounded-full transition-colors">
+                                <Trash2 size={24} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                        
+                        <div className="bg-white border-4 border-black p-8 rounded-3xl shadow-[8px_8px_0px_rgba(0,0,0,1)]">
+                          <h4 className="text-xl font-black mb-6 uppercase">新增活動記錄</h4>
+                          <form onSubmit={handleAddActivity} className="space-y-4">
+                            <div className="grid md:grid-cols-2 gap-4">
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase ml-1">活動標題</label>
+                                <input 
+                                  type="text" placeholder="標題" required
+                                  className="w-full border-2 border-black p-3 rounded-xl font-bold text-sm"
+                                  value={newActivity.title} onChange={e => setNewActivity({...newActivity, title: e.target.value})}
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase ml-1">日期</label>
+                                <input 
+                                  type="text" placeholder="例如: 2025年10月" required
+                                  className="w-full border-2 border-black p-3 rounded-xl font-bold text-sm"
+                                  value={newActivity.date} onChange={e => setNewActivity({...newActivity, date: e.target.value})}
+                                />
+                              </div>
+                              <div className="md:col-span-2 space-y-1">
+                                <FileUploader 
+                                  label="活動圖片"
+                                  currentImage={newActivity.img}
+                                  onUpload={(url) => setNewActivity({...newActivity, img: url})}
+                                />
+                                <input 
+                                  type="url" placeholder="或輸入 URL" required
+                                  className="w-full border-2 border-black p-3 rounded-xl font-bold text-sm mt-2"
+                                  value={newActivity.img} onChange={e => setNewActivity({...newActivity, img: e.target.value})}
+                                />
+                              </div>
+                              <div className="md:col-span-2 space-y-1">
+                                <label className="text-[10px] font-black uppercase ml-1">標籤 (逗號分隔)</label>
+                                <input 
+                                  type="text" placeholder="#SAVFX, #AI" required
+                                  className="w-full border-2 border-black p-3 rounded-xl font-bold text-sm"
+                                  value={newActivity.tags} onChange={e => setNewActivity({...newActivity, tags: e.target.value})}
+                                />
+                              </div>
+                              <div className="md:col-span-2 space-y-1">
+                                <label className="text-[10px] font-black uppercase ml-1">活動內容</label>
+                                <textarea 
+                                  placeholder="活動詳細介紹..." required
+                                  className="w-full border-2 border-black p-3 rounded-xl font-bold text-sm"
+                                  rows={4}
+                                  value={newActivity.content} onChange={e => setNewActivity({...newActivity, content: e.target.value})}
+                                />
+                              </div>
+                            </div>
+                            <button 
+                              type="submit" 
+                              disabled={isSavingActivities}
+                              className={`w-full bg-black text-[#FFEF00] py-4 rounded-full font-black uppercase text-sm hover:scale-[1.02] transition-transform flex items-center justify-center gap-2 ${isSavingActivities ? 'opacity-70 cursor-not-allowed' : ''}`}
+                            >
+                              {isSavingActivities ? <Loader2 className="animate-spin" size={20} /> : null}
+                              {isSavingActivities ? '正在發佈...' : '發佈活動'}
+                            </button>
+                          </form>
+                        </div>
+                      </section>
+                    )}
+
+                    {adminActiveTab === 'danger' && (
+                      <section>
+                        <h3 className="text-3xl font-black mb-8 flex items-center gap-3 text-red-600">
+                          <Trash2 size={32} /> 系統維護
+                        </h3>
+                        <div className="bg-red-50 border-4 border-red-600 p-8 rounded-3xl shadow-[8px_8px_0px_rgba(220,38,38,0.2)]">
+                          <h4 className="text-xl font-black mb-4 text-red-600 uppercase">危險區域</h4>
+                          <p className="font-bold mb-6 text-red-900/70">
+                            初始化操作將會清除資料庫中現有的所有單元、課程、活動、導師及學員感想，並填入系統預設資料。此操作不可撤銷。
+                          </p>
+                          <button 
+                            onClick={async () => {
+                              showConfirm("確定初始化", "這將會覆蓋現有資料，確定嗎？", async () => {
+                                try {
+                                const defaultUnits = [
+                                  "AI 基礎理論 (U1)", "AI 提示詞工程 (U2)", "AI 影像生成 (U3)", "AI 影片創作 (U4)", 
+                                  "水彩 (U5)", "編劇理論 (U6)", "角色設計 (U7)", "動畫理論1 (U8)", "動畫理論2 (U9)", "電腦合成 AE (U10)", 
+                                  "AI 繪圖基礎 (U11)", "3D 建模入門 (U12)", "燈光與渲染 (U13)", "動態圖形設計 (U14)", "剪接技巧 (U15)", 
+                                  "音效製作 (U16)", "故事板創作 (U17)", "人物骨架綁定 (U18)", "流體模擬 (U19)", "粒子特效 (U20)", 
+                                  "AI 語音合成 (U21)", "虛擬攝影機控制 (U22)", "色彩校正 (U23)", "專案管理 (U24)", "市場營銷 (U25)", 
+                                  "作品集製作 (U26)", "VR/AR 應用 (U27)", "遊戲引擎基礎 (U28)", "Python 腳本 (U29)", "AI 提示詞進階 (U30)", 
+                                  "深度學習影像 (U31)", "風格遷移 (U32)", "動作捕捉 (U33)", "面部捕捉 (U34)", "數位雕刻 (U35)", 
+                                  "材質貼圖 (U36)", "環境設計 (U37)", "UI/UX 設計 (U38)", "網頁動畫 (U39)", "移動應用開發 (U40)", 
+                                  "區塊鏈與藝術 (U41)", "NFT 基礎 (U42)", "法律與版權 (U43)", "創業導論 (U44)", "實習項目 (U45)", "畢業作品 (U46)"
+                                ];
+                                const defaultCourses = [
+                                  { id: 1, name: "AI全方位應用專業證書課程", type: "Certificate", mandatory: [0, 1, 2, 3], minUnits: 4, allowExtra: false, title: "AI全方位應用", subtitle: "（7大範疇）專業證書課程", desc: "四堂課程，全面掌握 AI 視覺應用", mask: "mask-cloud", img: "ai-cert" },
+                                  { id: 2, name: "商業漫畫、插畫及2D動畫文憑", type: "Diploma", mandatory: [10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25], minUnits: 16, allowExtra: true, title: "商業漫畫、插畫", subtitle: "及2D動畫文憑", desc: "一年制，從零開始的專業創作之路", mask: "mask-book", img: "2d-anim" },
+                                  { id: 3, name: "商業3D動畫文憑", type: "Diploma", mandatory: [30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45], minUnits: 16, allowExtra: true, title: "商業3D動畫文憑", subtitle: "", desc: "一年制，影視級 3D 建模與動畫技術", mask: "mask-box", img: "3d-anim" },
+                                  { id: 4, name: "AI YouTuber 及多媒體文憑", type: "Diploma", mandatory: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 19, 20, 21, 22, 23, 24, 25, 38, 39], minUnits: 16, allowExtra: true, title: "AI YouTuber", subtitle: "及多媒體文憑", desc: "一年制，全方位多媒體製作與運營", mask: "mask-film", img: "youtuber" },
+                                ];
+                                const defaultActivities = [
+                                  {
+                                    id: 1,
+                                    date: "2025年9月10日",
+                                    title: "做動畫師真係開心，每日都可以「左擁右抱」！",
+                                    content: "這個話現實世界冇童話？做動畫師嘅最大福利，就是每日返工都可以「左擁右抱」一班迪士尼公主！在 Nano Banana AI 技術與動畫工藝交織出的奇幻日常。透過 AI 生成技術，我們可以與經典角色「近距離接觸」。",
+                                    img: "https://picsum.photos/seed/activity1/800/1000",
+                                    tags: ["#AI", "#動畫", "#插畫", "#文憑", "#課程", "#youtuber", "#SAVFX", "#diploma", "#certificate", "#animation", "#illustration", "#NaveenMa", "#馬國樑"]
+                                  },
+                                ];
+                                const defaultTutors = [
+                                  { name: "Master Wong", role: "AI 動畫總監", desc: "擁有 20 年影視特效經驗，曾參與多部國際大片製作。", img: "https://picsum.photos/seed/tutor1/400/400" },
+                                  { name: "Coach Chan", role: "多媒體製作專家", desc: "資深 YouTuber，擅長利用 AI 進行內容創作與自動化工作流。", img: "https://picsum.photos/seed/tutor2/400/400" }
+                                ];
+                                const defaultTestimonials = [
+                                  { name: "阿強", text: "AI 動畫課程讓我大開眼界，製作效率提升了十倍！", img: "https://picsum.photos/seed/s1/200/200" },
+                                  { name: "Sarah", text: "單元組合非常靈活，我可以只選我感興趣的 AI 技術。", img: "https://picsum.photos/seed/s2/200/200" },
+                                  { name: "Ken", text: "導師非常專業，手把手教我們如何應用 AI 到實際項目中。", img: "https://picsum.photos/seed/s3/200/200" }
+                                ];
+                                const defaultGroupCourses = [
+                                  { title: "3D Printing 工作坊", desc: "親手體驗 3D 打印技術與建模", mask: "mask-book", img: "3d-print" },
+                                  { title: "小學生動畫工作坊", desc: "啟發創意，製作屬於自己的短片", mask: "mask-dream", img: "kids-anim" },
+                                  { title: "動畫輪工作坊", mask: "mask-film", desc: "探索傳統動畫與現代技術的結合", img: "zoetrope" }
+                                ];
+
+                                for (let i = 0; i < defaultUnits.length; i++) {
+                                  try {
+                                    await setDoc(doc(db, 'units', i.toString()), { id: i, name: defaultUnits[i] });
+                                  } catch (error) {
+                                    handleFirestoreError(error, OperationType.CREATE, `units/${i}`);
+                                  }
+                                }
+                                for (const c of defaultCourses) {
+                                  try {
+                                    await setDoc(doc(db, 'courses', c.id.toString()), c);
+                                  } catch (error) {
+                                    handleFirestoreError(error, OperationType.CREATE, `courses/${c.id}`);
+                                  }
+                                }
+                                for (const a of defaultActivities) {
+                                  try {
+                                    await setDoc(doc(db, 'activities', a.id.toString()), a);
+                                  } catch (error) {
+                                    handleFirestoreError(error, OperationType.CREATE, `activities/${a.id}`);
+                                  }
+                                }
+                                for (let i = 0; i < defaultTutors.length; i++) {
+                                  try {
+                                    await setDoc(doc(db, 'tutors', i.toString()), defaultTutors[i]);
+                                  } catch (error) {
+                                    handleFirestoreError(error, OperationType.CREATE, `tutors/${i}`);
+                                  }
+                                }
+                                for (let i = 0; i < defaultTestimonials.length; i++) {
+                                  try {
+                                    await setDoc(doc(db, 'testimonials', i.toString()), defaultTestimonials[i]);
+                                  } catch (error) {
+                                    handleFirestoreError(error, OperationType.CREATE, `testimonials/${i}`);
+                                  }
+                                }
+                                for (let i = 0; i < defaultGroupCourses.length; i++) {
+                                  try {
+                                    await addDoc(collection(db, 'groupCourses'), defaultGroupCourses[i]);
+                                  } catch (error) {
+                                    handleFirestoreError(error, OperationType.CREATE, 'groupCourses');
+                                  }
+                                }
+                                try {
+                                  await setDoc(doc(db, 'settings', 'global'), {
+                                    ...siteSettings,
+                                    address: '香港九龍...',
+                                    facebookUrl: 'https://facebook.com/savfx',
+                                    instagramUrl: 'https://instagram.com/savfx'
+                                  });
+                                  
+                                  // Manually update local states for all data
+                                  const seededUnits = defaultUnits.map((name, i) => ({ id: i, name }));
+                                  setUnitNames(seededUnits);
+                                  setAdminUnitNames(seededUnits);
+                                  setCourses(defaultCourses);
+                                  setActivities(defaultActivities);
+                                  setTutors(defaultTutors.map((t, i) => ({ id: i.toString(), ...t })));
+                                  setTestimonials(defaultTestimonials.map((t, i) => ({ id: i.toString(), ...t })));
+                                  setGroupCourses(defaultGroupCourses.map((gc, i) => ({ id: `default-${i}`, ...gc })));
+                                } catch (error) {
+                                  handleFirestoreError(error, OperationType.WRITE, 'settings/global');
+                                }
+                                
+                                showToast("初始化完成！請重新整理頁面。");
+                              } catch (error) {
+                                console.error("Initialization error:", error);
+                                showToast("初始化失敗", "error");
+                              }
+                            });
+                          }}
+                            className="bg-red-600 text-white px-8 py-4 rounded-full font-black uppercase hover:scale-105 transition-transform shadow-[4px_4px_0px_rgba(0,0,0,0.2)]"
+                          >
+                            初始化預設資料
+                          </button>
+                        </div>
+                      </section>
+                    )}
+                  </motion.div>
+                </AnimatePresence>
+              </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Confirm Modal */}
+      <AnimatePresence>
+        {confirmModal.show && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white border-[6px] border-black p-8 rounded-[2rem] shadow-[12px_12px_0px_rgba(0,0,0,1)] max-w-md w-full"
+            >
+              <h3 className="text-2xl font-black mb-4 uppercase">{confirmModal.title}</h3>
+              <p className="font-bold text-black/60 mb-8">{confirmModal.message}</p>
+              <div className="flex gap-4">
+                <button
+                  disabled={confirmModal.loading}
+                  onClick={() => setConfirmModal(prev => ({ ...prev, show: false }))}
+                  className="flex-1 py-4 rounded-full font-black border-4 border-black hover:bg-gray-100 transition-all disabled:opacity-50"
+                >
+                  取消
+                </button>
+                <button
+                  disabled={confirmModal.loading}
+                  onClick={async () => {
+                    setConfirmModal(prev => ({ ...prev, loading: true }));
+                    try {
+                      await confirmModal.onConfirm();
+                    } catch (error) {
+                      console.error("Confirm error:", error);
+                    } finally {
+                      setConfirmModal(prev => ({ ...prev, show: false, loading: false }));
+                    }
+                  }}
+                  className="flex-1 py-4 rounded-full font-black bg-red-500 text-white border-4 border-black hover:scale-105 transition-all shadow-[4px_4px_0px_rgba(0,0,0,1)] disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {confirmModal.loading ? (
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+                      className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
+                    />
+                  ) : '確定'}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Toast Notification */}
+      <AnimatePresence>
+        {toast.show && (
+          <motion.div
+            initial={{ y: 50, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            exit={{ y: 50, opacity: 0 }}
+            className="fixed bottom-8 left-1/2 -translate-x-1/2 z-[100]"
+          >
+            <div className={`px-8 py-4 rounded-full font-black border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] flex items-center gap-3 ${
+              toast.type === 'success' ? 'bg-[#FFEF00] text-black' : 'bg-red-500 text-white'
+            }`}>
+              {toast.type === 'success' ? <CheckCircle2 size={24} /> : <AlertCircle size={24} />}
+              {toast.message}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
