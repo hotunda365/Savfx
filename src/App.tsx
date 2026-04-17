@@ -1334,7 +1334,7 @@ function AppContent() {
                 className="bg-[#FFEF00] border-4 border-black p-8 flex flex-col items-center text-center rounded-3xl"
               >
                 <MaskedImage 
-                  src={(course.img?.startsWith('http') || course.img?.startsWith('data:')) ? course.img : `https://picsum.photos/seed/${course.img || 'course'}/400/400`} 
+                  src={(course.img?.startsWith('http') || course.img?.startsWith('data:') || course.img?.startsWith('/')) ? course.img : `https://picsum.photos/seed/${course.img || 'course'}/400/400`} 
                   maskId={course.mask || 'mask-cloud'} 
                   className="w-40 h-40 mb-6 bg-white border-2 border-black"
                 />
@@ -1568,7 +1568,7 @@ function AppContent() {
                   className="bg-black text-[#FFEF00] border-4 border-black p-8 flex flex-col items-center text-center rounded-3xl"
                 >
                   <MaskedImage 
-                    src={(item.img?.startsWith('http') || item.img?.startsWith('data:')) ? item.img : `https://picsum.photos/seed/group-${i}/400/400`} 
+                    src={(item.img?.startsWith('http') || item.img?.startsWith('data:') || item.img?.startsWith('/')) ? item.img : `https://picsum.photos/seed/group-${i}/400/400`} 
                     maskId={item.mask || 'mask-cloud'} 
                     className="w-48 h-48 mb-6 bg-white border-2 border-[#FFEF00]"
                   />
@@ -1687,7 +1687,7 @@ function AppContent() {
             {testimonials.map((t, i) => (
               <div key={i} className="flex flex-col items-center">
                 <MaskedImage 
-                  src={(t.img.startsWith('http') || t.img.startsWith('data:')) ? t.img : `https://picsum.photos/seed/${t.img}/300/300`} 
+                  src={(t.img.startsWith('http') || t.img.startsWith('data:') || t.img.startsWith('/')) ? t.img : `https://picsum.photos/seed/${t.img}/300/300`} 
                   maskId="mask-dream" 
                   className="w-40 h-40 mb-6 bg-[#FFEF00]"
                 />
@@ -1714,7 +1714,7 @@ function AppContent() {
               >
                 <div className="relative w-32 h-32 flex-shrink-0 mx-auto xl:mx-0">
                   <MaskedImage 
-                    src={(tutor.img.startsWith('http') || tutor.img.startsWith('data:')) ? tutor.img : `https://picsum.photos/seed/${tutor.img}/300/300`} 
+                    src={(tutor.img.startsWith('http') || tutor.img.startsWith('data:') || tutor.img.startsWith('/')) ? tutor.img : `https://picsum.photos/seed/${tutor.img}/300/300`} 
                     maskId="mask-notebook" 
                     className="w-full h-full bg-black transition-all duration-500 object-cover"
                   />
