@@ -292,6 +292,7 @@ function AppContent() {
     }
     return {
       siteName: 'SAVFX',
+      logoUrl: '',
       heroTitle: '掌握 AI 視覺技術<br />開啟動畫新紀元',
       heroSubtitle: '全港首個專為創意人設計的 AI 動畫與多媒體課程，從零開始，助你成為業界頂尖專家。',
       contactEmail: 'info@savfx.edu.hk',
@@ -1155,13 +1156,22 @@ function AppContent() {
       <nav className="fixed top-0 w-full z-50 bg-[#FFEF00] border-b border-black px-6 py-4">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <svg width="60" height="40" viewBox="0 0 120 80" className="stroke-[#0055FF] stroke-[4] fill-none">
-                <path d="M10,50 L20,30 L35,45 L50,20 L65,45 L80,30 L90,50 L95,80 L5,80 Z" strokeLinejoin="round" />
-                <circle cx="30" cy="60" r="3" fill="#0055FF" />
-                <circle cx="70" cy="60" r="3" fill="#0055FF" />
-              </svg>
-              <h1 className="text-2xl sm:text-4xl font-black tracking-tighter text-black">{siteSettings.siteName}</h1>
+            <div className="flex items-center gap-3">
+              <div className="relative w-14 h-12 rounded-3xl border-2 border-black bg-[#FFEF00] flex items-center justify-center overflow-hidden">
+                {siteSettings.logoUrl ? (
+                  <img src={siteSettings.logoUrl} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
+                ) : (
+                  <svg width="52" height="36" viewBox="0 0 120 80" className="stroke-[#0055FF] stroke-[4] fill-none">
+                    <path d="M10,50 L20,30 L35,45 L50,20 L65,45 L80,30 L90,50 L95,80 L5,80 Z" strokeLinejoin="round" />
+                    <circle cx="30" cy="60" r="3" fill="#0055FF" />
+                    <circle cx="70" cy="60" r="3" fill="#0055FF" />
+                  </svg>
+                )}
+              </div>
+              <div className="leading-tight">
+                <h1 className="text-2xl sm:text-4xl font-black tracking-tighter text-black">{siteSettings.siteName}</h1>
+                <p className="text-[10px] uppercase tracking-[0.3em] text-black/70">AI Studio</p>
+              </div>
             </div>
           </div>
           
@@ -2548,21 +2558,28 @@ function AppContent() {
                           <div className="grid md:grid-cols-2 gap-6 bg-white border-4 border-black p-8 rounded-3xl shadow-[8px_8px_0px_rgba(0,0,0,1)]">
                             <div className="space-y-2">
                               <label className="text-xs font-black uppercase">公司名稱 / 網站名稱</label>
-                              <input 
-                                type="text" 
+                              <input
+                                type="text"
                                 className="w-full border-4 border-black p-4 rounded-xl font-bold"
                                 value={siteSettings.siteName}
                                 onChange={e => setSiteSettings({...siteSettings, siteName: e.target.value})}
                               />
                             </div>
                             <div className="space-y-2">
-                              <label className="text-xs font-black uppercase">成立年份 (EST.)</label>
-                              <input 
-                                type="text" 
-                                className="w-full border-4 border-black p-4 rounded-xl font-bold"
-                                value={siteSettings.heroEst}
-                                onChange={e => setSiteSettings({...siteSettings, heroEst: e.target.value})}
+                              <label className="text-xs font-black uppercase">公司 Logo</label>
+                              <FileUploader
+                                label="上傳 Logo"
+                                currentImage={siteSettings.logoUrl}
+                                onUpload={(url) => setSiteSettings({...siteSettings, logoUrl: url})}
                               />
+                              {siteSettings.logoUrl && (
+                                <input
+                                  type="url" placeholder="Logo URL（已自動設置）"
+                                  className="w-full border-2 border-gray-300 p-3 rounded-xl font-bold text-sm mt-2 bg-gray-50"
+                                  value={siteSettings.logoUrl} onChange={e => setSiteSettings({...siteSettings, logoUrl: e.target.value})}
+                                  disabled
+                                />
+                              )}
                             </div>
                             <div className="space-y-2">
                               <label className="text-xs font-black uppercase">聯絡電郵</label>
