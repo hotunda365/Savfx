@@ -333,6 +333,7 @@ function AppContent() {
   const [isSavingCourses, setIsSavingCourses] = useState(false);
   const [isSavingActivities, setIsSavingActivities] = useState(false);
   const [isSavingTutors, setIsSavingTutors] = useState(false);
+  const [savingTutorPriorityId, setSavingTutorPriorityId] = useState<string | null>(null);
   const [isSavingTestimonials, setIsSavingTestimonials] = useState(false);
   const [isSavingGroupCourses, setIsSavingGroupCourses] = useState(false);
   const [dataLoaded, setDataLoaded] = useState({
@@ -817,7 +818,8 @@ function AppContent() {
   const handleLogout = () => signOut(auth);
 
   const [newActivity, setNewActivity] = useState({ title: '', content: '', date: '', img: '', tags: '#SAVFX, #AI, #動畫' });
-  const [newTutor, setNewTutor] = useState({ name: '', role: '', desc: '', img: '' });
+  const [newTutor, setNewTutor] = useState({ name: '', role: '', desc: '', img: '', priority: 0 });
+  const [tutorPriorityDrafts, setTutorPriorityDrafts] = useState<Record<string, number>>({});
   const [newTestimonial, setNewTestimonial] = useState({ name: '', text: '', img: '' });
   const [newCourse, setNewCourse] = useState({ 
     name: '', 
@@ -975,15 +977,36 @@ function AppContent() {
     e.preventDefault();
     setIsSavingTutors(true);
     const id = Date.now().toString();
+    const priority = Number.isFinite(Number(newTutor.priority)) ? Number(newTutor.priority) : 0;
+    const tutorPayload = { ...newTutor, priority };
     try {
-      await apiSetDoc('tutors', id, newTutor);
-      setTutors(prev => [...prev, { id, ...newTutor }]);
-      setNewTutor({ name: '', role: '', desc: '', img: '' });
+      await apiSetDoc('tutors', id, tutorPayload);
+      setTutors(prev => [...prev, { id, ...tutorPayload }]);
+      setNewTutor({ name: '', role: '', desc: '', img: '', priority: 0 });
       showToast("導師已新增");
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, `tutors/${id}`);
     } finally {
       setIsSavingTutors(false);
+    }
+  };
+
+  const handleUpdateTutorPriority = async (id: string) => {
+    const tutor = tutors.find(t => t.id?.toString() === id.toString());
+    if (!tutor) return;
+
+    const nextPriority = Number.isFinite(Number(tutorPriorityDrafts[id])) ? Number(tutorPriorityDrafts[id]) : 0;
+    setSavingTutorPriorityId(id.toString());
+
+    try {
+      const updatedTutor = { ...tutor, priority: nextPriority };
+      await apiSetDoc('tutors', id.toString(), updatedTutor);
+      setTutors(prev => prev.map(t => t.id?.toString() === id.toString() ? updatedTutor : t));
+      showToast("導師排序已更新");
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `tutors/${id}`);
+    } finally {
+      setSavingTutorPriorityId(null);
     }
   };
 
@@ -1030,6 +1053,28 @@ function AppContent() {
   };
 
   const heroImage = "https://picsum.photos/seed/interview/1200/1200";
+
+  useEffect(() => {
+    const drafts: Record<string, number> = {};
+    tutors.forEach((tutor) => {
+      const tutorId = tutor.id?.toString();
+      if (!tutorId) return;
+      const parsedPriority = Number(tutor.priority);
+      drafts[tutorId] = Number.isFinite(parsedPriority) ? parsedPriority : 0;
+    });
+    setTutorPriorityDrafts(drafts);
+  }, [tutors]);
+
+  const getTutorPriority = (tutor: any) => {
+    const parsed = Number(tutor?.priority);
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
+
+  const sortedTutors = [...tutors].sort((a, b) => {
+    const priorityDiff = getTutorPriority(a) - getTutorPriority(b);
+    if (priorityDiff !== 0) return priorityDiff;
+    return a.id.toString().localeCompare(b.id.toString());
+  });
 
   const currentCourse = courses.find(c => c.id === selectedCourse) || courses[1] || { mandatory: [], allowExtra: false, name: '', minUnits: 0 };
 
@@ -1706,7 +1751,7 @@ function AppContent() {
         <div className="max-w-7xl mx-auto px-6">
           <SectionTitle subtitle="業界頂尖專家親自授課">導師簡介</SectionTitle>
           <div className="grid md:grid-cols-2 gap-12">
-            {tutors.map((tutor, i) => (
+            {sortedTutors.map((tutor, i) => (
               <motion.div 
                 key={i} 
                 whileHover={{ scale: 1.02 }}
@@ -3400,12 +3445,34 @@ function AppContent() {
                           <Users size={32} /> 導師管理
                         </h3>
                         <div className="grid md:grid-cols-2 gap-6 mb-12">
-                          {tutors.map(t => (
+                          {sortedTutors.map(t => (
                             <div key={t.id} className="bg-white border-4 border-black p-6 rounded-3xl flex gap-4 items-center shadow-[4px_4px_0px_rgba(0,0,0,1)]">
                               <img src={t.img} className="w-16 h-16 rounded-full border-2 border-black object-cover" referrerPolicy="no-referrer" />
                               <div className="flex-1">
                                 <p className="font-black text-lg">{t.name}</p>
                                 <p className="text-xs font-bold text-black/60 uppercase tracking-widest">{t.role}</p>
+                                <div className="mt-2 flex items-center gap-2">
+                                  <label className="text-[10px] font-black uppercase text-black/50">Priority</label>
+                                  <input
+                                    type="number"
+                                    className="w-20 border-2 border-black p-1 rounded-lg font-black text-sm"
+                                    value={tutorPriorityDrafts[t.id?.toString()] ?? getTutorPriority(t)}
+                                    onChange={(e) => {
+                                      const value = Number(e.target.value);
+                                      setTutorPriorityDrafts(prev => ({
+                                        ...prev,
+                                        [t.id.toString()]: Number.isFinite(value) ? value : 0
+                                      }));
+                                    }}
+                                  />
+                                  <button
+                                    onClick={() => handleUpdateTutorPriority(t.id.toString())}
+                                    disabled={savingTutorPriorityId === t.id?.toString()}
+                                    className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase border-2 border-black ${savingTutorPriorityId === t.id?.toString() ? 'opacity-60 cursor-not-allowed' : 'hover:bg-black hover:text-[#FFEF00]'}`}
+                                  >
+                                    {savingTutorPriorityId === t.id?.toString() ? '儲存中' : '儲存'}
+                                  </button>
+                                </div>
                               </div>
                               <button onClick={() => handleDeleteTutor(t.id)} className="text-red-600 p-2 hover:bg-red-50 rounded-full transition-colors">
                                 <Trash2 size={20} />
@@ -3432,6 +3499,15 @@ function AppContent() {
                                   type="text" placeholder="例如: AI 動畫總監" required
                                   className="w-full border-2 border-black p-3 rounded-xl font-bold text-sm"
                                   value={newTutor.role} onChange={e => setNewTutor({...newTutor, role: e.target.value})}
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase ml-1">Priority (排序)</label>
+                                <input 
+                                  type="number" placeholder="數字越小越前" required
+                                  className="w-full border-2 border-black p-3 rounded-xl font-bold text-sm"
+                                  value={newTutor.priority}
+                                  onChange={e => setNewTutor({...newTutor, priority: Number(e.target.value)})}
                                 />
                               </div>
                               <div className="md:col-span-2 space-y-1">
