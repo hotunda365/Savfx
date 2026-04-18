@@ -3451,28 +3451,28 @@ function AppContent() {
                               <div className="flex-1">
                                 <p className="font-black text-lg">{t.name}</p>
                                 <p className="text-xs font-bold text-black/60 uppercase tracking-widest">{t.role}</p>
-                                <div className="mt-2 flex items-center gap-2">
-                                  <label className="text-[10px] font-black uppercase text-black/50">Priority</label>
-                                  <input
-                                    type="number"
-                                    className="w-20 border-2 border-black p-1 rounded-lg font-black text-sm"
-                                    value={tutorPriorityDrafts[t.id?.toString()] ?? getTutorPriority(t)}
-                                    onChange={(e) => {
-                                      const value = Number(e.target.value);
-                                      setTutorPriorityDrafts(prev => ({
-                                        ...prev,
-                                        [t.id.toString()]: Number.isFinite(value) ? value : 0
-                                      }));
-                                    }}
-                                  />
-                                  <button
-                                    onClick={() => handleUpdateTutorPriority(t.id.toString())}
-                                    disabled={savingTutorPriorityId === t.id?.toString()}
-                                    className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase border-2 border-black ${savingTutorPriorityId === t.id?.toString() ? 'opacity-60 cursor-not-allowed' : 'hover:bg-black hover:text-[#FFEF00]'}`}
-                                  >
-                                    {savingTutorPriorityId === t.id?.toString() ? '儲存中' : '儲存'}
-                                  </button>
-                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 shrink-0 bg-[#FFEF00]/20 border-2 border-black rounded-xl px-2 py-1">
+                                <label className="text-[10px] font-black uppercase text-black">排序</label>
+                                <input
+                                  type="number"
+                                  className="w-16 border-2 border-black p-1 rounded-lg font-black text-sm bg-white"
+                                  value={tutorPriorityDrafts[t.id?.toString()] ?? getTutorPriority(t)}
+                                  onChange={(e) => {
+                                    const value = Number(e.target.value);
+                                    setTutorPriorityDrafts(prev => ({
+                                      ...prev,
+                                      [t.id.toString()]: Number.isFinite(value) ? value : 0
+                                    }));
+                                  }}
+                                />
+                                <button
+                                  onClick={() => handleUpdateTutorPriority(t.id.toString())}
+                                  disabled={savingTutorPriorityId === t.id?.toString()}
+                                  className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase border-2 border-black bg-white ${savingTutorPriorityId === t.id?.toString() ? 'opacity-60 cursor-not-allowed' : 'hover:bg-black hover:text-[#FFEF00]'}`}
+                                >
+                                  {savingTutorPriorityId === t.id?.toString() ? '儲存中' : '儲存'}
+                                </button>
                               </div>
                               <button onClick={() => handleDeleteTutor(t.id)} className="text-red-600 p-2 hover:bg-red-50 rounded-full transition-colors">
                                 <Trash2 size={20} />
