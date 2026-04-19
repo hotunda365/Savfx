@@ -2237,23 +2237,6 @@ function AppContent() {
                         <div className="grid md:grid-cols-2 gap-8">
                           <div className="bg-white border-4 border-black p-8 rounded-[2rem] shadow-[8px_8px_0px_rgba(0,0,0,1)]">
                             <h4 className="text-xl font-black mb-6 uppercase flex items-center gap-2">
-                              <Database size={20} /> 系統初始化
-                            </h4>
-                            <p className="text-sm font-bold text-black/60 mb-6">
-                              如果您的網站還沒有任何單元或課程資料，可以使用此功能快速建立預設資料。
-                            </p>
-                            <button 
-                              onClick={handleSeedData}
-                              disabled={isSavingUnits}
-                              className={`w-full bg-black text-[#FFEF00] py-4 rounded-xl font-black flex items-center justify-center gap-2 hover:scale-105 transition-transform ${isSavingUnits ? 'opacity-70 cursor-not-allowed' : ''}`}
-                            >
-                              {isSavingUnits ? <Loader2 className="animate-spin" size={20} /> : <Database size={20} />}
-                              {isSavingUnits ? '正在初始化...' : '初始化預設資料'}
-                            </button>
-                          </div>
-
-                          <div className="bg-white border-4 border-black p-8 rounded-[2rem] shadow-[8px_8px_0px_rgba(0,0,0,1)]">
-                            <h4 className="text-xl font-black mb-6 uppercase flex items-center gap-2">
                               <MousePointer2 size={20} /> 快速操作
                             </h4>
                             <div className="grid grid-cols-2 gap-4">
@@ -2285,24 +2268,6 @@ function AppContent() {
                                 <Monitor size={24} />
                                 <span className="font-bold text-sm">查看前台</span>
                               </button>
-                            </div>
-                          </div>
-
-                          <div className="bg-[#0055FF] text-white p-8 rounded-[2rem] border-4 border-black flex flex-col justify-center">
-                            <h4 className="text-xl font-black mb-4 uppercase">系統狀態</h4>
-                            <div className="space-y-4">
-                              <div className="flex items-center gap-3">
-                                <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse" />
-                                <p className="font-bold">Firebase 資料庫連線正常</p>
-                              </div>
-                              <div className="flex items-center gap-3">
-                                <div className="w-3 h-3 bg-green-400 rounded-full" />
-                                <p className="font-bold">身份驗證服務已啟動</p>
-                              </div>
-                              <div className="pt-4 border-t border-white/20">
-                                <p className="text-sm font-bold opacity-70">最後同步時間: {new Date().toLocaleTimeString()}</p>
-                                <p className="text-sm font-bold opacity-70">當前用戶: {user?.email}</p>
-                              </div>
                             </div>
                           </div>
                         </div>
