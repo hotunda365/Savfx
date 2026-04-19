@@ -924,6 +924,7 @@ function AppContent() {
     return isNaN(t) ? 0 : t;
   };
 
+  // Sort newest first (higher date number = newer)
   const sortActivitiesByDateDesc = (items: any[]): any[] =>
     [...items].sort((a, b) => parseActivityDateForSort(b.date) - parseActivityDateForSort(a.date));
 
