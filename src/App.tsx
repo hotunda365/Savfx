@@ -818,7 +818,7 @@ function AppContent() {
   const handleLogout = () => signOut(auth);
 
   const [newActivity, setNewActivity] = useState({ title: '', content: '', date: '', img: '', tags: '#SAVFX, #AI, #動畫' });
-  const [newTutor, setNewTutor] = useState({ name: '', role: '', desc: '', img: '', priority: 0 });
+  const [newTutor, setNewTutor] = useState({ name: '', role: '', desc: '', img: '', priority: 0, mask: 'mask-notebook' });
   const [tutorPriorityDrafts, setTutorPriorityDrafts] = useState<Record<string, number>>({});
   const [newTestimonial, setNewTestimonial] = useState({ name: '', text: '', img: '' });
   const [newCourse, setNewCourse] = useState({ 
@@ -988,7 +988,7 @@ function AppContent() {
     try {
       await apiSetDoc('tutors', id, tutorPayload);
       setTutors(prev => [...prev, { id, ...tutorPayload }]);
-      setNewTutor({ name: '', role: '', desc: '', img: '', priority: 0 });
+      setNewTutor({ name: '', role: '', desc: '', img: '', priority: 0, mask: 'mask-notebook' });
       showToast("導師已新增");
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, `tutors/${id}`);
@@ -1769,7 +1769,7 @@ function AppContent() {
                 <div className="relative w-32 h-32 flex-shrink-0 mx-auto xl:mx-0">
                   <MaskedImage 
                     src={(tutor.img.startsWith('http') || tutor.img.startsWith('data:') || tutor.img.startsWith('/')) ? tutor.img : `https://picsum.photos/seed/${tutor.img}/300/300`} 
-                    maskId="mask-notebook" 
+                    maskId={tutor.mask || 'mask-notebook'} 
                     className="w-full h-full bg-black transition-all duration-500 object-cover"
                   />
                   <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-[#0055FF] rounded-full border-2 border-black" />
@@ -3608,6 +3608,21 @@ function AppContent() {
                                   value={newTutor.priority}
                                   onChange={e => setNewTutor({...newTutor, priority: Number(e.target.value)})}
                                 />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase ml-1">遮罩類型</label>
+                                <select
+                                  className="w-full border-2 border-black p-3 rounded-xl font-bold text-sm bg-white"
+                                  value={newTutor.mask}
+                                  onChange={e => setNewTutor({...newTutor, mask: e.target.value})}
+                                >
+                                  <option value="mask-notebook">筆記本</option>
+                                  <option value="mask-dream">夢想</option>
+                                  <option value="mask-cloud">雲朵</option>
+                                  <option value="mask-book">書本</option>
+                                  <option value="mask-film">底片</option>
+                                  <option value="mask-graduation-cap">畢業帽</option>
+                                </select>
                               </div>
                               <div className="md:col-span-2 space-y-1">
                                 <FileUploader 
