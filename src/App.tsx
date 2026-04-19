@@ -364,8 +364,8 @@ function AppContent() {
         ];
 
         const defaultCourses = [
-          { id: 1, name: "專業證書課程", type: "Certificate", mandatory: [2, 3, 4, 5], minUnits: 4, allowExtra: false, title: "專業證書課程", subtitle: "Professional Certificate", desc: "快速提升 AI 視覺應用能力", mask: "mask-graduation-cap", img: "course-1" },
-          { id: 2, name: "一年制文憑課程", type: "Diploma", mandatory: [2, 3, 4, 5], minUnits: 16, allowExtra: true, title: "一年制文憑課程", subtitle: "One-Year Diploma", desc: "全面掌握動畫與特效技術", mask: "mask-book", img: "course-2" }
+          { id: 1, name: "專業證書課程", type: "Certificate", mandatory: [2, 3, 4, 5], minUnits: 4, allowExtra: false, title: "專業證書課程", subtitle: "Professional Certificate", desc: "快速提升 AI 視覺應用能力", startDate: "", classTime: "", tuition: "", mask: "mask-graduation-cap", img: "course-1" },
+          { id: 2, name: "一年制文憑課程", type: "Diploma", mandatory: [2, 3, 4, 5], minUnits: 16, allowExtra: true, title: "一年制文憑課程", subtitle: "One-Year Diploma", desc: "全面掌握動畫與特效技術", startDate: "", classTime: "", tuition: "", mask: "mask-book", img: "course-2" }
         ];
 
         const defaultGroupCourses = [
@@ -830,6 +830,9 @@ function AppContent() {
     title: '',
     subtitle: '',
     desc: '',
+    startDate: '',
+    classTime: '',
+    tuition: '',
     mask: 'mask-book',
     img: ''
   });
@@ -862,6 +865,9 @@ function AppContent() {
         title: '',
         subtitle: '',
         desc: '',
+        startDate: '',
+        classTime: '',
+        tuition: '',
         mask: 'mask-book',
         img: 'https://picsum.photos/seed/course/800/600'
       });
@@ -1198,11 +1204,11 @@ function AppContent() {
             exit={{ opacity: 0 }}
           >
             {/* Navigation */}
-      <nav className="fixed top-0 w-full z-50 bg-[#FFEF00] border-b border-black px-6 py-4">
+      <nav className="fixed top-0 w-full z-50 bg-[#FFEF00] border-b border-black px-4 sm:px-6 py-3 sm:py-4">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-3">
-              <div className="relative w-14 h-12 rounded-3xl border-2 border-black bg-[#FFEF00] flex items-center justify-center overflow-hidden">
+              <div className="relative w-11 h-10 sm:w-14 sm:h-12 rounded-3xl border-2 border-black bg-[#FFEF00] flex items-center justify-center overflow-hidden">
                 {siteSettings.logoUrl ? (
                   <img src={siteSettings.logoUrl} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
                 ) : (
@@ -1214,7 +1220,7 @@ function AppContent() {
                 )}
               </div>
               <div className="leading-tight">
-                <h1 className="text-2xl sm:text-4xl font-black tracking-tighter text-black">{siteSettings.siteName}</h1>
+                <h1 className="text-xl sm:text-4xl font-black tracking-tighter text-black">{siteSettings.siteName}</h1>
                 <p className="text-[10px] uppercase tracking-[0.3em] text-black/70">AI Studio</p>
               </div>
             </div>
@@ -1270,7 +1276,7 @@ function AppContent() {
       </AnimatePresence>
 
       {/* Hero Section */}
-      <header className="pt-32 pb-20 px-6 min-h-screen flex items-center relative overflow-hidden bg-[#FFEF00]">
+      <header className="pt-24 sm:pt-32 pb-14 sm:pb-20 px-4 sm:px-6 min-h-[88vh] sm:min-h-screen flex items-center relative overflow-hidden bg-[#FFEF00]">
         {/* Decorative Shapes */}
         <BlueShape className="w-64 h-64 -top-20 -left-20 rotate-12" />
         <BlueShape className="w-96 h-96 -bottom-32 -right-32 -rotate-12" />
@@ -1279,7 +1285,7 @@ function AppContent() {
         <div className="absolute inset-0 pointer-events-none opacity-[0.08]" 
              style={{ backgroundImage: 'linear-gradient(45deg, #000 25%, transparent 25%, transparent 50%, #000 50%, #000 75%, transparent 75%, transparent)', backgroundSize: '60px 60px' }}></div>
 
-        <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-12 items-center w-full relative z-10">
+        <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-8 sm:gap-12 items-center w-full relative z-10">
           <motion.div
             initial={{ opacity: 0, x: -50 }}
             animate={{ opacity: 1, x: 0 }}
@@ -1288,7 +1294,7 @@ function AppContent() {
             <div className="inline-block bg-black text-[#FFEF00] px-4 py-1 self-start font-black text-sm mb-6 uppercase tracking-widest">
               {siteSettings.heroTagline || 'Professional AI Animation School'}
             </div>
-            <h1 className="text-4xl sm:text-5xl md:text-7xl lg:text-[110px] font-black leading-tight tracking-tighter mb-8 text-black uppercase">
+            <h1 className="text-3xl sm:text-5xl md:text-7xl lg:text-[110px] font-black leading-tight tracking-tighter mb-6 sm:mb-8 text-black uppercase">
               {siteSettings.heroTitle.split('<br />').map((line, i) => (
                 <React.Fragment key={i}>
                   {line}
@@ -1297,14 +1303,14 @@ function AppContent() {
               ))}
             </h1>
             <div className="relative">
-              <h2 className="text-white font-black text-[80px] sm:text-[120px] md:text-[140px] lg:text-[200px] leading-tight tracking-tighter drop-shadow-[8px_8px_0px_rgba(0,0,0,1)] mb-8 select-none">
+              <h2 className="text-white font-black text-[56px] sm:text-[120px] md:text-[140px] lg:text-[200px] leading-none sm:leading-tight tracking-tighter drop-shadow-[4px_4px_0px_rgba(0,0,0,1)] sm:drop-shadow-[8px_8px_0px_rgba(0,0,0,1)] mb-6 sm:mb-8 select-none">
                 {siteSettings.siteName}
               </h2>
               <div className="absolute -top-4 -right-4 bg-[#0055FF] text-white px-3 py-1 font-black text-xs rotate-12">
                 {siteSettings.heroEst || 'EST. 2024'}
               </div>
             </div>
-            <p className="text-xl md:text-2xl font-black max-w-lg text-black leading-tight border-l-8 border-black pl-6">
+            <p className="text-base sm:text-xl md:text-2xl font-black max-w-lg text-black leading-tight border-l-8 border-black pl-4 sm:pl-6">
               {siteSettings.heroSubtitle}
             </p>
           </motion.div>
@@ -1312,7 +1318,7 @@ function AppContent() {
           <motion.div 
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="grid grid-cols-2 sm:grid-cols-3 gap-4 md:gap-10"
+            className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 md:gap-10"
           >
             {[...Array(6)].map((_, i) => (
               <div key={i} className="relative aspect-square group">
@@ -1368,24 +1374,31 @@ function AppContent() {
       </AnimatePresence>
 
       {/* Individual Courses */}
-      <section id="courses-intro" className="py-20 bg-white border-y-8 border-black">
-        <div className="max-w-7xl mx-auto px-6">
+      <section id="courses-intro" className="py-14 sm:py-20 bg-white border-y-8 border-black">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <SectionTitle subtitle={siteSettings.coursesIntroSubtitle || "專業文憑與證書課程"}>{siteSettings.coursesIntroTitle || "課程介紹"}</SectionTitle>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-8">
             {courses.map((course, i) => (
               <motion.div 
                 key={i}
                 whileHover={{ y: -10 }}
-                className="bg-[#FFEF00] border-4 border-black p-8 flex flex-col items-center text-center rounded-3xl"
+                className="bg-[#FFEF00] border-4 border-black p-5 sm:p-8 flex flex-col items-center text-center rounded-3xl"
               >
                 <MaskedImage 
                   src={(course.img?.startsWith('http') || course.img?.startsWith('data:') || course.img?.startsWith('/')) ? course.img : `https://picsum.photos/seed/${course.img || 'course'}/400/400`} 
                   maskId={course.mask || 'mask-cloud'} 
-                  className="w-40 h-40 mb-6 bg-white border-2 border-black"
+                  className="w-28 h-28 sm:w-40 sm:h-40 mb-4 sm:mb-6 bg-white border-2 border-black"
                 />
-                <h3 className="text-xl font-black leading-tight mb-1">{course.title || course.name}</h3>
+                <h3 className="text-lg sm:text-xl font-black leading-tight mb-1">{course.title || course.name}</h3>
                 {course.subtitle && <p className="text-sm font-black mb-2">{course.subtitle}</p>}
                 <p className="font-bold text-black/70 mb-6 text-sm">{course.desc}</p>
+                {(course.startDate || course.classTime || course.tuition) && (
+                  <div className="w-full text-left text-xs font-black text-black/70 mb-5 space-y-1">
+                    {course.startDate && <p>開課日期: {course.startDate}</p>}
+                    {course.classTime && <p>上課時間: {course.classTime}</p>}
+                    {course.tuition && <p>課程學費: {course.tuition}</p>}
+                  </div>
+                )}
                 <button className="mt-auto bg-black text-[#FFEF00] w-full py-3 font-bold uppercase rounded-full text-sm">查看詳情</button>
               </motion.div>
             ))}
@@ -1394,7 +1407,7 @@ function AppContent() {
       </section>
 
       {/* Course Selection Tool */}
-      <section id="courses" className="py-24 px-6 bg-[#FFEF00] relative overflow-hidden">
+      <section id="courses" className="py-16 sm:py-24 px-4 sm:px-6 bg-[#FFEF00] relative overflow-hidden">
         {/* Background Pattern */}
         <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle, black 2px, transparent 0)', backgroundSize: '24px 24px' }} />
         
@@ -1402,12 +1415,12 @@ function AppContent() {
           <SectionTitle subtitle={siteSettings.personalCourseSubtitle || "選擇您的專業路徑與單元組合"}>{siteSettings.personalCourseTitle || "個人課程"}</SectionTitle>
           
           {/* Course Selector Tabs */}
-          <div className="flex flex-wrap gap-2 sm:gap-4 mb-16 justify-center">
+          <div className="flex flex-wrap gap-2 sm:gap-4 mb-10 sm:mb-16 justify-center">
             {courses.map(course => (
               <button
                 key={course.id}
                 onClick={() => handleCourseChange(course.id)}
-                className={`px-6 sm:px-10 py-3 sm:py-5 rounded-full font-black text-xs sm:text-sm transition-all border-[4px] shadow-lg ${
+                className={`w-full sm:w-auto px-4 sm:px-10 py-2.5 sm:py-5 rounded-full font-black text-xs sm:text-sm transition-all border-[4px] shadow-lg ${
                   selectedCourse === course.id 
                     ? 'bg-black text-[#FFEF00] border-black scale-105' 
                     : 'bg-white text-black border-black hover:bg-black/5'
@@ -1418,29 +1431,29 @@ function AppContent() {
             ))}
           </div>
 
-          <div className="bg-black text-[#FFEF00] p-6 sm:p-10 md:p-16 border-[6px] sm:border-[10px] border-white shadow-[10px_10px_0px_rgba(0,0,0,1)] sm:shadow-[20px_20px_0px_rgba(0,0,0,1)] rounded-[2rem] sm:rounded-[4rem] relative">
-            <div className="grid lg:grid-cols-2 gap-16 items-start">
-              <div className="space-y-10">
-                <h3 className="text-3xl sm:text-4xl md:text-5xl font-black leading-tight tracking-tighter">{currentCourse.name}</h3>
+          <div className="bg-black text-[#FFEF00] p-4 sm:p-10 md:p-16 border-[6px] sm:border-[10px] border-white shadow-[10px_10px_0px_rgba(0,0,0,1)] sm:shadow-[20px_20px_0px_rgba(0,0,0,1)] rounded-[2rem] sm:rounded-[4rem] relative">
+            <div className="grid lg:grid-cols-2 gap-8 sm:gap-16 items-start">
+              <div className="space-y-7 sm:space-y-10">
+                <h3 className="text-2xl sm:text-4xl md:text-5xl font-black leading-tight tracking-tighter">{currentCourse.name}</h3>
                 
                 <div className="space-y-6">
-                  <p className="text-xl font-bold leading-relaxed opacity-90">
+                  <p className="text-base sm:text-xl font-bold leading-relaxed opacity-90">
                     {selectedCourse === 1 
                       ? "本證書課程包含 4 個核心 AI 單元，旨在快速提升您的 AI 視覺應用能力。" 
                       : "本一年制文憑課程包含核心必修單元，並允許學生根據興趣自由加選其他單元。"}
                   </p>
                   
                   <ul className="space-y-3">
-                    <li className="flex items-center gap-3 text-lg font-black">
+                    <li className="flex items-center gap-3 text-sm sm:text-lg font-black">
                       <div className="w-2 h-2 bg-[#FFEF00] rounded-full" />
                       單元 1-4：$1,600 / 每個
                     </li>
-                    <li className="flex items-center gap-3 text-lg font-black">
+                    <li className="flex items-center gap-3 text-sm sm:text-lg font-black">
                       <div className="w-2 h-2 bg-[#FFEF00] rounded-full" />
                       其他單元：$3,000 / 每個
                     </li>
                     {currentCourse.allowExtra && (
-                      <li className="flex items-center gap-3 text-lg font-black">
+                      <li className="flex items-center gap-3 text-sm sm:text-lg font-black">
                         <div className="w-2 h-2 bg-[#FFEF00] rounded-full" />
                         超過 16 個單元後，額外單元享 8 折優惠！
                       </li>
@@ -1448,9 +1461,9 @@ function AppContent() {
                   </ul>
                 </div>
 
-                <div className="flex items-end gap-4">
+                <div className="flex items-end gap-3 sm:gap-4">
                   <div className="text-6xl sm:text-8xl font-black leading-none">{selectedUnits.filter(idx => idx < unitNames.length).length}</div>
-                  <div className="text-xl sm:text-2xl font-black mb-2">
+                  <div className="text-base sm:text-2xl font-black mb-1 sm:mb-2">
                     <span className="opacity-60">/ {unitNames.length}</span>
                     <br />
                     已選單元
@@ -1468,13 +1481,13 @@ function AppContent() {
                     )}
                   </div>
                   
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-3 flex-wrap">
                     {selectedUnits.filter(idx => idx < unitNames.length).length < currentCourse.minUnits ? (
-                      <div className="text-red-500 text-sm font-black flex items-center gap-2 bg-red-500/10 px-4 py-2 rounded-full border border-red-500/20">
+                      <div className="text-red-500 text-xs sm:text-sm font-black flex items-center gap-2 bg-red-500/10 px-3 sm:px-4 py-2 rounded-full border border-red-500/20">
                         <X size={18} /> 還差 {currentCourse.minUnits - selectedUnits.filter(idx => idx < unitNames.length).length} 個單元即可報名
                       </div>
                     ) : (
-                      <div className="text-[#00FF00] text-sm font-black flex items-center gap-2 bg-[#00FF00]/10 px-4 py-2 rounded-full border border-[#00FF00]/20">
+                      <div className="text-[#00FF00] text-xs sm:text-sm font-black flex items-center gap-2 bg-[#00FF00]/10 px-3 sm:px-4 py-2 rounded-full border border-[#00FF00]/20">
                         <CheckCircle2 size={18} /> 已達最低報名要求
                       </div>
                     )}
@@ -1490,13 +1503,13 @@ function AppContent() {
                   />
                 </div>
 
-                <div className="flex flex-wrap gap-3 pt-4">
+                <div className="flex flex-wrap gap-2 sm:gap-3 pt-2 sm:pt-4">
                   <button 
                     onClick={() => {
                       const allIndices = unitNames.map((_, i) => i);
                       setSelectedUnits([...new Set([...selectedUnits, ...allIndices])]);
                     }}
-                    className="px-6 py-3 rounded-full font-black text-xs transition-all border-[3px] border-white bg-white text-black hover:bg-[#FFEF00] hover:border-[#FFEF00] shadow-md"
+                    className="w-full sm:w-auto px-4 sm:px-6 py-2.5 sm:py-3 rounded-full font-black text-xs transition-all border-[3px] border-white bg-white text-black hover:bg-[#FFEF00] hover:border-[#FFEF00] shadow-md"
                   >
                     全選單元
                   </button>
@@ -1506,7 +1519,7 @@ function AppContent() {
                       const courseMandatory = currentCourse.mandatory || [];
                       setSelectedUnits([...new Set([...courseMandatory, ...globalMandatory])]);
                     }}
-                    className="px-6 py-3 rounded-full font-black text-xs transition-all border-[3px] border-white bg-white text-black hover:bg-[#FFEF00] hover:border-[#FFEF00] shadow-md"
+                    className="w-full sm:w-auto px-4 sm:px-6 py-2.5 sm:py-3 rounded-full font-black text-xs transition-all border-[3px] border-white bg-white text-black hover:bg-[#FFEF00] hover:border-[#FFEF00] shadow-md"
                   >
                     重設必修
                   </button>
@@ -1515,7 +1528,7 @@ function AppContent() {
                       const indices = [0, 1, 2, 3];
                       setSelectedUnits([...new Set([...selectedUnits, ...indices])]);
                     }}
-                    className="px-6 py-3 rounded-full font-black text-xs transition-all border-[3px] border-white bg-white text-black hover:bg-[#FFEF00] hover:border-[#FFEF00] shadow-md"
+                    className="w-full sm:w-auto px-4 sm:px-6 py-2.5 sm:py-3 rounded-full font-black text-xs transition-all border-[3px] border-white bg-white text-black hover:bg-[#FFEF00] hover:border-[#FFEF00] shadow-md"
                   >
                     選取單元 1-4
                   </button>
@@ -1523,7 +1536,7 @@ function AppContent() {
               </div>
               
               <div className="relative">
-                <div className="grid grid-cols-3 gap-4 h-[420px] overflow-y-auto p-6 bg-[#1A1A1A] custom-scrollbar rounded-[3rem] border-4 border-white/10 shadow-inner">
+                <div className="grid grid-cols-3 gap-2 sm:gap-4 h-[380px] sm:h-[420px] overflow-y-auto p-3 sm:p-6 bg-[#1A1A1A] custom-scrollbar rounded-[2rem] sm:rounded-[3rem] border-4 border-white/10 shadow-inner">
                   {unitNames.length === 0 ? (
                     <div className="flex flex-col items-center justify-center text-center p-12 w-full col-span-full min-h-[400px]">
                       <BookOpen size={64} className="mb-6 opacity-20 text-white" />
@@ -1543,23 +1556,23 @@ function AppContent() {
                             whileTap={isMandatory ? {} : { scale: 0.95 }}
                             onClick={() => toggleUnit(i)}
                             disabled={isMandatory}
-                            className={`p-3 border-[3px] flex flex-col items-center justify-center font-black text-[13px] transition-all rounded-2xl min-h-[92px] h-auto text-center leading-tight relative shadow-xl ${
+                            className={`p-2 sm:p-3 border-[3px] flex flex-col items-center justify-center font-black text-[10px] sm:text-[13px] transition-all rounded-xl sm:rounded-2xl min-h-[86px] sm:min-h-[92px] h-auto text-center leading-tight relative shadow-xl ${
                               isHighlighted 
                                 ? 'bg-[#FFEF00] text-black border-white shadow-[#FFEF00]/30' 
                                 : 'bg-[#2A2A2A] border-white/10 hover:border-white/30 text-white/80 hover:text-white'
                             } ${isMandatory ? 'cursor-default' : 'cursor-pointer'}`}
                           >
-                            <span className="block">{unit.name}</span>
-                            <div className="flex items-center gap-2 mt-1">
-                              <span className="text-[10px] opacity-40">(U{i+1})</span>
+                            <span className="block break-words leading-tight">{unit.name}</span>
+                            <div className="flex items-center gap-1 sm:gap-2 mt-1">
+                              <span className="text-[9px] sm:text-[10px] opacity-40">(U{i+1})</span>
                               {unit.price > 0 && (
-                                <span className="text-[10px] font-black text-black/60 bg-black/5 px-1.5 rounded-md">
+                                <span className="text-[9px] sm:text-[10px] font-black text-black/60 bg-black/5 px-1 sm:px-1.5 rounded-md">
                                   ${unit.price}
                                 </span>
                               )}
                             </div>
                             {isMandatory && (
-                              <div className="absolute top-2 right-2 flex items-center gap-1 bg-black text-[#FFEF00] px-1.5 py-0.5 rounded-md text-[8px] font-black uppercase tracking-tighter border border-white/20 shadow-sm">
+                              <div className="absolute top-1 right-1 sm:top-2 sm:right-2 flex items-center gap-1 bg-black text-[#FFEF00] px-1 sm:px-1.5 py-0.5 rounded-md text-[7px] sm:text-[8px] font-black uppercase tracking-tighter border border-white/20 shadow-sm">
                                 必修
                               </div>
                             )}
@@ -1997,7 +2010,7 @@ function AppContent() {
       <motion.button 
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
-        className="fixed bottom-8 right-8 bg-black text-[#FFEF00] w-16 h-16 rounded-full flex items-center justify-center shadow-2xl z-50 border-4 border-white"
+        className="hidden md:flex fixed bottom-8 right-8 bg-black text-[#FFEF00] w-16 h-16 rounded-full items-center justify-center shadow-2xl z-50 border-4 border-white"
       >
         <MousePointer2 />
       </motion.button>
@@ -2264,6 +2277,33 @@ function AppContent() {
                                   <option value="true">是</option>
                                   <option value="false">否</option>
                                 </select>
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase ml-1">開課日期</label>
+                                <input 
+                                  type="date"
+                                  className="w-full border-2 border-black p-3 rounded-xl font-bold text-sm"
+                                  value={newCourse.startDate}
+                                  onChange={e => setNewCourse({...newCourse, startDate: e.target.value})}
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase ml-1">上課時間</label>
+                                <input 
+                                  type="text" placeholder="例如: 逢六 14:00-17:00"
+                                  className="w-full border-2 border-black p-3 rounded-xl font-bold text-sm"
+                                  value={newCourse.classTime}
+                                  onChange={e => setNewCourse({...newCourse, classTime: e.target.value})}
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase ml-1">課程學費</label>
+                                <input 
+                                  type="text" placeholder="例如: HK$12,800"
+                                  className="w-full border-2 border-black p-3 rounded-xl font-bold text-sm"
+                                  value={newCourse.tuition}
+                                  onChange={e => setNewCourse({...newCourse, tuition: e.target.value})}
+                                />
                               </div>
                               <div className="md:col-span-2 space-y-1">
                                 <label className="text-[10px] font-black uppercase ml-1 flex justify-between items-center">
@@ -2750,6 +2790,9 @@ function AppContent() {
                                     title: '',
                                     subtitle: '',
                                     desc: '',
+                                    startDate: '',
+                                    classTime: '',
+                                    tuition: '',
                                     mask: 'mask-cloud',
                                     img: 'https://picsum.photos/seed/course/800/600'
                                   });
@@ -3074,6 +3117,36 @@ function AppContent() {
                                     </div>
                                   </div>
 
+                                  <div className="grid md:grid-cols-3 gap-6">
+                                    <div className="space-y-2">
+                                      <label className="text-xs font-black uppercase ml-1">開課日期</label>
+                                      <input 
+                                        type="date"
+                                        className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                        value={editingCourse.startDate || ''}
+                                        onChange={e => setEditingCourse({...editingCourse, startDate: e.target.value})}
+                                      />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <label className="text-xs font-black uppercase ml-1">上課時間</label>
+                                      <input 
+                                        type="text" placeholder="例如: 逢六 14:00-17:00"
+                                        className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                        value={editingCourse.classTime || ''}
+                                        onChange={e => setEditingCourse({...editingCourse, classTime: e.target.value})}
+                                      />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <label className="text-xs font-black uppercase ml-1">課程學費</label>
+                                      <input 
+                                        type="text" placeholder="例如: HK$12,800"
+                                        className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                        value={editingCourse.tuition || ''}
+                                        onChange={e => setEditingCourse({...editingCourse, tuition: e.target.value})}
+                                      />
+                                    </div>
+                                  </div>
+
                                   <div className="space-y-2">
                                     <label className="text-xs font-black uppercase ml-1">課程簡介</label>
                                     <textarea 
@@ -3229,6 +3302,36 @@ function AppContent() {
                                         type="text" placeholder="首頁顯示副標題"
                                         className="w-full border-4 border-black p-4 rounded-xl font-bold"
                                         value={newCourse.subtitle} onChange={e => setNewCourse({...newCourse, subtitle: e.target.value})}
+                                      />
+                                    </div>
+                                  </div>
+
+                                  <div className="grid md:grid-cols-3 gap-6">
+                                    <div className="space-y-2">
+                                      <label className="text-xs font-black uppercase ml-1">開課日期</label>
+                                      <input 
+                                        type="date"
+                                        className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                        value={newCourse.startDate}
+                                        onChange={e => setNewCourse({...newCourse, startDate: e.target.value})}
+                                      />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <label className="text-xs font-black uppercase ml-1">上課時間</label>
+                                      <input 
+                                        type="text" placeholder="例如: 逢六 14:00-17:00"
+                                        className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                        value={newCourse.classTime}
+                                        onChange={e => setNewCourse({...newCourse, classTime: e.target.value})}
+                                      />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <label className="text-xs font-black uppercase ml-1">課程學費</label>
+                                      <input 
+                                        type="text" placeholder="例如: HK$12,800"
+                                        className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                        value={newCourse.tuition}
+                                        onChange={e => setNewCourse({...newCourse, tuition: e.target.value})}
                                       />
                                     </div>
                                   </div>
