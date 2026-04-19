@@ -104,8 +104,14 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
 
 const apiPath = (collection: string, id?: string) => id ? `/api/collections/${collection}/${id}` : `/api/collections/${collection}`;
 
-async function apiFetchCollection(collection: string) {
-  const res = await fetch(apiPath(collection));
+async function apiFetchCollection(collection: string, limit?: number, offset?: number) {
+  let url = apiPath(collection);
+  const params = new URLSearchParams();
+  if (limit !== undefined) params.append('limit', limit.toString());
+  if (offset !== undefined) params.append('offset', offset.toString());
+  if (params.toString()) url += `?${params.toString()}`;
+
+  const res = await fetch(url);
   if (!res.ok) throw new Error(`Failed to fetch collection: ${collection}`);
   return res.json();
 }
@@ -400,6 +406,11 @@ function AppContent() {
   };
 
   const [activities, setActivities] = useState<any[]>(() => getInitialList('activities', []));
+  const [activitiesPage, setActivitiesPage] = useState(0);
+  const [hasMoreActivities, setHasMoreActivities] = useState(true);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const ACTIVITIES_PER_PAGE = 12;
+
   const [groupCourses, setGroupCourses] = useState<any[]>(() => getInitialList('groupCourses', []));
   const [unitNames, setUnitNames] = useState<any[]>(() => getInitialList('units', []));
   const [adminUnitNames, setAdminUnitNames] = useState<any[]>(() => getInitialList('units', []));
@@ -721,8 +732,10 @@ function AppContent() {
       };
 
       fetchCollection('activities', async () => {
-        const items = await apiFetchCollection('activities');
-        setActivities(items.sort((a: any, b: any) => Number(b.id) - Number(a.id)));
+        const items = await apiFetchCollection('activities', ACTIVITIES_PER_PAGE, 0);
+        setActivities(items);
+        setActivitiesPage(0);
+        setHasMoreActivities(items.length >= ACTIVITIES_PER_PAGE);
       }, 'activities');
 
       fetchCollection('groupCourses', async () => {
@@ -959,6 +972,26 @@ function AppContent() {
       setCourses(prev => prev.map(c => c.id.toString() === courseId.toString() ? { ...c, mandatory: newMandatory } : c));
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `courses/${courseId}`);
+    }
+  };
+
+  const handleLoadMoreActivities = async () => {
+    if (isLoadingMore || !hasMoreActivities) return;
+    setIsLoadingMore(true);
+    try {
+      const nextOffset = (activitiesPage + 1) * ACTIVITIES_PER_PAGE;
+      const newItems = await apiFetchCollection('activities', ACTIVITIES_PER_PAGE, nextOffset);
+      if (newItems.length > 0) {
+        setActivities(prev => [...prev, ...newItems]);
+        setActivitiesPage(prev => prev + 1);
+      }
+      if (newItems.length < ACTIVITIES_PER_PAGE) {
+        setHasMoreActivities(false);
+      }
+    } catch (err) {
+      console.error("Failed to load more activities:", err);
+    } finally {
+      setIsLoadingMore(false);
     }
   };
 
@@ -2056,6 +2089,27 @@ function AppContent() {
               </motion.div>
             ))}
           </div>
+
+          {hasMoreActivities && (
+            <div className="mt-16 flex justify-center pb-12 text-black">
+              <button
+                onClick={handleLoadMoreActivities}
+                disabled={isLoadingMore}
+                className={`px-10 py-4 rounded-full bg-[#0055FF] text-white font-black hover:bg-black transition-all transform hover:scale-105 active:scale-95 flex items-center gap-3 shadow-lg shadow-blue-500/20 uppercase tracking-widest ${
+                  isLoadingMore ? 'opacity-50 cursor-not-allowed' : ''
+                }`}
+              >
+                {isLoadingMore ? (
+                  <>
+                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    正在載入中...
+                  </>
+                ) : (
+                  '瀏覽更多活動回顧'
+                )}
+              </button>
+            </div>
+          )}
         </div>
       </section>
 
@@ -3930,6 +3984,85 @@ function AppContent() {
                         <h3 className="text-3xl font-black mb-8 flex items-center gap-3">
                           <Film size={32} /> 活動管理
                         </h3>
+
+                        {/* 批次匯入區域 */}
+                        <div className="bg-blue-50 border-4 border-[#0055FF] p-8 rounded-3xl shadow-[8px_8px_0px_rgba(0,85,255,1)] mb-12">
+                          <h4 className="text-xl font-black mb-4 uppercase flex items-center gap-2">
+                            <UploadCloud size={24} /> 批次匯入活動資料 (Phase 3)
+                          </h4>
+                          <p className="font-bold text-sm text-black/60 mb-6">
+                            選擇從 Scraper 產出的 <code className="bg-black/5 px-2 py-1 rounded">migrated_activities.json</code> 檔案進行批次匯入。
+                            系統會自動處理 1100+ 筆資料並過濾重複標題。
+                          </p>
+                          <div className="flex flex-col gap-4">
+                            <input 
+                              type="file" 
+                              accept=".json"
+                              id="bulk-import-json"
+                              className="hidden"
+                              onChange={async (e) => {
+                                const file = e.target.files?.[0];
+                                if (!file) return;
+                                
+                                try {
+                                  const text = await file.text();
+                                  const data = JSON.parse(text);
+                                  if (!Array.isArray(data)) throw new Error("無效的 JSON 格式，預期為陣列。");
+                                  
+                                  if (!confirm(`確定要匯入 ${data.length} 筆活動資料嗎？`)) return;
+                                  
+                                  let successCount = 0;
+                                  let skipCount = 0;
+                                  setIsSavingActivities(true);
+                                  
+                                  for (const item of data) {
+                                    // 簡單去重：檢查標題是否已存在
+                                    const exists = activities.some(a => a.title === item.title);
+                                    if (exists) {
+                                      skipCount++;
+                                      continue;
+                                    }
+                                    
+                                    const id = item.id || Date.now() + Math.random();
+                                    await apiSetDoc('activities', id.toString(), {
+                                      ...item,
+                                      id,
+                                      tags: Array.isArray(item.tags) ? item.tags : (item.tags || '').split(',').map((t: string) => t.trim())
+                                    });
+                                    successCount++;
+                                  }
+                                  
+                                  showToast(`匯入完成！成功：${successCount} 筆，跳過重複：${skipCount} 筆`);
+                                  // 重新刷新第一頁
+                                  const items = await apiFetchCollection('activities', ACTIVITIES_PER_PAGE, 0);
+                                  setActivities(items);
+                                  setActivitiesPage(0);
+                                  setHasMoreActivities(items.length >= ACTIVITIES_PER_PAGE);
+                                  
+                                } catch (err) {
+                                  console.error("匯入失敗:", err);
+                                  showToast("匯入失敗，請檢查檔案格式", "error");
+                                } finally {
+                                  setIsSavingActivities(false);
+                                  e.target.value = '';
+                                }
+                              }}
+                            />
+                            <label 
+                              htmlFor="bulk-import-json"
+                              className={`cursor-pointer inline-flex items-center justify-center gap-3 bg-[#0055FF] text-white px-8 py-5 rounded-full font-black uppercase hover:bg-black transition-all transform hover:scale-[1.02] shadow-[4px_4px_00px_rgba(0,0,0,1)] ${isSavingActivities ? 'opacity-50 pointer-events-none' : ''}`}
+                            >
+                              {isSavingActivities ? <Loader2 className="animate-spin" /> : <Database size={24} />}
+                              {isSavingActivities ? '正在批次匯入中...' : '選擇 JSON 檔案開始匯入'}
+                            </label>
+                            {isSavingActivities && (
+                              <p className="text-center text-xs font-black animate-pulse text-[#0055FF]">
+                                正在寫入資料庫，請勿關閉視窗...
+                              </p>
+                            )}
+                          </div>
+                        </div>
+
                         <div className="grid grid-cols-1 gap-4 mb-12">
                           {activities.map(a => (
                             <div key={a.id} className="bg-white border-4 border-black p-6 rounded-3xl flex gap-6 items-center shadow-[4px_4px_0px_rgba(0,0,0,1)]">

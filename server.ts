@@ -101,10 +101,26 @@ async function startServer() {
 
   app.get('/api/collections/:collection', async (req, res) => {
     try {
-      const result = await pool.query(
-        `SELECT doc_id, data FROM documents WHERE collection_name = $1 ORDER BY created_at DESC`,
-        [req.params.collection]
-      );
+      const { limit, offset } = req.query;
+      let query = `SELECT doc_id, data FROM documents WHERE collection_name = $1 ORDER BY created_at DESC`;
+      const params: any[] = [req.params.collection];
+
+      if (limit) {
+        const limitVal = parseInt(limit as string);
+        if (!isNaN(limitVal)) {
+          params.push(limitVal);
+          query += ` LIMIT $${params.length}`;
+        }
+      }
+      if (offset) {
+        const offsetVal = parseInt(offset as string);
+        if (!isNaN(offsetVal)) {
+          params.push(offsetVal);
+          query += ` OFFSET $${params.length}`;
+        }
+      }
+
+      const result = await pool.query(query, params);
       const items = result.rows.map((row) => ({ id: row.doc_id, ...row.data }));
       res.json(items);
     } catch (error) {
