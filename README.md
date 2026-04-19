@@ -19,6 +19,24 @@ View your app in AI Studio: https://ai.studio/apps/caa10c7e-353e-4c8c-83a0-b49ae
 3. Run the app:
    `npm run dev`
 
+### Keep Localhost Data In Sync With Zeabur
+
+If localhost and Zeabur show different data, they are usually connected to
+different PostgreSQL databases.
+
+Use this flow to make localhost read/write the same data as Zeabur:
+
+1. Copy [/.env.example](.env.example) to `/.env.local`.
+2. In `/.env.local`, set `DATABASE_URL` to the Zeabur PostgreSQL connection string.
+3. Set `POSTGRES_SSL=true` for managed PostgreSQL.
+4. Start local server with `npm run dev`.
+5. Verify by creating data on localhost, then refresh Zeabur UI.
+
+Notes:
+
+- `server.ts` accepts either `DATABASE_URL` or `POSTGRES_CONNECTION_STRING`.
+- If both are set, keep them pointing to the same database to avoid drift.
+
 ## Deploy on Zeabur
 
 This repository includes [zeabur.json](zeabur.json) with the deployment commands.
