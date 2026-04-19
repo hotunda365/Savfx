@@ -52,3 +52,26 @@ Required environment variables for backend startup:
 
 If Zeabur service settings already define commands, keep them consistent with
 `zeabur.json` to avoid config drift.
+
+## Recommended Workflow (Your Final Goal)
+
+### 1) Update / modify code
+
+- Run VS Code task: `auto push github`
+- This script commits and pushes current branch to GitHub.
+- If current branch is `master`, it also syncs `master -> main` for Zeabur.
+- Zeabur deployment menu should track `main` for automatic redeploy.
+
+### 2) Update website information (content/data)
+
+- Keep localhost and Zeabur connected to the same PostgreSQL database.
+- Use the same `DATABASE_URL` (or `POSTGRES_CONNECTION_STRING`) on both sides.
+- Restart local server after env updates.
+
+### 3) Verify localhost <-> Zeabur data sync
+
+- Run VS Code task: `verify localhost-zeabur sync`
+- This performs two-way writes/reads:
+   - local write -> remote read
+   - remote write -> local read
+- `PASS` means both are synced to the same data source.
