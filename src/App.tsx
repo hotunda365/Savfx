@@ -266,6 +266,7 @@ export default function App() {
 function AppContent() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  const [selectedCourseDetail, setSelectedCourseDetail] = useState<any | null>(null);
   const [selectedCourse, setSelectedCourse] = useState<number>(2);
   const [selectedUnits, setSelectedUnits] = useState<number[]>([]);
   const [briefingForm, setBriefingForm] = useState({ email: '', phone: '' });
@@ -1407,6 +1408,68 @@ function AppContent() {
         )}
       </AnimatePresence>
 
+      <AnimatePresence>
+        {selectedCourseDetail && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[110] bg-black/70 flex items-center justify-center p-3 sm:p-6"
+            onClick={() => setSelectedCourseDetail(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 16 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 16 }}
+              transition={{ duration: 0.2 }}
+              onClick={(e) => e.stopPropagation()}
+              className="relative bg-[#FFEF00] border-4 sm:border-6 border-black rounded-3xl w-full max-w-3xl max-h-[92vh] overflow-y-auto p-5 sm:p-8 shadow-[10px_10px_0px_rgba(0,0,0,1)]"
+            >
+              <button
+                onClick={() => setSelectedCourseDetail(null)}
+                className="absolute top-3 right-3 sm:top-4 sm:right-4 w-10 h-10 rounded-full bg-black text-[#FFEF00] border-2 border-black flex items-center justify-center"
+                aria-label="關閉課程詳情"
+              >
+                <X size={20} />
+              </button>
+
+              <div className="pr-10 sm:pr-12">
+                <h3 className="text-2xl sm:text-4xl font-black leading-tight break-words [overflow-wrap:anywhere]">
+                  {selectedCourseDetail.title || selectedCourseDetail.name}
+                </h3>
+                {selectedCourseDetail.subtitle && (
+                  <p className="mt-1 text-sm sm:text-base font-black text-black/80 break-words [overflow-wrap:anywhere]">
+                    {selectedCourseDetail.subtitle}
+                  </p>
+                )}
+              </div>
+
+              <div className="my-5 sm:my-6 flex justify-center">
+                <MaskedImage
+                  src={(selectedCourseDetail.img?.startsWith('http') || selectedCourseDetail.img?.startsWith('data:') || selectedCourseDetail.img?.startsWith('/'))
+                    ? selectedCourseDetail.img
+                    : `https://picsum.photos/seed/${selectedCourseDetail.img || 'course'}/700/500`}
+                  maskId={selectedCourseDetail.mask || 'mask-cloud'}
+                  className="w-40 h-40 sm:w-56 sm:h-56 bg-white border-2 sm:border-4 border-black"
+                />
+              </div>
+
+              <div className="bg-white/60 border-2 border-black rounded-2xl p-4 sm:p-5 text-sm sm:text-base font-bold leading-relaxed whitespace-pre-line break-words [overflow-wrap:anywhere]">
+                {selectedCourseDetail.desc || '暫無課程介紹'}
+              </div>
+
+              {(selectedCourseDetail.startDate || selectedCourseDetail.classTime || selectedCourseDetail.tuition) && (
+                <div className="mt-4 sm:mt-5 bg-black text-[#FFEF00] rounded-2xl p-4 space-y-2 text-xs sm:text-sm font-black break-words [overflow-wrap:anywhere]">
+                  {selectedCourseDetail.startDate && <p className="whitespace-pre-line">開課日期: {selectedCourseDetail.startDate}</p>}
+                  {selectedCourseDetail.classTime && <p className="whitespace-pre-line">上課時間: {selectedCourseDetail.classTime}</p>}
+                  {selectedCourseDetail.tuition && <p className="whitespace-pre-line">課程學費: {selectedCourseDetail.tuition}</p>}
+                </div>
+              )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Individual Courses */}
       <section id="courses-intro" className="py-14 sm:py-20 bg-white border-y-8 border-black">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
@@ -1433,7 +1496,12 @@ function AppContent() {
                     {course.tuition && <p className="whitespace-pre-line">課程學費: {course.tuition}</p>}
                   </div>
                 )}
-                <button className="mt-auto bg-black text-[#FFEF00] w-full py-3 font-bold uppercase rounded-full text-sm">查看詳情</button>
+                <button
+                  onClick={() => setSelectedCourseDetail(course)}
+                  className="mt-auto bg-black text-[#FFEF00] w-full py-3 font-bold uppercase rounded-full text-sm"
+                >
+                  查看詳情
+                </button>
               </motion.div>
             ))}
           </div>
