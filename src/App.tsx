@@ -3981,87 +3981,73 @@ function AppContent() {
 
                     {adminActiveTab === 'activities' && (
                       <section>
-                        <h3 className="text-3xl font-black mb-8 flex items-center gap-3">
-                          <Film size={32} /> 活動管理
-                        </h3>
-
-                        {/* 批次匯入區域 */}
-                        <div className="bg-blue-50 border-4 border-[#0055FF] p-8 rounded-3xl shadow-[8px_8px_0px_rgba(0,85,255,1)] mb-12">
-                          <h4 className="text-xl font-black mb-4 uppercase flex items-center gap-2">
-                            <UploadCloud size={24} /> 批次匯入活動資料 (Phase 3)
-                          </h4>
-                          <p className="font-bold text-sm text-black/60 mb-6">
-                            選擇從 Scraper 產出的 <code className="bg-black/5 px-2 py-1 rounded">migrated_activities.json</code> 檔案進行批次匯入。
-                            系統會自動處理 1100+ 筆資料並過濾重複標題。
-                          </p>
-                          <div className="flex flex-col gap-4">
-                            <input 
-                              type="file" 
-                              accept=".json"
-                              id="bulk-import-json"
-                              className="hidden"
-                              onChange={async (e) => {
-                                const file = e.target.files?.[0];
-                                if (!file) return;
-                                
-                                try {
-                                  const text = await file.text();
-                                  const data = JSON.parse(text);
-                                  if (!Array.isArray(data)) throw new Error("無效的 JSON 格式，預期為陣列。");
-                                  
-                                  if (!confirm(`確定要匯入 ${data.length} 筆活動資料嗎？`)) return;
-                                  
-                                  let successCount = 0;
-                                  let skipCount = 0;
-                                  setIsSavingActivities(true);
-                                  
-                                  for (const item of data) {
-                                    // 簡單去重：檢查標題是否已存在
-                                    const exists = activities.some(a => a.title === item.title);
-                                    if (exists) {
-                                      skipCount++;
-                                      continue;
-                                    }
+                        {/* 🚀 強制置頂的批次匯入區域 */}
+                        <div className="bg-[#0055FF] border-[6px] border-black p-10 rounded-[3rem] shadow-[12px_12px_0px_rgba(0,0,0,1)] mb-16 relative overflow-hidden">
+                          <div className="absolute top-[-20px] right-[-20px] opacity-10 rotate-12">
+                            <Database size={200} />
+                          </div>
+                          
+                          <div className="relative z-10">
+                            <h3 className="text-4xl font-[1000] text-white mb-4 flex items-center gap-4 italic tracking-tighter">
+                              <UploadCloud size={48} className="text-[#FFEF00]" /> 
+                              數據大遷移 (Phase 3)
+                            </h3>
+                            <p className="font-bold text-lg text-white/90 mb-8 max-w-2xl leading-relaxed">
+                              已經成功抓取 <span className="bg-[#FFEF00] text-black px-2 py-1 rounded-lg">1144 筆</span> 歷史數據！<br/>
+                              請點擊下方按鈕，選擇 <code className="bg-black/30 px-2 py-1 rounded">scripts/migrated_activities.json</code> 開始匯入。
+                            </p>
+                            
+                            <div className="flex flex-col items-start gap-4">
+                              <input 
+                                type="file" accept=".json" id="bulk-import-json-fix" className="hidden"
+                                onChange={async (e) => {
+                                  const file = e.target.files?.[0];
+                                  if (!file) return;
+                                  try {
+                                    const text = await file.text();
+                                    const data = JSON.parse(text);
+                                    if (!Array.isArray(data)) throw new Error("無效 JSON");
+                                    if (!confirm(`確定要匯入這 ${data.length} 筆活動資料嗎？這可能需要幾分鐘。`)) return;
                                     
-                                    const id = item.id || Date.now() + Math.random();
-                                    await apiSetDoc('activities', id.toString(), {
-                                      ...item,
-                                      id,
-                                      tags: Array.isArray(item.tags) ? item.tags : (item.tags || '').split(',').map((t: string) => t.trim())
-                                    });
-                                    successCount++;
+                                    setIsSavingActivities(true);
+                                    let count = 0;
+                                    for (const item of data) {
+                                      const id = item.id || `migrated-${Date.now()}-${count}`;
+                                      await apiSetDoc('activities', id.toString(), {
+                                        ...item,
+                                        id,
+                                        tags: Array.isArray(item.tags) ? item.tags : (item.tags || '').split(',').map((t: any) => t.trim())
+                                      });
+                                      count++;
+                                    }
+                                    showToast(`🎉 成功匯入 ${count} 筆資料！`);
+                                    window.location.reload(); // 強制刷新獲取最新數據
+                                  } catch (err) {
+                                    showToast("匯入出錯，請檢查檔案", "error");
+                                  } finally {
+                                    setIsSavingActivities(false);
                                   }
-                                  
-                                  showToast(`匯入完成！成功：${successCount} 筆，跳過重複：${skipCount} 筆`);
-                                  // 重新刷新第一頁
-                                  const items = await apiFetchCollection('activities', ACTIVITIES_PER_PAGE, 0);
-                                  setActivities(items);
-                                  setActivitiesPage(0);
-                                  setHasMoreActivities(items.length >= ACTIVITIES_PER_PAGE);
-                                  
-                                } catch (err) {
-                                  console.error("匯入失敗:", err);
-                                  showToast("匯入失敗，請檢查檔案格式", "error");
-                                } finally {
-                                  setIsSavingActivities(false);
-                                  e.target.value = '';
-                                }
-                              }}
-                            />
-                            <label 
-                              htmlFor="bulk-import-json"
-                              className={`cursor-pointer inline-flex items-center justify-center gap-3 bg-[#0055FF] text-white px-8 py-5 rounded-full font-black uppercase hover:bg-black transition-all transform hover:scale-[1.02] shadow-[4px_4px_00px_rgba(0,0,0,1)] ${isSavingActivities ? 'opacity-50 pointer-events-none' : ''}`}
-                            >
-                              {isSavingActivities ? <Loader2 className="animate-spin" /> : <Database size={24} />}
-                              {isSavingActivities ? '正在批次匯入中...' : '選擇 JSON 檔案開始匯入'}
-                            </label>
-                            {isSavingActivities && (
-                              <p className="text-center text-xs font-black animate-pulse text-[#0055FF]">
-                                正在寫入資料庫，請勿關閉視窗...
-                              </p>
-                            )}
+                                }}
+                              />
+                              <label 
+                                htmlFor="bulk-import-json-fix"
+                                className={`cursor-pointer inline-flex items-center justify-center gap-4 bg-[#FFEF00] text-black px-12 py-6 rounded-full font-[1000] text-2xl uppercase hover:scale-110 active:scale-95 transition-all shadow-[8px_8px_0px_rgba(0,0,0,1)] border-4 border-black ${isSavingActivities ? 'opacity-50 pointer-events-none' : ''}`}
+                              >
+                                {isSavingActivities ? <Loader2 className="animate-spin" size={32} /> : <Database size={32} />}
+                                {isSavingActivities ? '正在寫入 1144 筆數據...' : '立即開始匯入資料'}
+                              </label>
+                              {isSavingActivities && (
+                                <div className="mt-4 bg-black/20 p-4 rounded-2xl border-2 border-dashed border-white/50 w-full text-white font-black text-center">
+                                  ⏳ 請耐心等候，系統正在處理大量數據，請勿重新整理頁面...
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
+
+                        <h3 className="text-3xl font-black mb-8 flex items-center gap-3">
+                          <Film size={32} /> 單筆新增活動
+                        </h3>
 
                         <div className="grid grid-cols-1 gap-4 mb-12">
                           {activities.map(a => (
