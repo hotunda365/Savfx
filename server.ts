@@ -109,10 +109,10 @@ async function startServer() {
         query += `
           ORDER BY
             CASE
-              WHEN data->>'date' ~ '(\d{4})年\s*(\d{1,2})月\s*(\d{1,2})日' THEN
-                ((regexp_match(data->>'date', '(\d{4})年\s*(\d{1,2})月\s*(\d{1,2})日'))[1]::int * 10000) +
-                ((regexp_match(data->>'date', '(\d{4})年\s*(\d{1,2})月\s*(\d{1,2})日'))[2]::int * 100) +
-                ((regexp_match(data->>'date', '(\d{4})年\s*(\d{1,2})月\s*(\d{1,2})日'))[3]::int)
+              WHEN data->>'date' ~ '([0-9]{4})年[0-9]{1,2}月[0-9]{1,2}日' THEN
+                ((regexp_match(data->>'date', '([0-9]{4})年([0-9]{1,2})月([0-9]{1,2})日'))[1]::int * 10000) +
+                ((regexp_match(data->>'date', '([0-9]{4})年([0-9]{1,2})月([0-9]{1,2})日'))[2]::int * 100) +
+                ((regexp_match(data->>'date', '([0-9]{4})年([0-9]{1,2})月([0-9]{1,2})日'))[3]::int)
               ELSE 0
             END DESC,
             created_at DESC`;
