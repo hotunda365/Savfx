@@ -820,6 +820,7 @@ function AppContent() {
   const [newActivity, setNewActivity] = useState({ title: '', content: '', date: '', img: '', tags: '#SAVFX, #AI, #動畫' });
   const [newTutor, setNewTutor] = useState({ name: '', role: '', desc: '', img: '', priority: 0, mask: 'mask-notebook' });
   const [tutorPriorityDrafts, setTutorPriorityDrafts] = useState<Record<string, number>>({});
+  const [tutorMaskDrafts, setTutorMaskDrafts] = useState<Record<string, string>>({});
   const [newTestimonial, setNewTestimonial] = useState({ name: '', text: '', img: '' });
   const [newCourse, setNewCourse] = useState({ 
     name: '', 
@@ -1002,13 +1003,14 @@ function AppContent() {
     if (!tutor) return;
 
     const nextPriority = Number.isFinite(Number(tutorPriorityDrafts[id])) ? Number(tutorPriorityDrafts[id]) : 0;
+    const nextMask = tutorMaskDrafts[id] ?? tutor.mask ?? 'mask-notebook';
     setSavingTutorPriorityId(id.toString());
 
     try {
-      const updatedTutor = { ...tutor, priority: nextPriority };
+      const updatedTutor = { ...tutor, priority: nextPriority, mask: nextMask };
       await apiSetDoc('tutors', id.toString(), updatedTutor);
       setTutors(prev => prev.map(t => t.id?.toString() === id.toString() ? updatedTutor : t));
-      showToast("導師排序已更新");
+      showToast("導師資料已更新");
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `tutors/${id}`);
     } finally {
@@ -3551,27 +3553,44 @@ function AppContent() {
                                 <p className="font-black text-lg">{t.name}</p>
                                 <p className="text-xs font-bold text-black/60 uppercase tracking-widest">{t.role}</p>
                               </div>
-                              <div className="flex items-center gap-2 shrink-0 bg-[#FFEF00]/20 border-2 border-black rounded-xl px-2 py-1">
-                                <label className="text-[10px] font-black uppercase text-black">排序</label>
-                                <input
-                                  type="number"
-                                  className="w-16 border-2 border-black p-1 rounded-lg font-black text-sm bg-white"
-                                  value={tutorPriorityDrafts[t.id?.toString()] ?? getTutorPriority(t)}
-                                  onChange={(e) => {
-                                    const value = Number(e.target.value);
-                                    setTutorPriorityDrafts(prev => ({
-                                      ...prev,
-                                      [t.id.toString()]: Number.isFinite(value) ? value : 0
-                                    }));
-                                  }}
-                                />
-                                <button
-                                  onClick={() => handleUpdateTutorPriority(t.id.toString())}
-                                  disabled={savingTutorPriorityId === t.id?.toString()}
-                                  className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase border-2 border-black bg-white ${savingTutorPriorityId === t.id?.toString() ? 'opacity-60 cursor-not-allowed' : 'hover:bg-black hover:text-[#FFEF00]'}`}
-                                >
-                                  {savingTutorPriorityId === t.id?.toString() ? '儲存中' : '儲存'}
-                                </button>
+                              <div className="flex flex-col gap-2 shrink-0">
+                                <div className="flex items-center gap-2 bg-[#FFEF00]/20 border-2 border-black rounded-xl px-2 py-1">
+                                  <label className="text-[10px] font-black uppercase text-black">排序</label>
+                                  <input
+                                    type="number"
+                                    className="w-16 border-2 border-black p-1 rounded-lg font-black text-sm bg-white"
+                                    value={tutorPriorityDrafts[t.id?.toString()] ?? getTutorPriority(t)}
+                                    onChange={(e) => {
+                                      const value = Number(e.target.value);
+                                      setTutorPriorityDrafts(prev => ({
+                                        ...prev,
+                                        [t.id.toString()]: Number.isFinite(value) ? value : 0
+                                      }));
+                                    }}
+                                  />
+                                  <button
+                                    onClick={() => handleUpdateTutorPriority(t.id.toString())}
+                                    disabled={savingTutorPriorityId === t.id?.toString()}
+                                    className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase border-2 border-black bg-white ${savingTutorPriorityId === t.id?.toString() ? 'opacity-60 cursor-not-allowed' : 'hover:bg-black hover:text-[#FFEF00]'}`}
+                                  >
+                                    {savingTutorPriorityId === t.id?.toString() ? '儲存中' : '儲存'}
+                                  </button>
+                                </div>
+                                <div className="flex items-center gap-2 bg-white border-2 border-black rounded-xl px-2 py-1">
+                                  <label className="text-[10px] font-black uppercase text-black whitespace-nowrap">遮罩</label>
+                                  <select
+                                    className="border border-black p-1 rounded-lg font-bold text-xs bg-white"
+                                    value={tutorMaskDrafts[t.id?.toString()] ?? (t.mask || 'mask-notebook')}
+                                    onChange={(e) => setTutorMaskDrafts(prev => ({ ...prev, [t.id.toString()]: e.target.value }))}
+                                  >
+                                    <option value="mask-notebook">筆記本</option>
+                                    <option value="mask-dream">夢想</option>
+                                    <option value="mask-cloud">雲朵</option>
+                                    <option value="mask-book">書本</option>
+                                    <option value="mask-film">底片</option>
+                                    <option value="mask-graduation-cap">畢業帽</option>
+                                  </select>
+                                </div>
                               </div>
                               <button onClick={() => handleDeleteTutor(t.id)} className="text-red-600 p-2 hover:bg-red-50 rounded-full transition-colors">
                                 <Trash2 size={20} />
