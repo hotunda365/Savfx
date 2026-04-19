@@ -2157,7 +2157,6 @@ function AppContent() {
                 { id: 'tutors', label: '導師管理', icon: Users },
                 { id: 'testimonials', label: '學員感想', icon: MessageSquare },
                 { id: 'activities', label: '活動管理', icon: Film },
-                { id: 'danger', label: '系統維護', icon: Trash2 },
               ].map(tab => (
                 <button
                   key={tab.id}
@@ -3940,7 +3939,7 @@ function AppContent() {
                       </section>
                     )}
 
-                    {adminActiveTab === 'danger' && (
+                    {adminActiveTab === 'danger-disabled' && (
                       <section>
                         <h3 className="text-3xl font-black mb-8 flex items-center gap-3 text-red-600">
                           <Trash2 size={32} /> 系統維護
