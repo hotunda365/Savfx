@@ -1523,7 +1523,7 @@ function AppContent() {
               </div>
               
               <div className="relative">
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 max-h-[700px] overflow-y-auto p-8 bg-[#1A1A1A] custom-scrollbar rounded-[3rem] border-4 border-white/10 shadow-inner">
+                <div className="grid grid-cols-3 gap-4 h-[420px] overflow-y-auto p-6 bg-[#1A1A1A] custom-scrollbar rounded-[3rem] border-4 border-white/10 shadow-inner">
                   {unitNames.length === 0 ? (
                     <div className="flex flex-col items-center justify-center text-center p-12 w-full col-span-full min-h-[400px]">
                       <BookOpen size={64} className="mb-6 opacity-20 text-white" />
@@ -1543,7 +1543,7 @@ function AppContent() {
                             whileTap={isMandatory ? {} : { scale: 0.95 }}
                             onClick={() => toggleUnit(i)}
                             disabled={isMandatory}
-                            className={`p-4 border-[3px] flex flex-col items-center justify-center font-black text-[13px] transition-all rounded-2xl min-h-[85px] h-auto text-center leading-tight relative shadow-xl ${
+                            className={`p-3 border-[3px] flex flex-col items-center justify-center font-black text-[13px] transition-all rounded-2xl min-h-[92px] h-auto text-center leading-tight relative shadow-xl ${
                               isHighlighted 
                                 ? 'bg-[#FFEF00] text-black border-white shadow-[#FFEF00]/30' 
                                 : 'bg-[#2A2A2A] border-white/10 hover:border-white/30 text-white/80 hover:text-white'
