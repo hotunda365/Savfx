@@ -1569,10 +1569,6 @@ function AppContent() {
                     </>
                   )}
                 </div>
-                {/* Custom Scrollbar Indicator */}
-                <div className="absolute top-8 right-2 bottom-8 w-1.5 bg-white/5 rounded-full overflow-hidden">
-                  <div className="w-full bg-[#FFEF00] rounded-full" style={{ height: '30%', marginTop: '10%' }} />
-                </div>
               </div>
             </div>
           </div>
