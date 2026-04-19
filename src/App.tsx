@@ -334,6 +334,7 @@ function AppContent() {
   const [isSavingActivities, setIsSavingActivities] = useState(false);
   const [isSavingTutors, setIsSavingTutors] = useState(false);
   const [savingTutorPriorityId, setSavingTutorPriorityId] = useState<string | null>(null);
+  const [savingTutorMaskId, setSavingTutorMaskId] = useState<string | null>(null);
   const [isSavingTestimonials, setIsSavingTestimonials] = useState(false);
   const [isSavingGroupCourses, setIsSavingGroupCourses] = useState(false);
   const [dataLoaded, setDataLoaded] = useState({
@@ -1015,6 +1016,27 @@ function AppContent() {
       handleFirestoreError(error, OperationType.UPDATE, `tutors/${id}`);
     } finally {
       setSavingTutorPriorityId(null);
+    }
+  };
+
+  const handleUpdateTutorMask = async (id: string, nextMask: string) => {
+    const tutor = tutors.find(t => t.id?.toString() === id.toString());
+    if (!tutor) return;
+
+    const previousMask = tutor.mask || 'mask-notebook';
+    setTutorMaskDrafts(prev => ({ ...prev, [id]: nextMask }));
+    setSavingTutorMaskId(id.toString());
+
+    try {
+      const updatedTutor = { ...tutor, mask: nextMask };
+      await apiSetDoc('tutors', id.toString(), updatedTutor);
+      setTutors(prev => prev.map(t => t.id?.toString() === id.toString() ? updatedTutor : t));
+      showToast("導師遮罩已更新");
+    } catch (error) {
+      setTutorMaskDrafts(prev => ({ ...prev, [id]: previousMask }));
+      handleFirestoreError(error, OperationType.UPDATE, `tutors/${id}`);
+    } finally {
+      setSavingTutorMaskId(null);
     }
   };
 
@@ -3591,7 +3613,8 @@ function AppContent() {
                                   <select
                                     className="border border-black p-1 rounded-lg font-bold text-xs bg-white"
                                     value={tutorMaskDrafts[t.id?.toString()] ?? (t.mask || 'mask-notebook')}
-                                    onChange={(e) => setTutorMaskDrafts(prev => ({ ...prev, [t.id.toString()]: e.target.value }))}
+                                    onChange={(e) => handleUpdateTutorMask(t.id.toString(), e.target.value)}
+                                    disabled={savingTutorMaskId === t.id?.toString()}
                                   >
                                     <option value="mask-notebook">筆記本</option>
                                     <option value="mask-dream">夢想</option>
@@ -3600,6 +3623,7 @@ function AppContent() {
                                     <option value="mask-film">底片</option>
                                     <option value="mask-graduation-cap">畢業帽</option>
                                   </select>
+                                  {savingTutorMaskId === t.id?.toString() && <span className="text-[10px] font-black text-black/60 whitespace-nowrap">儲存中</span>}
                                 </div>
                               </div>
                               <button onClick={() => handleDeleteTutor(t.id)} className="text-red-600 p-2 hover:bg-red-50 rounded-full transition-colors">
