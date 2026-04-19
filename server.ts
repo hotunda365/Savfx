@@ -102,8 +102,23 @@ async function startServer() {
   app.get('/api/collections/:collection', async (req, res) => {
     try {
       const { limit, offset } = req.query;
-      let query = `SELECT doc_id, data FROM documents WHERE collection_name = $1 ORDER BY created_at DESC`;
+      let query = `SELECT doc_id, data FROM documents WHERE collection_name = $1`;
       const params: any[] = [req.params.collection];
+
+      if (req.params.collection === 'activities') {
+        query += `
+          ORDER BY
+            CASE
+              WHEN data->>'date' ~ '(\d{4})年\s*(\d{1,2})月\s*(\d{1,2})日' THEN
+                ((regexp_match(data->>'date', '(\d{4})年\s*(\d{1,2})月\s*(\d{1,2})日'))[1]::int * 10000) +
+                ((regexp_match(data->>'date', '(\d{4})年\s*(\d{1,2})月\s*(\d{1,2})日'))[2]::int * 100) +
+                ((regexp_match(data->>'date', '(\d{4})年\s*(\d{1,2})月\s*(\d{1,2})日'))[3]::int)
+              ELSE 0
+            END DESC,
+            created_at DESC`;
+      } else {
+        query += ` ORDER BY created_at DESC`;
+      }
 
       if (limit) {
         const limitVal = parseInt(limit as string);

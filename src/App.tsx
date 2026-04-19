@@ -38,6 +38,7 @@ import {
   AlertCircle,
   Camera,
   Upload,
+  UploadCloud,
   Loader2,
   Database
 } from 'lucide-react';
