@@ -1,6 +1,6 @@
 {
-  "buildCommand": "npm install",
-  "startCommand": "npm run dev",
+  "buildCommand": "npm install && npm run build",
+  "startCommand": "npm run start",
   "installCommand": "npm install",
   "rootDirectory": "."
 }
