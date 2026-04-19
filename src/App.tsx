@@ -915,6 +915,13 @@ function AppContent() {
     return normalized.img || 'https://picsum.photos/seed/activity-fallback/900/1200';
   };
 
+  const handleActivityImageError = (event: React.SyntheticEvent<HTMLImageElement>) => {
+    const fallback = 'https://picsum.photos/seed/activity-fallback/900/1200';
+    if (event.currentTarget.src !== fallback) {
+      event.currentTarget.src = fallback;
+    }
+  };
+
   const handleAddCourse = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSavingCourses(true);
@@ -2086,8 +2093,9 @@ function AppContent() {
                   <img 
                     src={getActivityImageUrl(activity)} 
                     alt={activity.title} 
-                    className="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-110"
+                    className="w-full h-64 object-cover transition-transform duration-500 group-hover:scale-110"
                     referrerPolicy="no-referrer"
+                    onError={handleActivityImageError}
                   />
                   {isAdmin && (
                     <button 
@@ -2114,9 +2122,9 @@ function AppContent() {
                   <h3 className="text-2xl font-black text-black mb-4 leading-tight group-hover:text-[#0055FF] transition-colors">
                     {activity.title}
                   </h3>
-                  <p className="text-black/70 text-base font-bold leading-snug mb-8 line-clamp-6">
+                  <div className="text-black/70 text-base font-bold leading-snug mb-8 max-h-56 overflow-y-auto pr-2 whitespace-pre-line">
                     {activity.content}
-                  </p>
+                  </div>
                   
                   {/* Tags */}
                   <div className="mt-auto flex flex-wrap gap-2">
