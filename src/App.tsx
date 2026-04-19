@@ -334,6 +334,7 @@ function AppContent() {
   const [isSavingCourses, setIsSavingCourses] = useState(false);
   const [isSavingActivities, setIsSavingActivities] = useState(false);
   const [isSavingTutors, setIsSavingTutors] = useState(false);
+  const [isSubmittingBriefing, setIsSubmittingBriefing] = useState(false);
   const [savingTutorPriorityId, setSavingTutorPriorityId] = useState<string | null>(null);
   const [savingTutorMaskId, setSavingTutorMaskId] = useState<string | null>(null);
   const [isSavingTestimonials, setIsSavingTestimonials] = useState(false);
@@ -345,7 +346,8 @@ function AppContent() {
     activities: false,
     tutors: false,
     testimonials: false,
-    groupCourses: false
+    groupCourses: false,
+    briefingLeads: false
   });
 
   const handleSeedData = async () => {
@@ -404,6 +406,7 @@ function AppContent() {
   const [courses, setCourses] = useState<any[]>(() => getInitialList('courses', []));
   const [tutors, setTutors] = useState<any[]>(() => getInitialList('tutors', []));
   const [testimonials, setTestimonials] = useState<any[]>(() => getInitialList('testimonials', []));
+  const [briefingLeads, setBriefingLeads] = useState<any[]>(() => getInitialList('briefingLeads', []));
 
   // Persistence Effects
   useEffect(() => { localStorage.setItem('savfx_cache_activities', JSON.stringify(activities)); }, [activities]);
@@ -412,6 +415,7 @@ function AppContent() {
   useEffect(() => { localStorage.setItem('savfx_cache_courses', JSON.stringify(courses)); }, [courses]);
   useEffect(() => { localStorage.setItem('savfx_cache_tutors', JSON.stringify(tutors)); }, [tutors]);
   useEffect(() => { localStorage.setItem('savfx_cache_testimonials', JSON.stringify(testimonials)); }, [testimonials]);
+  useEffect(() => { localStorage.setItem('savfx_cache_briefingLeads', JSON.stringify(briefingLeads)); }, [briefingLeads]);
   const [confirmModal, setConfirmModal] = useState<{
     show: boolean;
     title: string;
@@ -751,6 +755,16 @@ function AppContent() {
         const items = await apiFetchCollection('testimonials');
         setTestimonials(items);
       }, 'testimonials');
+
+      fetchCollection('briefingLeads', async () => {
+        const items = await apiFetchCollection('briefingLeads');
+        const sorted = items.sort((a: any, b: any) => {
+          const aTime = Date.parse(a.createdAt || '') || Number(a.id) || 0;
+          const bTime = Date.parse(b.createdAt || '') || Number(b.id) || 0;
+          return bTime - aTime;
+        });
+        setBriefingLeads(sorted);
+      }, 'briefingLeads');
     };
 
     loadSettings();
@@ -768,7 +782,8 @@ function AppContent() {
             activities: true,
             tutors: true,
             testimonials: true,
-            groupCourses: true
+            groupCourses: true,
+            briefingLeads: true
           };
         }
         return prev;
@@ -1172,10 +1187,34 @@ function AppContent() {
 
   const totalPrice = calculateTotalPrice();
 
-  const handleBriefingSubmit = (e: React.FormEvent) => {
+  const handleBriefingSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsSubmitted(true);
-    setTimeout(() => setIsSubmitted(false), 3000);
+
+    const email = briefingForm.email.trim();
+    const phone = briefingForm.phone.trim();
+    if (!email || !phone) return;
+
+    const id = Date.now().toString();
+    const leadPayload = {
+      id,
+      email,
+      phone,
+      createdAt: new Date().toISOString()
+    };
+
+    setIsSubmittingBriefing(true);
+    try {
+      await apiSetDoc('briefingLeads', id, leadPayload);
+      setBriefingLeads(prev => [leadPayload, ...prev]);
+      setBriefingForm({ email: '', phone: '' });
+      setIsSubmitted(true);
+      setTimeout(() => setIsSubmitted(false), 3000);
+      showToast("提交成功！我們會盡快聯絡您。", "success");
+    } catch (error) {
+      handleFirestoreError(error, OperationType.CREATE, `briefingLeads/${id}`);
+    } finally {
+      setIsSubmittingBriefing(false);
+    }
   };
 
   return (
@@ -1817,9 +1856,11 @@ function AppContent() {
             />
             <button 
               type="submit" 
-              className="w-full bg-black text-[#FFEF00] py-4 font-black uppercase text-xl hover:scale-[1.02] transition-transform rounded-full"
+              disabled={isSubmittingBriefing}
+              className={`w-full bg-black text-[#FFEF00] py-4 font-black uppercase text-xl hover:scale-[1.02] transition-transform rounded-full flex items-center justify-center gap-2 ${isSubmittingBriefing ? 'opacity-70 cursor-not-allowed' : ''}`}
             >
-              獲取簡介會影片
+              {isSubmittingBriefing ? <Loader2 className="animate-spin" size={20} /> : null}
+              {isSubmittingBriefing ? '提交中...' : '獲取簡介會影片'}
             </button>
           </form>
 
@@ -2154,6 +2195,7 @@ function AppContent() {
                 { id: 'courses', label: '課程管理', icon: GraduationCap },
                 { id: 'units', label: '個人課程管理', icon: BookOpen },
                 { id: 'group-courses', label: '團體課程管理', icon: Users },
+                { id: 'briefing-leads', label: '簡介會留名', icon: FileText },
                 { id: 'tutors', label: '導師管理', icon: Users },
                 { id: 'testimonials', label: '學員感想', icon: MessageSquare },
                 { id: 'activities', label: '活動管理', icon: Film },
@@ -2219,6 +2261,7 @@ function AppContent() {
                             { label: '課程數量', value: courses.length, icon: GraduationCap, color: 'bg-green-500', tab: 'courses' },
                             { label: '導師人數', value: tutors.length, icon: Users, color: 'bg-purple-500', tab: 'tutors' },
                             { label: '活動記錄', value: activities.length, icon: Film, color: 'bg-orange-500', tab: 'activities' },
+                            { label: '留名數量', value: briefingLeads.length, icon: FileText, color: 'bg-pink-500', tab: 'briefing-leads' },
                           ].map((stat, i) => (
                             <button 
                               key={i} 
@@ -2232,6 +2275,33 @@ function AppContent() {
                               <p className="text-3xl font-black">{stat.value}</p>
                             </button>
                           ))}
+                        </div>
+
+                        <div className="bg-white border-4 border-black p-8 rounded-[2rem] shadow-[8px_8px_0px_rgba(0,0,0,1)]">
+                          <div className="flex items-center justify-between mb-5">
+                            <h4 className="text-xl font-black uppercase flex items-center gap-2">
+                              <FileText size={20} /> 最新留名資料
+                            </h4>
+                            <button
+                              onClick={() => setAdminActiveTab('briefing-leads')}
+                              className="text-xs font-black uppercase bg-black text-[#FFEF00] px-3 py-2 rounded-full"
+                            >
+                              查看全部
+                            </button>
+                          </div>
+                          {briefingLeads.length === 0 ? (
+                            <p className="text-sm font-bold text-black/60">暫時未有留名資料</p>
+                          ) : (
+                            <div className="space-y-3 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
+                              {briefingLeads.slice(0, 5).map((lead) => (
+                                <div key={lead.id} className="border-2 border-black/10 rounded-xl p-3 bg-gray-50">
+                                  <p className="font-black text-sm break-words [overflow-wrap:anywhere]">{lead.email}</p>
+                                  <p className="font-bold text-sm text-black/70">{lead.phone}</p>
+                                  <p className="text-xs font-bold text-black/50 mt-1">{lead.createdAt ? new Date(lead.createdAt).toLocaleString() : '-'}</p>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
 
                         <div className="grid md:grid-cols-2 gap-8">
@@ -2272,6 +2342,44 @@ function AppContent() {
                           </div>
                         </div>
                       </div>
+                    )}
+
+                    {adminActiveTab === 'briefing-leads' && (
+                      <section>
+                        <h3 className="text-3xl font-black mb-8 flex items-center gap-3">
+                          <FileText size={32} /> 簡介會留名
+                        </h3>
+
+                        <div className="bg-white border-4 border-black p-6 md:p-8 rounded-3xl shadow-[8px_8px_0px_rgba(0,0,0,1)]">
+                          {briefingLeads.length === 0 ? (
+                            <div className="text-center py-14 bg-black/5 rounded-3xl border-4 border-dashed border-black/10">
+                              <FileText size={48} className="mx-auto mb-4 opacity-20" />
+                              <p className="font-black text-black/60">暫時未有留名資料</p>
+                            </div>
+                          ) : (
+                            <div className="overflow-x-auto">
+                              <table className="w-full min-w-[680px] border-collapse">
+                                <thead>
+                                  <tr className="border-b-4 border-black/15">
+                                    <th className="text-left py-3 px-2 text-xs font-black uppercase">時間</th>
+                                    <th className="text-left py-3 px-2 text-xs font-black uppercase">Email</th>
+                                    <th className="text-left py-3 px-2 text-xs font-black uppercase">電話</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {briefingLeads.map((lead) => (
+                                    <tr key={lead.id} className="border-b border-black/10">
+                                      <td className="py-3 px-2 text-sm font-bold text-black/60 whitespace-nowrap">{lead.createdAt ? new Date(lead.createdAt).toLocaleString() : '-'}</td>
+                                      <td className="py-3 px-2 text-sm font-black break-words [overflow-wrap:anywhere]">{lead.email}</td>
+                                      <td className="py-3 px-2 text-sm font-bold">{lead.phone}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+                        </div>
+                      </section>
                     )}
 
                     {adminActiveTab === 'courses' && (
