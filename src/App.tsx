@@ -885,9 +885,11 @@ function AppContent() {
       normalized = `https://www.savfx.com.hk${normalized}`;
     }
 
+    // Scraper produced "https://www.savfx.com.hk_XXXX.jpg" (missing slash+path).
+    // Real URL is https://www.savfx.com.hk/images/lib/_XXXX.jpg
     return normalized.replace(
       /^https?:\/\/www\.savfx\.com\.hk_(.+)$/i,
-      'https://www.savfx.com.hk/$1'
+      'https://www.savfx.com.hk/images/lib/_$1'
     );
   };
 
@@ -2097,7 +2099,6 @@ function AppContent() {
                     src={getActivityImageUrl(activity)} 
                     alt={activity.title} 
                     className="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-110"
-                    referrerPolicy="no-referrer"
                     onError={(e) => { (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/activity-fallback/900/600'; }}
                   />
                   {/* SAVFX Logo Overlay */}

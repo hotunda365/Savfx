@@ -33,7 +33,7 @@ async function scrapeEverything() {
                     title: item.event_title || "未命名活動",
                     date: item.event_date_format || "2024-01-01",
                     content: item.event_desc || "",
-                    img: item.event_cover_url ? (item.event_cover_url.startsWith('http') ? item.event_cover_url : `https://www.savfx.com.hk${item.event_cover_url}`) : 'https://www.savfx.com.hk/images/default.jpg',
+                    img: item.event_cover_url ? (item.event_cover_url.startsWith('http') ? item.event_cover_url : `https://www.savfx.com.hk/images/lib/${item.event_cover_url}`) : 'https://www.savfx.com.hk/images/default.jpg',
                     tags: (item.event_desc || "").match(/#[^\s#\u3000]+/g) || ['#SAVFX', '#AI', '#活動重溫']
                 }));
 
