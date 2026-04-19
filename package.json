@@ -9,7 +9,9 @@
     "preview": "vite preview",
     "start": "npx tsx server.ts",
     "clean": "rm -rf dist",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "prepare:activity-rewrite": "node scripts/select-recent-activities.mjs",
+    "rewrite:activity-headlines": "node scripts/rewrite-activity-headlines.mjs"
   },
   "dependencies": {
     "@google/genai": "^1.29.0",

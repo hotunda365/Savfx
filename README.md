@@ -37,6 +37,27 @@ Notes:
 - `server.ts` accepts either `DATABASE_URL` or `POSTGRES_CONNECTION_STRING`.
 - If both are set, keep them pointing to the same database to avoid drift.
 
+## Low-Token Activity Rewrite Workflow
+
+Use this when you want AI polishing without rewriting all 1144 posts.
+
+1. Prepare the latest 100 activities:
+   `npm run prepare:activity-rewrite`
+2. Add `GEMINI_API_KEY` to `/.env.local` or your shell environment.
+3. Generate rewritten titles and one-line summaries:
+   `npm run rewrite:activity-headlines`
+
+Files produced:
+
+- `scripts/recent_100_activities.json`: selected source posts
+- `scripts/recent_100_activities_rewritten.json`: rewritten title + summary only
+
+Optional environment variables:
+
+- `ACTIVITY_REWRITE_LIMIT` default `100`
+- `ACTIVITY_REWRITE_BATCH_SIZE` default `20`
+- `GEMINI_MODEL` default `gemini-2.5-flash`
+
 ## Deploy on Zeabur
 
 This repository includes [zeabur.json](zeabur.json) with the deployment commands.

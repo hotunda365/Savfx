@@ -733,7 +733,7 @@ function AppContent() {
 
       fetchCollection('activities', async () => {
         const items = await apiFetchCollection('activities', ACTIVITIES_PER_PAGE, 0);
-        setActivities(items);
+        setActivities(items.map(normalizeActivity));
         setActivitiesPage(0);
         setHasMoreActivities(items.length >= ACTIVITIES_PER_PAGE);
       }, 'activities');
@@ -874,6 +874,47 @@ function AppContent() {
   const [editingCourse, setEditingCourse] = useState<any>(null);
   const [showAddForm, setShowAddForm] = useState(false);
 
+  const normalizeLegacySavfxImageUrl = (url?: string) => {
+    if (!url) return '';
+    let normalized = url.trim();
+    if (!normalized) return '';
+
+    if (normalized.startsWith('//')) {
+      normalized = `https:${normalized}`;
+    } else if (normalized.startsWith('/')) {
+      normalized = `https://www.savfx.com.hk${normalized}`;
+    }
+
+    return normalized.replace(
+      /^https?:\/\/www\.savfx\.com\.hk_(.+)$/i,
+      'https://www.savfx.com.hk/$1'
+    );
+  };
+
+  const normalizeActivity = (item: any) => {
+    const imgRaw = (item?.img || item?.image || '').toString();
+    const tags = Array.isArray(item?.tags)
+      ? item.tags
+      : Array.isArray(item?.hashtags)
+        ? item.hashtags
+        : (item?.tags || item?.hashtags || '')
+            .toString()
+            .split(',')
+            .map((t: string) => t.trim())
+            .filter((t: string) => t !== '');
+
+    return {
+      ...item,
+      img: normalizeLegacySavfxImageUrl(imgRaw),
+      tags
+    };
+  };
+
+  const getActivityImageUrl = (item: any) => {
+    const normalized = normalizeActivity(item);
+    return normalized.img || 'https://picsum.photos/seed/activity-fallback/900/1200';
+  };
+
   const handleAddCourse = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSavingCourses(true);
@@ -982,7 +1023,7 @@ function AppContent() {
       const nextOffset = (activitiesPage + 1) * ACTIVITIES_PER_PAGE;
       const newItems = await apiFetchCollection('activities', ACTIVITIES_PER_PAGE, nextOffset);
       if (newItems.length > 0) {
-        setActivities(prev => [...prev, ...newItems]);
+        setActivities(prev => [...prev, ...newItems.map(normalizeActivity)]);
         setActivitiesPage(prev => prev + 1);
       }
       if (newItems.length < ACTIVITIES_PER_PAGE) {
@@ -999,11 +1040,11 @@ function AppContent() {
     e.preventDefault();
     setIsSavingActivities(true);
     const id = Date.now();
-    const activity = {
+    const activity = normalizeActivity({
       ...newActivity,
       id,
       tags: newActivity.tags.split(',').map(t => t.trim()).filter(t => t !== '')
-    };
+    });
     try {
       await apiSetDoc('activities', id.toString(), activity);
       setActivities(prev => [activity, ...prev]);
@@ -2043,7 +2084,7 @@ function AppContent() {
                 {/* Image Container */}
                 <div className="relative overflow-hidden bg-gray-200 border-b-4 border-black">
                   <img 
-                    src={activity.img} 
+                    src={getActivityImageUrl(activity)} 
                     alt={activity.title} 
                     className="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-110"
                     referrerPolicy="no-referrer"
@@ -4013,11 +4054,12 @@ function AppContent() {
                                     let count = 0;
                                     for (const item of data) {
                                       const id = item.id || `migrated-${Date.now()}-${count}`;
-                                      await apiSetDoc('activities', id.toString(), {
+                                      const normalized = normalizeActivity({
                                         ...item,
                                         id,
                                         tags: Array.isArray(item.tags) ? item.tags : (item.tags || '').split(',').map((t: any) => t.trim())
                                       });
+                                      await apiSetDoc('activities', id.toString(), normalized);
                                       count++;
                                     }
                                     showToast(`🎉 成功匯入 ${count} 筆資料！`);
