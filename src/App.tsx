@@ -733,7 +733,7 @@ function AppContent() {
 
       fetchCollection('activities', async () => {
         const items = await apiFetchCollection('activities', ACTIVITIES_PER_PAGE, 0);
-        setActivities(items.map(normalizeActivity));
+        setActivities(sortActivitiesByDateDesc(items.map(normalizeActivity)));
         setActivitiesPage(0);
         setHasMoreActivities(items.length >= ACTIVITIES_PER_PAGE);
       }, 'activities');
@@ -915,12 +915,15 @@ function AppContent() {
     return normalized.img || 'https://picsum.photos/seed/activity-fallback/900/1200';
   };
 
-  const handleActivityImageError = (event: React.SyntheticEvent<HTMLImageElement>) => {
-    const fallback = 'https://picsum.photos/seed/activity-fallback/900/1200';
-    if (event.currentTarget.src !== fallback) {
-      event.currentTarget.src = fallback;
-    }
+  const parseActivityDateForSort = (dateStr: string): number => {
+    const m = String(dateStr || '').match(/(\d{4})年\s*(\d{1,2})月\s*(\d{1,2})日/);
+    if (m) return Number(m[1]) * 10000 + Number(m[2]) * 100 + Number(m[3]);
+    const t = Date.parse(String(dateStr || ''));
+    return isNaN(t) ? 0 : t;
   };
+
+  const sortActivitiesByDateDesc = (items: any[]): any[] =>
+    [...items].sort((a, b) => parseActivityDateForSort(b.date) - parseActivityDateForSort(a.date));
 
   const handleAddCourse = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1030,7 +1033,7 @@ function AppContent() {
       const nextOffset = (activitiesPage + 1) * ACTIVITIES_PER_PAGE;
       const newItems = await apiFetchCollection('activities', ACTIVITIES_PER_PAGE, nextOffset);
       if (newItems.length > 0) {
-        setActivities(prev => [...prev, ...newItems.map(normalizeActivity)]);
+        setActivities(prev => sortActivitiesByDateDesc([...prev, ...newItems.map(normalizeActivity)]));
         setActivitiesPage(prev => prev + 1);
       }
       if (newItems.length < ACTIVITIES_PER_PAGE) {
@@ -2093,18 +2096,10 @@ function AppContent() {
                   <img 
                     src={getActivityImageUrl(activity)} 
                     alt={activity.title} 
-                    className="w-full h-64 object-cover transition-transform duration-500 group-hover:scale-110"
+                    className="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-110"
                     referrerPolicy="no-referrer"
-                    onError={handleActivityImageError}
+                    onError={(e) => { (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/activity-fallback/900/600'; }}
                   />
-                  {isAdmin && (
-                    <button 
-                      onClick={() => handleDeleteActivity(activity.id)}
-                      className="absolute top-4 right-4 bg-red-600 text-white p-2 rounded-full hover:scale-110 transition-transform z-10"
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                  )}
                   {/* SAVFX Logo Overlay */}
                   <div className="absolute top-4 left-4 flex items-center gap-1 bg-black text-[#FFEF00] px-3 py-1 rounded-full border-2 border-white/20">
                     <svg width="20" height="14" viewBox="0 0 120 80" className="stroke-[#FFEF00] stroke-[12] fill-none">
@@ -2122,9 +2117,9 @@ function AppContent() {
                   <h3 className="text-2xl font-black text-black mb-4 leading-tight group-hover:text-[#0055FF] transition-colors">
                     {activity.title}
                   </h3>
-                  <div className="text-black/70 text-base font-bold leading-snug mb-8 max-h-56 overflow-y-auto pr-2 whitespace-pre-line">
+                  <p className="text-black/70 text-base font-bold leading-snug mb-8 line-clamp-6">
                     {activity.content}
-                  </div>
+                  </p>
                   
                   {/* Tags */}
                   <div className="mt-auto flex flex-wrap gap-2">
