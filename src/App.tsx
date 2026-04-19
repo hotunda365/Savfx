@@ -1073,6 +1073,16 @@ function AppContent() {
     setTutorPriorityDrafts(drafts);
   }, [tutors]);
 
+  useEffect(() => {
+    const drafts: Record<string, string> = {};
+    tutors.forEach((tutor) => {
+      const tutorId = tutor.id?.toString();
+      if (!tutorId) return;
+      drafts[tutorId] = tutor.mask || 'mask-notebook';
+    });
+    setTutorMaskDrafts(drafts);
+  }, [tutors]);
+
   const getTutorPriority = (tutor: any) => {
     const parsed = Number(tutor?.priority);
     return Number.isFinite(parsed) ? parsed : 0;
@@ -1771,7 +1781,7 @@ function AppContent() {
                 <div className="relative w-32 h-32 flex-shrink-0 mx-auto xl:mx-0">
                   <MaskedImage 
                     src={(tutor.img.startsWith('http') || tutor.img.startsWith('data:') || tutor.img.startsWith('/')) ? tutor.img : `https://picsum.photos/seed/${tutor.img}/300/300`} 
-                    maskId={tutor.mask || 'mask-notebook'} 
+                    maskId={tutorMaskDrafts[tutor.id?.toString()] || tutor.mask || 'mask-notebook'} 
                     className="w-full h-full bg-black transition-all duration-500 object-cover"
                   />
                   <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-[#0055FF] rounded-full border-2 border-black" />
