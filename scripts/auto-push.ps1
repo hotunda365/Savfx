@@ -35,6 +35,34 @@ try {
     exit $LASTEXITCODE
   }
 
+  # Keep Zeabur deployment branch aligned when development happens on master.
+  if ($branch -eq "master") {
+    $hasMain = (git branch --list main)
+    if (-not [string]::IsNullOrWhiteSpace($hasMain)) {
+      Write-Host "Syncing master into main..."
+      git checkout main
+      if ($LASTEXITCODE -ne 0) {
+        throw "Failed to checkout main branch."
+      }
+
+      git merge --no-ff master -m "Sync master updates to main for Zeabur"
+      if ($LASTEXITCODE -ne 0) {
+        throw "Merge master -> main failed. Resolve conflicts and retry."
+      }
+
+      git push origin main
+      if ($LASTEXITCODE -ne 0) {
+        throw "Failed to push main branch."
+      }
+
+      git checkout master
+      if ($LASTEXITCODE -ne 0) {
+        throw "Failed to switch back to master."
+      }
+      Write-Host "Synced origin/main with master updates."
+    }
+  }
+
   Write-Host "Pushed successfully to origin/$branch"
 }
 finally {
