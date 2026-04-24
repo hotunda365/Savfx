@@ -327,6 +327,10 @@ function AppContent() {
         'AI 輔助高效動畫流程',
         '影視級後期合成特效'
       ],
+      studentWorksTitle: '學生作品',
+      studentWorksSubtitle: '優秀學員作品展示',
+      studentWorksContent: '我們的學生以 AI 與傳統動畫技術創作出色作品，每一件作品都是創意與技術的完美結合。',
+      studentWorksYoutubeUrl: '',
       briefingTitle: '課程簡介會',
       briefingSubtitle: '留下您的聯絡資料，我們將把 YouTube 簡介會影片傳送給您。',
       partnersTitle: '曾合作機構'
@@ -1390,11 +1394,14 @@ function AppContent() {
             </div>
           </div>
           
-          <div className="hidden md:flex gap-8 font-bold text-base text-black items-center">
-            <a href="#courses-intro" className="hover:opacity-70 transition-opacity">課程介紹</a>
+          <div className="hidden md:flex gap-6 font-bold text-base text-black items-center">
             <a href="#courses" className="hover:opacity-70 transition-opacity">個人課程</a>
-            <a href="#tutors" className="hover:opacity-70 transition-opacity">導師簡介</a>
-            <a href="#activities" className="hover:opacity-70 transition-opacity">活動重溫</a>
+            <a href="#group-courses" className="hover:opacity-70 transition-opacity">團體課程</a>
+            <a href="#student-works" className="hover:opacity-70 transition-opacity">學生作品</a>
+            <a href="#testimonials" className="hover:opacity-70 transition-opacity">學生見證</a>
+            <a href="#tutors" className="hover:opacity-70 transition-opacity">專業團隊</a>
+            <a href="#business" className="hover:opacity-70 transition-opacity">商業合作</a>
+            <a href="#activities" className="hover:opacity-70 transition-opacity">活動回顧</a>
             <a href="#contact" className="hover:opacity-70 transition-opacity">聯絡我們</a>
             {isAdmin && (
               <button 
@@ -1484,10 +1491,13 @@ function AppContent() {
               )}
             </div>
             
-            <a href="#courses-intro" onClick={() => setIsMenuOpen(false)}>課程介紹</a>
             <a href="#courses" onClick={() => setIsMenuOpen(false)}>個人課程</a>
-            <a href="#tutors" onClick={() => setIsMenuOpen(false)}>導師簡介</a>
-            <a href="#activities" onClick={() => setIsMenuOpen(false)}>活動重溫</a>
+            <a href="#group-courses" onClick={() => setIsMenuOpen(false)}>團體課程</a>
+            <a href="#student-works" onClick={() => setIsMenuOpen(false)}>學生作品</a>
+            <a href="#testimonials" onClick={() => setIsMenuOpen(false)}>學生見證</a>
+            <a href="#tutors" onClick={() => setIsMenuOpen(false)}>專業團隊</a>
+            <a href="#business" onClick={() => setIsMenuOpen(false)}>商業合作</a>
+            <a href="#activities" onClick={() => setIsMenuOpen(false)}>活動回顧</a>
             <a href="#contact" onClick={() => setIsMenuOpen(false)}>聯絡我們</a>
           </motion.div>
         )}
@@ -1871,7 +1881,7 @@ function AppContent() {
       </section>
 
       {/* Group Courses */}
-      <section className="py-20 bg-white border-y-8 border-black">
+      <section id="group-courses" className="py-20 bg-white border-y-8 border-black">
         <div className="max-w-7xl mx-auto px-6">
           <SectionTitle subtitle={siteSettings.groupCourseSubtitle || "適合學校、社福機構及私人團體"}>{siteSettings.groupCourseTitle || "團體課程"}</SectionTitle>
           <div className="grid md:grid-cols-3 gap-8">
@@ -1918,8 +1928,50 @@ function AppContent() {
         </div>
       </section>
 
+      {/* Student Works */}
+      <section id="student-works" className="py-20 px-6 bg-[#FFEF00]">
+        <div className="max-w-7xl mx-auto">
+          <SectionTitle subtitle={siteSettings.studentWorksSubtitle || "優秀學員作品展示"}>{siteSettings.studentWorksTitle || "學生作品"}</SectionTitle>
+          <div className="bg-black text-[#FFEF00] p-8 md:p-12 border-8 border-black rounded-[3rem]">
+            <div className="grid md:grid-cols-2 gap-12 items-center">
+              <div>
+                <h3 className="text-4xl font-black mb-6">{siteSettings.studentWorksTitle || "學生創作展示"}</h3>
+                <p className="text-xl font-bold mb-8 text-[#FFEF00]/80">
+                  {siteSettings.studentWorksContent || "我們的學生以 AI 與傳統動畫技術創作出色作品，每一件作品都是創意與技術的完美結合。"}
+                </p>
+                <a 
+                  href={siteSettings.youtubeUrl || '#'} 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-3 bg-[#FFEF00] text-black px-10 py-4 font-black uppercase rounded-full text-lg hover:scale-105 transition-transform"
+                >
+                  <FaYoutube size={24} /> 觀看更多作品
+                </a>
+              </div>
+              <div className="aspect-video bg-[#FFEF00]/10 rounded-2xl overflow-hidden border-4 border-[#FFEF00]/30 shadow-lg">
+                {siteSettings.studentWorksYoutubeUrl ? (
+                  <iframe
+                    className="w-full h-full"
+                    src={siteSettings.studentWorksYoutubeUrl.replace('watch?v=', 'embed/')}
+                    title="Student Works"
+                    frameBorder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                  ></iframe>
+                ) : (
+                  <div className="w-full h-full flex flex-col items-center justify-center gap-4 text-[#FFEF00]/50">
+                    <FaYoutube size={64} />
+                    <p className="font-black uppercase text-sm">在管理後台設定 YouTube 連結</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* Business Cooperation */}
-      <section className="py-20 px-6">
+      <section id="business" className="py-20 px-6">
         <div className="max-w-7xl mx-auto">
           <SectionTitle subtitle={siteSettings.businessCoopSubtitle || "專業動畫製作與 AI 方案"}>{siteSettings.businessCoopTitle || "商業合作"}</SectionTitle>
           <div className="bg-[#FFEF00] text-black p-8 md:p-12 border-8 border-black rounded-[3rem]">
@@ -2018,9 +2070,9 @@ function AppContent() {
       </section>
 
       {/* Testimonials */}
-      <section className="py-20 bg-white">
+      <section id="testimonials" className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-6">
-          <SectionTitle subtitle="聽聽學員怎麼說">學員感想</SectionTitle>
+          <SectionTitle subtitle="聽聽學員怎麼說">學生見證</SectionTitle>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-12">
             {testimonials.map((t, i) => (
               <div key={i} className="flex flex-col items-center">
@@ -2042,7 +2094,7 @@ function AppContent() {
       {/* Tutor Profiles */}
       <section id="tutors" className="py-20 bg-[#FFEF00] border-y-8 border-black">
         <div className="max-w-7xl mx-auto px-6">
-          <SectionTitle subtitle="業界頂尖專家親自授課">導師簡介</SectionTitle>
+          <SectionTitle subtitle="業界頂尖專家親自授課">專業團隊</SectionTitle>
           <div className="grid md:grid-cols-2 gap-12">
             {sortedTutors.map((tutor, i) => (
               <motion.div 
@@ -2075,7 +2127,7 @@ function AppContent() {
       <section id="activities" className="py-20 bg-[#F5F5F5] overflow-hidden border-t-8 border-black">
         <div className="max-w-7xl mx-auto px-6">
             <div className="flex justify-between items-end mb-12">
-              <SectionTitle subtitle="精彩瞬間與技術分享">活動重溫</SectionTitle>
+              <SectionTitle subtitle="精彩瞬間與技術分享">活動回顧</SectionTitle>
             </div>
 
           {isAdmin && showAddForm && (
@@ -2848,6 +2900,31 @@ function AppContent() {
                                 value={siteSettings.groupCourseSubtitle}
                                 onChange={e => setSiteSettings({...siteSettings, groupCourseSubtitle: e.target.value})}
                               />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-xs font-black uppercase">學生作品 - 標題</label>
+                              <input type="text" className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                value={siteSettings.studentWorksTitle || ''}
+                                onChange={e => setSiteSettings({...siteSettings, studentWorksTitle: e.target.value})} />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-xs font-black uppercase">學生作品 - 副標題</label>
+                              <input type="text" className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                value={siteSettings.studentWorksSubtitle || ''}
+                                onChange={e => setSiteSettings({...siteSettings, studentWorksSubtitle: e.target.value})} />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-xs font-black uppercase">學生作品 - 內容簡介</label>
+                              <input type="text" className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                value={siteSettings.studentWorksContent || ''}
+                                onChange={e => setSiteSettings({...siteSettings, studentWorksContent: e.target.value})} />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-xs font-black uppercase">學生作品 - YouTube 連結</label>
+                              <input type="url" className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                value={siteSettings.studentWorksYoutubeUrl || ''}
+                                placeholder="https://www.youtube.com/watch?v=..."
+                                onChange={e => setSiteSettings({...siteSettings, studentWorksYoutubeUrl: e.target.value})} />
                             </div>
                             <div className="space-y-2">
                               <label className="text-xs font-black uppercase">商業合作 - 標題</label>
