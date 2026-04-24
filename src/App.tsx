@@ -424,6 +424,7 @@ function AppContent() {
   const [courses, setCourses] = useState<any[]>(() => getInitialList('courses', []));
   const [tutors, setTutors] = useState<any[]>(() => getInitialList('tutors', []));
   const [testimonials, setTestimonials] = useState<any[]>(() => getInitialList('testimonials', []));
+  const [studentWorks, setStudentWorks] = useState<any[]>(() => getInitialList('studentWorks', []));
   const [briefingLeads, setBriefingLeads] = useState<any[]>(() => getInitialList('briefingLeads', []));
 
   // Persistence Effects
@@ -433,6 +434,7 @@ function AppContent() {
   useEffect(() => { localStorage.setItem('savfx_cache_courses', JSON.stringify(courses)); }, [courses]);
   useEffect(() => { localStorage.setItem('savfx_cache_tutors', JSON.stringify(tutors)); }, [tutors]);
   useEffect(() => { localStorage.setItem('savfx_cache_testimonials', JSON.stringify(testimonials)); }, [testimonials]);
+  useEffect(() => { localStorage.setItem('savfx_cache_studentWorks', JSON.stringify(studentWorks)); }, [studentWorks]);
   useEffect(() => { localStorage.setItem('savfx_cache_briefingLeads', JSON.stringify(briefingLeads)); }, [briefingLeads]);
   const [confirmModal, setConfirmModal] = useState<{
     show: boolean;
@@ -776,6 +778,11 @@ function AppContent() {
         setTestimonials(items);
       }, 'testimonials');
 
+      fetchCollection('studentWorks', async () => {
+        const items = await apiFetchCollection('studentWorks');
+        setStudentWorks(items);
+      }, 'studentWorks');
+
       fetchCollection('briefingLeads', async () => {
         const items = await apiFetchCollection('briefingLeads');
         const sorted = items.sort((a: any, b: any) => {
@@ -859,6 +866,9 @@ function AppContent() {
   const [tutorPriorityDrafts, setTutorPriorityDrafts] = useState<Record<string, number>>({});
   const [tutorMaskDrafts, setTutorMaskDrafts] = useState<Record<string, string>>({});
   const [newTestimonial, setNewTestimonial] = useState({ name: '', text: '', img: '' });
+  const [newStudentWork, setNewStudentWork] = useState({ title: '', youtubeUrl: '' });
+  const [editingStudentWorkId, setEditingStudentWorkId] = useState<string | null>(null);
+  const [isSavingStudentWorks, setIsSavingStudentWorks] = useState(false);
   const [newCourse, setNewCourse] = useState({ 
     name: '', 
     type: 'Diploma', 
@@ -1187,6 +1197,40 @@ function AppContent() {
         showToast("感想已刪除");
       } catch (error: any) {
         console.error("Error deleting testimonial:", error);
+        showToast(error.message || "刪除失敗", "error");
+      }
+    });
+  };
+
+  const handleSaveStudentWork = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingStudentWorks(true);
+    const id = editingStudentWorkId || Date.now().toString();
+    try {
+      await apiSetDoc('studentWorks', id, newStudentWork);
+      if (editingStudentWorkId) {
+        setStudentWorks(prev => prev.map(w => w.id === id ? { id, ...newStudentWork } : w));
+        showToast("作品已更新");
+      } else {
+        setStudentWorks(prev => [...prev, { id, ...newStudentWork }]);
+        showToast("作品已新增");
+      }
+      setNewStudentWork({ title: '', youtubeUrl: '' });
+      setEditingStudentWorkId(null);
+    } catch (error) {
+      handleFirestoreError(error, OperationType.WRITE, `studentWorks/${id}`);
+    } finally {
+      setIsSavingStudentWorks(false);
+    }
+  };
+
+  const handleDeleteStudentWork = async (id: string) => {
+    showConfirm("確定刪除", "確定刪除此學生作品？", async () => {
+      try {
+        await apiDeleteDoc('studentWorks', id);
+        setStudentWorks(prev => prev.filter(w => w.id !== id));
+        showToast("作品已刪除");
+      } catch (error: any) {
         showToast(error.message || "刪除失敗", "error");
       }
     });
@@ -1933,39 +1977,44 @@ function AppContent() {
         <div className="max-w-7xl mx-auto">
           <SectionTitle subtitle={siteSettings.studentWorksSubtitle || "優秀學員作品展示"}>{siteSettings.studentWorksTitle || "學生作品"}</SectionTitle>
           <div className="bg-black text-[#FFEF00] p-8 md:p-12 border-8 border-black rounded-[3rem]">
-            <div className="grid md:grid-cols-2 gap-12 items-center">
-              <div>
-                <h3 className="text-4xl font-black mb-6">{siteSettings.studentWorksTitle || "學生創作展示"}</h3>
-                <p className="text-xl font-bold mb-8 text-[#FFEF00]/80">
-                  {siteSettings.studentWorksContent || "我們的學生以 AI 與傳統動畫技術創作出色作品，每一件作品都是創意與技術的完美結合。"}
-                </p>
-                <a 
-                  href={siteSettings.youtubeUrl || '#'} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-3 bg-[#FFEF00] text-black px-10 py-4 font-black uppercase rounded-full text-lg hover:scale-105 transition-transform"
-                >
-                  <FaYoutube size={24} /> 觀看更多作品
-                </a>
-              </div>
-              <div className="aspect-video bg-[#FFEF00]/10 rounded-2xl overflow-hidden border-4 border-[#FFEF00]/30 shadow-lg">
-                {siteSettings.studentWorksYoutubeUrl ? (
-                  <iframe
-                    className="w-full h-full"
-                    src={siteSettings.studentWorksYoutubeUrl.replace('watch?v=', 'embed/')}
-                    title="Student Works"
-                    frameBorder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowFullScreen
-                  ></iframe>
-                ) : (
-                  <div className="w-full h-full flex flex-col items-center justify-center gap-4 text-[#FFEF00]/50">
-                    <FaYoutube size={64} />
-                    <p className="font-black uppercase text-sm">在管理後台設定 YouTube 連結</p>
-                  </div>
-                )}
-              </div>
+            <div className="mb-8">
+              <h3 className="text-4xl font-black mb-4">{siteSettings.studentWorksTitle || "學生創作展示"}</h3>
+              <p className="text-xl font-bold text-[#FFEF00]/80 mb-6">
+                {siteSettings.studentWorksContent || "我們的學生以 AI 與傳統動畫技術創作出色作品，每一件作品都是創意與技術的完美結合。"}
+              </p>
+              <a 
+                href={siteSettings.youtubeUrl || '#'} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-3 bg-[#FFEF00] text-black px-8 py-3 font-black uppercase rounded-full hover:scale-105 transition-transform"
+              >
+                <FaYoutube size={20} /> 訂閱 YouTube 頻道
+              </a>
             </div>
+            {studentWorks.length === 0 ? (
+              <div className="flex flex-col items-center justify-center gap-4 text-[#FFEF00]/40 py-16">
+                <FaYoutube size={64} />
+                <p className="font-black uppercase text-sm">暫無作品，敬請期待</p>
+              </div>
+            ) : (
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                {studentWorks.map((w, i) => (
+                  <div key={w.id || i} className="flex flex-col gap-3">
+                    <div className="aspect-video rounded-2xl overflow-hidden border-4 border-[#FFEF00]/30 bg-[#FFEF00]/10">
+                      <iframe
+                        className="w-full h-full"
+                        src={(w.youtubeUrl || '').replace('watch?v=', 'embed/')}
+                        title={w.title}
+                        frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowFullScreen
+                      />
+                    </div>
+                    <p className="font-black text-base">{w.title}</p>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </section>
@@ -2403,7 +2452,8 @@ function AppContent() {
                 { id: 'group-courses', label: '團體課程管理', icon: Users },
                 { id: 'briefing-leads', label: '簡介會留名', icon: FileText },
                 { id: 'tutors', label: '導師管理', icon: Users },
-                { id: 'testimonials', label: '學員感想', icon: MessageSquare },
+                { id: 'student-works', label: '學生作品', icon: Film },
+                { id: 'testimonials', label: '學生見證', icon: MessageSquare },
                 { id: 'activities', label: '活動管理', icon: Film },
               ].map(tab => (
                 <button
@@ -4096,10 +4146,97 @@ function AppContent() {
                       </section>
                     )}
 
+                    {adminActiveTab === 'student-works' && (
+                      <section>
+                        <h3 className="text-3xl font-black mb-8 flex items-center gap-3">
+                          <FaYoutube size={32} /> 學生作品管理
+                        </h3>
+                        <div className="grid md:grid-cols-2 gap-6 mb-12">
+                          {studentWorks.length === 0 && (
+                            <p className="font-black text-black/30 col-span-2">尚無學生作品，請新增。</p>
+                          )}
+                          {studentWorks.map(w => (
+                            <div key={w.id} className="bg-white border-4 border-black p-5 rounded-3xl shadow-[4px_4px_0px_rgba(0,0,0,1)]">
+                              <div className="aspect-video rounded-xl overflow-hidden border-2 border-black mb-4 bg-black">
+                                <iframe
+                                  className="w-full h-full"
+                                  src={(w.youtubeUrl || '').replace('watch?v=', 'embed/')}
+                                  title={w.title}
+                                  frameBorder="0"
+                                  allowFullScreen
+                                />
+                              </div>
+                              <p className="font-black text-lg mb-1 truncate">{w.title}</p>
+                              <p className="text-xs text-black/50 font-bold mb-4 truncate">{w.youtubeUrl}</p>
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => { setNewStudentWork({ title: w.title, youtubeUrl: w.youtubeUrl }); setEditingStudentWorkId(w.id); }}
+                                  className="flex-1 flex items-center justify-center gap-2 bg-[#FFEF00] border-2 border-black py-2 rounded-full font-black text-sm hover:scale-105 transition-transform"
+                                >
+                                  <Edit2 size={16} /> 修改
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteStudentWork(w.id)}
+                                  className="flex items-center justify-center gap-2 bg-red-500 text-white border-2 border-black px-4 py-2 rounded-full font-black text-sm hover:scale-105 transition-transform"
+                                >
+                                  <Trash2 size={16} />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        <div className="bg-white border-4 border-black p-8 rounded-3xl shadow-[8px_8px_0px_rgba(0,0,0,1)]">
+                          <h4 className="text-xl font-black mb-6 uppercase">
+                            {editingStudentWorkId ? '修改學生作品' : '新增學生作品'}
+                          </h4>
+                          <form onSubmit={handleSaveStudentWork} className="space-y-4">
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-black uppercase ml-1">作品標題</label>
+                              <input
+                                type="text" required placeholder="例如：2024屆學生動畫作品集"
+                                className="w-full border-2 border-black p-3 rounded-xl font-bold text-sm"
+                                value={newStudentWork.title}
+                                onChange={e => setNewStudentWork({ ...newStudentWork, title: e.target.value })}
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-[10px] font-black uppercase ml-1">YouTube 連結</label>
+                              <input
+                                type="url" required placeholder="https://www.youtube.com/watch?v=..."
+                                className="w-full border-2 border-black p-3 rounded-xl font-bold text-sm"
+                                value={newStudentWork.youtubeUrl}
+                                onChange={e => setNewStudentWork({ ...newStudentWork, youtubeUrl: e.target.value })}
+                              />
+                            </div>
+                            <div className="flex gap-3">
+                              <button
+                                type="submit"
+                                disabled={isSavingStudentWorks}
+                                className={`flex-1 bg-black text-[#FFEF00] py-4 rounded-full font-black uppercase text-sm hover:scale-[1.02] transition-transform flex items-center justify-center gap-2 ${isSavingStudentWorks ? 'opacity-70 cursor-not-allowed' : ''}`}
+                              >
+                                {isSavingStudentWorks ? <Loader2 className="animate-spin" size={20} /> : null}
+                                {isSavingStudentWorks ? '儲存中...' : editingStudentWorkId ? '更新作品' : '新增作品'}
+                              </button>
+                              {editingStudentWorkId && (
+                                <button
+                                  type="button"
+                                  onClick={() => { setNewStudentWork({ title: '', youtubeUrl: '' }); setEditingStudentWorkId(null); }}
+                                  className="px-6 py-4 rounded-full font-black uppercase text-sm border-2 border-black hover:bg-black hover:text-white transition-colors"
+                                >
+                                  取消
+                                </button>
+                              )}
+                            </div>
+                          </form>
+                        </div>
+                      </section>
+                    )}
+
                     {adminActiveTab === 'testimonials' && (
                       <section>
                         <h3 className="text-3xl font-black mb-8 flex items-center gap-3">
-                          <MessageSquare size={32} /> 學員感想管理
+                          <MessageSquare size={32} /> 學生見證管理
                         </h3>
                         <div className="grid md:grid-cols-2 gap-6 mb-12">
                           {testimonials.map(t => (
