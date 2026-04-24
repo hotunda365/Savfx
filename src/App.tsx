@@ -2315,7 +2315,7 @@ function AppContent() {
       </section>
 
       {/* Partners */}
-      <section className="py-20 bg-white border-t-8 border-black">
+      <section className="py-20 bg-[#FFEF00] border-t-8 border-black">
         <div className="max-w-7xl mx-auto px-6 text-center">
           <h3 className="text-2xl font-black uppercase mb-12">{siteSettings.partnersTitle || "曾合作機構"}</h3>
           <div className="flex flex-wrap justify-center gap-12 opacity-50 hover:opacity-100 transition-all">
