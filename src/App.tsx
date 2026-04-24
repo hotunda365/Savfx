@@ -1973,7 +1973,7 @@ function AppContent() {
       </section>
 
       {/* Student Works */}
-      <section id="student-works" className="py-20 px-6 bg-[#EAF2FF] border-y-8 border-black">
+      <section id="student-works" className="py-20 px-6 bg-[#FFEF00] border-y-8 border-black">
         <div className="max-w-7xl mx-auto">
           <SectionTitle subtitle={siteSettings.studentWorksSubtitle || "優秀學員作品展示"}>{siteSettings.studentWorksTitle || "學生作品"}</SectionTitle>
           <div className="bg-black text-[#FFEF00] p-8 md:p-12 border-8 border-black rounded-[3rem]">
@@ -2020,7 +2020,7 @@ function AppContent() {
       </section>
 
       {/* Business Cooperation */}
-      <section id="business" className="py-20 px-6">
+      <section id="business" className="py-20 px-6 bg-white">
         <div className="max-w-7xl mx-auto">
           <SectionTitle subtitle={siteSettings.businessCoopSubtitle || "專業動畫製作與 AI 方案"}>{siteSettings.businessCoopTitle || "商業合作"}</SectionTitle>
           <div className="bg-[#FFEF00] text-black p-8 md:p-12 border-8 border-black rounded-[3rem]">
@@ -2173,7 +2173,7 @@ function AppContent() {
       </section>
 
       {/* Activity Review */}
-      <section id="activities" className="py-20 bg-[#F5F5F5] overflow-hidden border-t-8 border-black">
+      <section id="activities" className="py-20 bg-white overflow-hidden border-t-8 border-black">
         <div className="max-w-7xl mx-auto px-6">
             <div className="flex justify-between items-end mb-12">
               <SectionTitle subtitle="精彩瞬間與技術分享">活動回顧</SectionTitle>
