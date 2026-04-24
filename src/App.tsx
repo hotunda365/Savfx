@@ -50,6 +50,7 @@ import {
   User
 } from 'firebase/auth';
 import { auth } from './firebase';
+import { FaYoutube, FaFacebook, FaInstagram } from 'react-icons/fa';
 
 enum OperationType {
   CREATE = 'create',
@@ -1416,19 +1417,19 @@ function AppContent() {
               {siteSettings.youtubeUrl && (
                 <a href={siteSettings.youtubeUrl} target="_blank" rel="noopener noreferrer"
                   className="w-8 h-8 border-2 border-black rounded-full flex items-center justify-center hover:bg-black hover:text-[#FFEF00] transition-colors">
-                  <Film size={16} />
+                  <FaYoutube size={16} />
                 </a>
               )}
               {siteSettings.facebookUrl && (
                 <a href={siteSettings.facebookUrl} target="_blank" rel="noopener noreferrer"
                   className="w-8 h-8 border-2 border-black rounded-full flex items-center justify-center hover:bg-black hover:text-[#FFEF00] transition-colors">
-                  <Monitor size={16} />
+                  <FaFacebook size={16} />
                 </a>
               )}
               {siteSettings.instagramUrl && (
                 <a href={siteSettings.instagramUrl} target="_blank" rel="noopener noreferrer"
                   className="w-8 h-8 border-2 border-black rounded-full flex items-center justify-center hover:bg-black hover:text-[#FFEF00] transition-colors">
-                  <Camera size={16} />
+                  <FaInstagram size={16} />
                 </a>
               )}
             </div>
@@ -1458,7 +1459,7 @@ function AppContent() {
                   rel="noopener noreferrer"
                   className="w-12 h-12 border-2 border-black rounded-full flex items-center justify-center hover:bg-black hover:text-[#FFEF00] transition-colors cursor-pointer"
                 >
-                  <Film size={24} />
+                  <FaYoutube size={24} />
                 </a>
               )}
               {siteSettings.facebookUrl && (
@@ -1468,7 +1469,7 @@ function AppContent() {
                   rel="noopener noreferrer"
                   className="w-12 h-12 border-2 border-black rounded-full flex items-center justify-center hover:bg-black hover:text-[#FFEF00] transition-colors cursor-pointer"
                 >
-                  <Monitor size={24} />
+                  <FaFacebook size={24} />
                 </a>
               )}
               {siteSettings.instagramUrl && (
