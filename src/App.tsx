@@ -1488,7 +1488,7 @@ function AppContent() {
             animate={{ opacity: 1, x: 0 }}
             className="flex flex-col"
           >
-            <div className="inline-block bg-black text-[#FFEF00] px-4 py-1 self-start font-black text-sm mb-6 uppercase tracking-widest">
+            <div className="inline-block bg-black text-[#FFEF00] px-4 py-1 self-start font-black text-sm mb-6 uppercase tracking-widest border-0 outline-none ring-0">
               {siteSettings.heroTagline || 'Professional AI Animation School'}
             </div>
             <h1 className="text-3xl sm:text-5xl md:text-7xl lg:text-[110px] font-black leading-tight tracking-tighter mb-6 sm:mb-8 text-black uppercase">
