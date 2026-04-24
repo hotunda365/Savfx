@@ -2071,7 +2071,7 @@ function AppContent() {
       </section>
 
       {/* Briefing Session Form */}
-      <section className="py-20 px-6 bg-[#FFEF00]">
+      <section className="py-20 px-6 bg-[#FFEF00] border-y-8 border-black">
         <div className="max-w-3xl mx-auto bg-white border-8 border-black p-12 text-center relative rounded-[3rem]">
           <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-20 h-20 bg-black rounded-full flex items-center justify-center">
             <Play className="text-[#FFEF00] fill-[#FFEF00] w-8 h-8 ml-1" />
@@ -2173,7 +2173,7 @@ function AppContent() {
       </section>
 
       {/* Activity Review */}
-      <section id="activities" className="py-20 bg-white overflow-hidden border-t-8 border-black">
+      <section id="activities" className="py-20 bg-white overflow-hidden">
         <div className="max-w-7xl mx-auto px-6">
             <div className="flex justify-between items-end mb-12">
               <SectionTitle subtitle="精彩瞬間與技術分享">活動回顧</SectionTitle>
