@@ -39,7 +39,10 @@ import {
   Camera,
   Upload,
   Loader2,
-  Database
+  Database,
+  Youtube,
+  Facebook,
+  Instagram
 } from 'lucide-react';
 import { 
   signInWithEmailAndPassword, 
@@ -298,6 +301,7 @@ function AppContent() {
       contactEmail: 'info@savfx.edu.hk',
       contactPhone: '+852 2345 6789',
       address: '香港九龍...',
+      youtubeUrl: 'https://youtube.com/@savfx',
       facebookUrl: 'https://facebook.com/savfx',
       instagramUrl: 'https://instagram.com/savfx',
       heroTagline: 'Professional AI Animation School',
@@ -1086,6 +1090,12 @@ function AppContent() {
 
   const totalPrice = calculateTotalPrice();
 
+  const socialHeaderLinks = [
+    { key: 'youtube', href: siteSettings.youtubeUrl, icon: Youtube, label: 'YouTube' },
+    { key: 'facebook', href: siteSettings.facebookUrl, icon: Facebook, label: 'Facebook' },
+    { key: 'instagram', href: siteSettings.instagramUrl, icon: Instagram, label: 'Instagram' }
+  ].filter(link => Boolean(link.href));
+
   const handleBriefingSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitted(true);
@@ -1198,11 +1208,29 @@ function AppContent() {
                 <LogOut size={18} /> 登出
               </button>
             )}
+            {socialHeaderLinks.length > 0 && (
+              <div className="flex items-center gap-2 ml-1">
+                {socialHeaderLinks.map(({ key, href, icon: Icon, label }) => (
+                  <a
+                    key={key}
+                    href={href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={label}
+                    className="w-9 h-9 border-2 border-black rounded-full flex items-center justify-center hover:bg-black hover:text-[#FFEF00] transition-colors"
+                  >
+                    <Icon size={16} />
+                  </a>
+                ))}
+              </div>
+            )}
           </div>
 
-          <button className="md:hidden" onClick={() => setIsMenuOpen(!isMenuOpen)}>
-            {isMenuOpen ? <X /> : <Menu />}
-          </button>
+          <div className="md:hidden flex items-center gap-2">
+            <button onClick={() => setIsMenuOpen(!isMenuOpen)}>
+              {isMenuOpen ? <X /> : <Menu />}
+            </button>
+          </div>
         </div>
       </nav>
 
@@ -1213,13 +1241,46 @@ function AppContent() {
             initial={{ opacity: 0, x: '100%' }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: '100%' }}
-            className="fixed inset-0 z-40 bg-[#FFEF00] flex flex-col items-center justify-center gap-8 text-3xl font-black uppercase"
+            className="fixed inset-0 z-40 bg-[#FFEF00] flex flex-col text-3xl font-black uppercase p-6"
           >
+            {/* Top Close Bar with Social Icons */}
+            <div className="flex items-center justify-between w-full mb-8">
+              <div className="flex items-center gap-3">
+                {[
+                  { key: 'youtube', href: siteSettings.youtubeUrl || 'https://youtube.com/@savfx', icon: Youtube, label: 'YouTube' },
+                  { key: 'facebook', href: siteSettings.facebookUrl || 'https://facebook.com/savfx', icon: Facebook, label: 'Facebook' },
+                  { key: 'instagram', href: siteSettings.instagramUrl || 'https://instagram.com/savfx', icon: Instagram, label: 'Instagram' }
+                ].map(({ key, href, icon: Icon, label }) => (
+                  href && (
+                    <a
+                      key={`menu-social-${key}`}
+                      href={href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={label}
+                      className="w-10 h-10 border-3 border-black rounded-full flex items-center justify-center hover:bg-black hover:text-[#FFEF00] transition-colors"
+                    >
+                      <Icon size={18} />
+                    </a>
+                  )
+                ))}
+              </div>
+              <button 
+                onClick={() => setIsMenuOpen(false)}
+                className="w-10 h-10 flex items-center justify-center"
+              >
+                <X size={28} />
+              </button>
+            </div>
+
+            {/* Menu Items */}
+            <div className="flex flex-col items-center justify-center gap-8 flex-1">
             <a href="#courses-intro" onClick={() => setIsMenuOpen(false)}>課程介紹</a>
             <a href="#courses" onClick={() => setIsMenuOpen(false)}>個人課程</a>
             <a href="#tutors" onClick={() => setIsMenuOpen(false)}>導師簡介</a>
             <a href="#activities" onClick={() => setIsMenuOpen(false)}>活動重溫</a>
             <a href="#contact" onClick={() => setIsMenuOpen(false)}>聯絡我們</a>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -2610,6 +2671,16 @@ function AppContent() {
                               />
                             </div>
                             <div className="space-y-2">
+                              <label className="text-xs font-black uppercase">YouTube 連結</label>
+                              <input 
+                                type="url" 
+                                className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                value={siteSettings.youtubeUrl || ''}
+                                onChange={e => setSiteSettings({...siteSettings, youtubeUrl: e.target.value})}
+                                placeholder="https://youtube.com/@..."
+                              />
+                            </div>
+                            <div className="space-y-2">
                               <label className="text-xs font-black uppercase">Facebook 連結</label>
                               <input 
                                 type="url" 
@@ -3731,6 +3802,7 @@ function AppContent() {
                                   await apiSetDoc('settings', 'global', {
                                     ...siteSettings,
                                     address: '香港九龍...',
+                                    youtubeUrl: 'https://youtube.com/@savfx',
                                     facebookUrl: 'https://facebook.com/savfx',
                                     instagramUrl: 'https://instagram.com/savfx'
                                   });
