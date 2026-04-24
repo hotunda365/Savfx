@@ -101,10 +101,41 @@ async function startServer() {
 
   app.get('/api/collections/:collection', async (req, res) => {
     try {
-      const result = await pool.query(
-        `SELECT doc_id, data FROM documents WHERE collection_name = $1 ORDER BY created_at DESC`,
-        [req.params.collection]
-      );
+      const { limit, offset } = req.query;
+      let query = `SELECT doc_id, data FROM documents WHERE collection_name = $1`;
+      const params: any[] = [req.params.collection];
+
+      if (req.params.collection === 'activities') {
+        query += `
+          ORDER BY
+            CASE
+              WHEN data->>'date' ~ '([0-9]{4})年[0-9]{1,2}月[0-9]{1,2}日' THEN
+                ((regexp_match(data->>'date', '([0-9]{4})年([0-9]{1,2})月([0-9]{1,2})日'))[1]::int * 10000) +
+                ((regexp_match(data->>'date', '([0-9]{4})年([0-9]{1,2})月([0-9]{1,2})日'))[2]::int * 100) +
+                ((regexp_match(data->>'date', '([0-9]{4})年([0-9]{1,2})月([0-9]{1,2})日'))[3]::int)
+              ELSE 0
+            END DESC,
+            created_at DESC`;
+      } else {
+        query += ` ORDER BY created_at DESC`;
+      }
+
+      if (limit) {
+        const limitVal = parseInt(limit as string);
+        if (!isNaN(limitVal)) {
+          params.push(limitVal);
+          query += ` LIMIT $${params.length}`;
+        }
+      }
+      if (offset) {
+        const offsetVal = parseInt(offset as string);
+        if (!isNaN(offsetVal)) {
+          params.push(offsetVal);
+          query += ` OFFSET $${params.length}`;
+        }
+      }
+
+      const result = await pool.query(query, params);
       const items = result.rows.map((row) => ({ id: row.doc_id, ...row.data }));
       res.json(items);
     } catch (error) {

@@ -1,10 +1,68 @@
 {
 	"version": "2.0.0",
+	"inputs": [
+		{
+			"id": "pushMessage",
+			"type": "promptString",
+			"description": "Commit message (leave empty to use auto message)",
+			"default": ""
+		},
+		{
+			"id": "syncLocalBaseUrl",
+			"type": "promptString",
+			"description": "Local base URL",
+			"default": "http://localhost:3000"
+		},
+		{
+			"id": "syncRemoteBaseUrl",
+			"type": "promptString",
+			"description": "Zeabur base URL",
+			"default": "https://savfx.zeabur.app"
+		}
+	],
 	"tasks": [
 		{
 			"label": "dev",
 			"type": "shell",
 			"command": "npm run dev"
+		},
+		{
+			"label": "auto push github",
+			"type": "shell",
+			"command": "C:/Windows/System32/WindowsPowerShell/v1.0/powershell.exe",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				"scripts/auto-push.ps1",
+				"-Message",
+				"${input:pushMessage}"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}"
+			},
+			"problemMatcher": []
+		},
+		{
+			"label": "verify localhost-zeabur sync",
+			"type": "shell",
+			"command": "C:/Windows/System32/WindowsPowerShell/v1.0/powershell.exe",
+			"args": [
+				"-NoProfile",
+				"-ExecutionPolicy",
+				"Bypass",
+				"-File",
+				"scripts/verify-sync.ps1",
+				"-LocalBaseUrl",
+				"${input:syncLocalBaseUrl}",
+				"-RemoteBaseUrl",
+				"${input:syncRemoteBaseUrl}"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}"
+			},
+			"problemMatcher": []
 		}
 	]
 }

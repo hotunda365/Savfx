@@ -18,3 +18,81 @@ View your app in AI Studio: https://ai.studio/apps/caa10c7e-353e-4c8c-83a0-b49ae
 2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
 3. Run the app:
    `npm run dev`
+
+### Keep Localhost Data In Sync With Zeabur
+
+If localhost and Zeabur show different data, they are usually connected to
+different PostgreSQL databases.
+
+Use this flow to make localhost read/write the same data as Zeabur:
+
+1. Copy [/.env.example](.env.example) to `/.env.local`.
+2. In `/.env.local`, set `DATABASE_URL` to the Zeabur PostgreSQL connection string.
+3. Set `POSTGRES_SSL=true` for managed PostgreSQL.
+4. Start local server with `npm run dev`.
+5. Verify by creating data on localhost, then refresh Zeabur UI.
+
+Notes:
+
+- `server.ts` accepts either `DATABASE_URL` or `POSTGRES_CONNECTION_STRING`.
+- If both are set, keep them pointing to the same database to avoid drift.
+
+## Low-Token Activity Rewrite Workflow
+
+Use this when you want AI polishing without rewriting all 1144 posts.
+
+1. Prepare the latest 100 activities:
+   `npm run prepare:activity-rewrite`
+2. Add `GEMINI_API_KEY` to `/.env.local` or your shell environment.
+3. Generate rewritten titles and one-line summaries:
+   `npm run rewrite:activity-headlines`
+
+Files produced:
+
+- `scripts/recent_100_activities.json`: selected source posts
+- `scripts/recent_100_activities_rewritten.json`: rewritten title + summary only
+
+Optional environment variables:
+
+- `ACTIVITY_REWRITE_LIMIT` default `100`
+- `ACTIVITY_REWRITE_BATCH_SIZE` default `20`
+- `GEMINI_MODEL` default `gemini-2.5-flash`
+
+## Deploy on Zeabur
+
+This repository includes [zeabur.json](zeabur.json) with the deployment commands.
+
+- Install command: `npm install`
+- Build command: `npm install`
+- Start command: `npm run dev`
+
+Required environment variables for backend startup:
+
+- `DATABASE_URL` or `POSTGRES_CONNECTION_STRING`
+- `GEMINI_API_KEY` (if AI features are enabled)
+
+If Zeabur service settings already define commands, keep them consistent with
+`zeabur.json` to avoid config drift.
+
+## Recommended Workflow (Your Final Goal)
+
+### 1) Update / modify code
+
+- Run VS Code task: `auto push github`
+- This script commits and pushes current branch to GitHub.
+- If current branch is `master`, it also syncs `master -> main` for Zeabur.
+- Zeabur deployment menu should track `main` for automatic redeploy.
+
+### 2) Update website information (content/data)
+
+- Keep localhost and Zeabur connected to the same PostgreSQL database.
+- Use the same `DATABASE_URL` (or `POSTGRES_CONNECTION_STRING`) on both sides.
+- Restart local server after env updates.
+
+### 3) Verify localhost <-> Zeabur data sync
+
+- Run VS Code task: `verify localhost-zeabur sync`
+- This performs two-way writes/reads:
+   - local write -> remote read
+   - remote write -> local read
+- `PASS` means both are synced to the same data source.

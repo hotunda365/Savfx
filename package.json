@@ -9,7 +9,9 @@
     "preview": "vite preview",
     "start": "npx tsx server.ts",
     "clean": "rm -rf dist",
-    "lint": "tsc --noEmit"
+    "lint": "tsc --noEmit",
+    "prepare:activity-rewrite": "node scripts/select-recent-activities.mjs",
+    "rewrite:activity-headlines": "node scripts/rewrite-activity-headlines.mjs"
   },
   "dependencies": {
     "@google/genai": "^1.29.0",
@@ -17,6 +19,7 @@
     "@supabase/supabase-js": "^2.104.0",
     "@tailwindcss/vite": "^4.1.14",
     "@vitejs/plugin-react": "^5.0.4",
+    "axios": "^1.15.0",
     "cheerio": "^1.2.0",
     "dotenv": "^17.4.2",
     "express": "^4.21.2",
