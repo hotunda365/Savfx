@@ -1973,7 +1973,7 @@ function AppContent() {
       </section>
 
       {/* Student Works */}
-      <section id="student-works" className="py-20 px-6 bg-[#F5F5F5] border-y-8 border-black">
+      <section id="student-works" className="py-20 px-6 bg-[#EAF2FF] border-y-8 border-black">
         <div className="max-w-7xl mx-auto">
           <SectionTitle subtitle={siteSettings.studentWorksSubtitle || "優秀學員作品展示"}>{siteSettings.studentWorksTitle || "學生作品"}</SectionTitle>
           <div className="bg-black text-[#FFEF00] p-8 md:p-12 border-8 border-black rounded-[3rem]">
