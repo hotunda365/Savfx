@@ -1412,6 +1412,26 @@ function AppContent() {
                 <LogOut size={18} /> 登出
               </button>
             )}
+            <div className="flex gap-2 ml-2">
+              {siteSettings.youtubeUrl && (
+                <a href={siteSettings.youtubeUrl} target="_blank" rel="noopener noreferrer"
+                  className="w-8 h-8 border-2 border-black rounded-full flex items-center justify-center hover:bg-black hover:text-[#FFEF00] transition-colors">
+                  <Film size={16} />
+                </a>
+              )}
+              {siteSettings.facebookUrl && (
+                <a href={siteSettings.facebookUrl} target="_blank" rel="noopener noreferrer"
+                  className="w-8 h-8 border-2 border-black rounded-full flex items-center justify-center hover:bg-black hover:text-[#FFEF00] transition-colors">
+                  <Monitor size={16} />
+                </a>
+              )}
+              {siteSettings.instagramUrl && (
+                <a href={siteSettings.instagramUrl} target="_blank" rel="noopener noreferrer"
+                  className="w-8 h-8 border-2 border-black rounded-full flex items-center justify-center hover:bg-black hover:text-[#FFEF00] transition-colors">
+                  <Camera size={16} />
+                </a>
+              )}
+            </div>
           </div>
 
           <button className="md:hidden" onClick={() => setIsMenuOpen(!isMenuOpen)}>
