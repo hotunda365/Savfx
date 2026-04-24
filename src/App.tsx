@@ -1430,7 +1430,7 @@ function AppContent() {
             className="fixed inset-0 z-40 bg-[#FFEF00] flex flex-col items-center justify-center gap-8 text-3xl font-black uppercase"
           >
             {/* Social Icons - Top Right Corner */}
-            <div className="absolute top-6 right-6 flex gap-4">
+            <div className="absolute top-20 right-6 flex gap-4">
               {siteSettings.youtubeUrl && (
                 <a 
                   href={siteSettings.youtubeUrl} 
@@ -1488,9 +1488,6 @@ function AppContent() {
             animate={{ opacity: 1, x: 0 }}
             className="flex flex-col"
           >
-            <div className="inline-block bg-black text-[#FFEF00] px-4 py-1 self-start font-black text-sm mb-6 uppercase tracking-widest border-0 outline-none ring-0">
-              {siteSettings.heroTagline || 'Professional AI Animation School'}
-            </div>
             <h1 className="text-3xl sm:text-5xl md:text-7xl lg:text-[110px] font-black leading-tight tracking-tighter mb-6 sm:mb-8 text-black uppercase">
               {siteSettings.heroTitle.split('<br />').map((line, i) => (
                 <React.Fragment key={i}>
