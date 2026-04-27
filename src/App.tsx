@@ -213,6 +213,47 @@ const SectionTitle = ({ children, subtitle, reverse = false }: { children: React
   </div>
 );
 
+type HeroGalleryItem = {
+  id: string;
+  url: string;
+  title: string;
+  date: string;
+  order: number;
+};
+
+const HERO_FONT_OPTIONS: Array<{ label: string; value: string }> = [
+  { label: 'Noto Sans TC', value: 'Noto Sans TC' },
+  { label: 'Noto Serif TC', value: 'Noto Serif TC' },
+  { label: 'Montserrat', value: 'Montserrat' },
+  { label: 'Oswald', value: 'Oswald' },
+  { label: 'Playfair Display', value: 'Playfair Display' },
+  { label: 'Bebas Neue', value: 'Bebas Neue' }
+];
+
+const HERO_GOOGLE_FONT_HREF = 'https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Montserrat:wght@400;600;700;900&family=Noto+Sans+TC:wght@400;700;900&family=Noto+Serif+TC:wght@400;700;900&family=Oswald:wght@400;600;700&family=Playfair+Display:wght@400;700;900&display=swap';
+
+const buildDefaultHeroGallery = (): HeroGalleryItem[] => (
+  Array.from({ length: 6 }, (_, index) => ({
+    id: `hero-${index}`,
+    url: `https://picsum.photos/seed/hero-${index}/400/400`,
+    title: `作品 ${index + 1}`,
+    date: '',
+    order: index + 1
+  }))
+);
+
+const normalizeHeroGalleryItem = (item: any, index: number): HeroGalleryItem => ({
+  id: item?.id?.toString() || `hero-fallback-${index}`,
+  url: item?.url || item?.img || '',
+  title: item?.title || '',
+  date: item?.date || '',
+  order: Number.isFinite(Number(item?.order)) ? Number(item.order) : index + 1
+});
+
+const getResponsiveFontSize = (mobile: number, desktop: number) => (
+  `clamp(${mobile}px, calc(${mobile}px + (${desktop} - ${mobile}) * ((100vw - 375px) / 1065)), ${desktop}px)`
+);
+
 interface ErrorBoundaryProps {
   children: React.ReactNode;
 }
@@ -274,6 +315,7 @@ export default function App() {
 function AppContent() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  const [heroVisibleCount, setHeroVisibleCount] = useState(6);
   const [selectedCourseDetail, setSelectedCourseDetail] = useState<any | null>(null);
   const [selectedCourse, setSelectedCourse] = useState<number>(2);
   const [selectedUnits, setSelectedUnits] = useState<number[]>([]);
@@ -299,10 +341,20 @@ function AppContent() {
         console.error("Failed to parse settings draft:", e);
       }
     }
+    const defaultHeroGallery = buildDefaultHeroGallery();
     return {
       siteName: 'SAVFX',
       logoUrl: '',
       heroTitle: '掌握 AI 視覺技術<br />開啟動畫新紀元',
+      heroTitleFont: 'Noto Sans TC',
+      heroTitleSizeMobile: 48,
+      heroTitleSizeDesktop: 110,
+      heroTaglineFont: 'Montserrat',
+      heroTaglineSizeMobile: 20,
+      heroTaglineSizeDesktop: 40,
+      heroSubtitleFont: 'Noto Sans TC',
+      heroSubtitleSizeMobile: 20,
+      heroSubtitleSizeDesktop: 32,
       heroSubtitle: '全港首個專為創意人設計的 AI 動畫與多媒體課程，從零開始，助你成為業界頂尖專家。',
       contactEmail: 'info@savfx.edu.hk',
       contactPhone: '+852 2345 6789',
@@ -312,7 +364,8 @@ function AppContent() {
       instagramUrl: 'https://instagram.com/savfx',
       heroTagline: 'Professional AI Animation School',
       heroEst: 'EST. 2024',
-      heroImages: [] as string[],
+      heroImages: defaultHeroGallery.map(item => item.url),
+      heroGallery: defaultHeroGallery,
       coursesIntroTitle: '課程介紹',
       coursesIntroSubtitle: '專業文憑與證書課程',
       personalCourseTitle: '個人課程',
@@ -341,6 +394,16 @@ function AppContent() {
   useEffect(() => {
     localStorage.setItem('savfx_settings_draft', JSON.stringify(siteSettings));
   }, [siteSettings]);
+
+  useEffect(() => {
+    if (document.getElementById('savfx-google-fonts')) return;
+    const link = document.createElement('link');
+    link.id = 'savfx-google-fonts';
+    link.rel = 'stylesheet';
+    link.href = HERO_GOOGLE_FONT_HREF;
+    document.head.appendChild(link);
+  }, []);
+
   const [settingsLoadStatus, setSettingsLoadStatus] = useState<'loading' | 'success' | 'error' | 'not-found'>('loading');
   const [isSavingSettings, setIsSavingSettings] = useState(false);
   const [isSavingUnits, setIsSavingUnits] = useState(false);
@@ -696,24 +759,46 @@ function AppContent() {
     const loadSettings = async () => {
       try {
         const data = await apiGetDoc('settings', 'global');
-        setSiteSettings(data);
-        localStorage.setItem('savfx_settings_draft', JSON.stringify(data));
+        const mappedHeroGallery = Array.isArray(data?.heroGallery) && data.heroGallery.length > 0
+          ? data.heroGallery.map((item: any, index: number) => normalizeHeroGalleryItem(item, index))
+          : Array.isArray(data?.heroImages) && data.heroImages.length > 0
+            ? data.heroImages.map((url: string, index: number) => normalizeHeroGalleryItem({
+                id: `hero-${index}`,
+                url,
+                title: '',
+                date: '',
+                order: index + 1
+              }, index))
+            : buildDefaultHeroGallery();
+
+        const normalizedSettings = {
+          ...data,
+          heroTitleFont: data?.heroTitleFont || 'Noto Sans TC',
+          heroTitleSizeMobile: Number(data?.heroTitleSizeMobile) || 48,
+          heroTitleSizeDesktop: Number(data?.heroTitleSizeDesktop) || 110,
+          heroTaglineFont: data?.heroTaglineFont || 'Montserrat',
+          heroTaglineSizeMobile: Number(data?.heroTaglineSizeMobile) || 20,
+          heroTaglineSizeDesktop: Number(data?.heroTaglineSizeDesktop) || 40,
+          heroSubtitleFont: data?.heroSubtitleFont || 'Noto Sans TC',
+          heroSubtitleSizeMobile: Number(data?.heroSubtitleSizeMobile) || 20,
+          heroSubtitleSizeDesktop: Number(data?.heroSubtitleSizeDesktop) || 32,
+          heroGallery: mappedHeroGallery,
+          heroImages: mappedHeroGallery.map((item: HeroGalleryItem) => item.url)
+        };
+
+        setSiteSettings(normalizedSettings);
+        localStorage.setItem('savfx_settings_draft', JSON.stringify(normalizedSettings));
         setSettingsLoadStatus('success');
       } catch (error: any) {
         if (error.message?.includes('Not found')) {
           setSettingsLoadStatus('not-found');
           setSiteSettings(prev => {
-            if (prev.heroImages.length > 0) return prev;
+            if ((prev.heroImages?.length || 0) > 0 || (prev.heroGallery?.length || 0) > 0) return prev;
+            const fallbackHeroGallery = buildDefaultHeroGallery();
             return {
               ...prev,
-              heroImages: [
-                'https://picsum.photos/seed/hero-0/400/400',
-                'https://picsum.photos/seed/hero-1/400/400',
-                'https://picsum.photos/seed/hero-2/400/400',
-                'https://picsum.photos/seed/hero-3/400/400',
-                'https://picsum.photos/seed/hero-4/400/400',
-                'https://picsum.photos/seed/hero-5/400/400'
-              ]
+              heroImages: fallbackHeroGallery.map(item => item.url),
+              heroGallery: fallbackHeroGallery
             };
           });
         } else {
@@ -1272,6 +1357,65 @@ function AppContent() {
 
   const currentCourse = courses.find(c => c.id === selectedCourse) || courses[1] || { mandatory: [], allowExtra: false, name: '', minUnits: 0 };
 
+  const getHeroGalleryItems = (): HeroGalleryItem[] => {
+    if (Array.isArray(siteSettings.heroGallery) && siteSettings.heroGallery.length > 0) {
+      return siteSettings.heroGallery.map((item: any, index: number) => normalizeHeroGalleryItem(item, index));
+    }
+    if (Array.isArray(siteSettings.heroImages) && siteSettings.heroImages.length > 0) {
+      return siteSettings.heroImages.map((url: string, index: number) => normalizeHeroGalleryItem({
+        id: `hero-${index}`,
+        url,
+        title: '',
+        date: '',
+        order: index + 1
+      }, index));
+    }
+    return buildDefaultHeroGallery();
+  };
+
+  const updateHeroGallery = (updater: (items: HeroGalleryItem[]) => HeroGalleryItem[]) => {
+    const currentItems = getHeroGalleryItems();
+    const updatedItems = updater(currentItems);
+    setSiteSettings({
+      ...siteSettings,
+      heroGallery: updatedItems,
+      heroImages: updatedItems.map(item => item.url)
+    });
+  };
+
+  const sortedHeroGalleryItems = [...getHeroGalleryItems()].sort((a, b) => {
+    const orderDiff = Number(a.order || 0) - Number(b.order || 0);
+    if (orderDiff !== 0) return orderDiff;
+    return a.id.localeCompare(b.id);
+  });
+
+  const visibleHeroGalleryItems = sortedHeroGalleryItems.slice(0, heroVisibleCount);
+  const hasMoreHeroItems = sortedHeroGalleryItems.length > heroVisibleCount;
+
+  const heroTitleFont = siteSettings.heroTitleFont || 'Noto Sans TC';
+  const heroTaglineFont = siteSettings.heroTaglineFont || 'Montserrat';
+  const heroSubtitleFont = siteSettings.heroSubtitleFont || 'Noto Sans TC';
+
+  const heroTitleSizeMobile = Number(siteSettings.heroTitleSizeMobile) || 48;
+  const heroTitleSizeDesktop = Number(siteSettings.heroTitleSizeDesktop) || 110;
+  const heroTaglineSizeMobile = Number(siteSettings.heroTaglineSizeMobile) || 20;
+  const heroTaglineSizeDesktop = Number(siteSettings.heroTaglineSizeDesktop) || 40;
+  const heroSubtitleSizeMobile = Number(siteSettings.heroSubtitleSizeMobile) || 20;
+  const heroSubtitleSizeDesktop = Number(siteSettings.heroSubtitleSizeDesktop) || 32;
+
+  const heroTitleStyle: React.CSSProperties = {
+    fontFamily: `"${heroTitleFont}", sans-serif`,
+    fontSize: getResponsiveFontSize(heroTitleSizeMobile, heroTitleSizeDesktop)
+  };
+  const heroTaglineStyle: React.CSSProperties = {
+    fontFamily: `"${heroTaglineFont}", sans-serif`,
+    fontSize: getResponsiveFontSize(heroTaglineSizeMobile, heroTaglineSizeDesktop)
+  };
+  const heroSubtitleStyle: React.CSSProperties = {
+    fontFamily: `"${heroSubtitleFont}", sans-serif`,
+    fontSize: getResponsiveFontSize(heroSubtitleSizeMobile, heroSubtitleSizeDesktop)
+  };
+
   const handleCourseChange = (courseId: number) => {
     const course = courses.find(c => c.id === courseId);
     if (course) {
@@ -1432,7 +1576,7 @@ function AppContent() {
                 )}
               </div>
               <div className="leading-tight">
-                <h1 className="text-xl sm:text-4xl font-black tracking-tighter text-black">{siteSettings.siteName}</h1>
+                <h1 className="text-xl sm:text-4xl font-black tracking-tighter text-black">SAVFX</h1>
                 <p className="text-[10px] uppercase tracking-[0.3em] text-black/70">AI Studio</p>
               </div>
             </div>
@@ -1465,47 +1609,35 @@ function AppContent() {
               </button>
             )}
             <div className="flex gap-2 ml-2">
-              {siteSettings.youtubeUrl && (
-                <a href={siteSettings.youtubeUrl} target="_blank" rel="noopener noreferrer"
-                  className="w-8 h-8 border-2 border-black rounded-full flex items-center justify-center hover:bg-black hover:text-[#FFEF00] transition-colors">
-                  <FaYoutube size={16} />
-                </a>
-              )}
-              {siteSettings.facebookUrl && (
-                <a href={siteSettings.facebookUrl} target="_blank" rel="noopener noreferrer"
-                  className="w-8 h-8 border-2 border-black rounded-full flex items-center justify-center hover:bg-black hover:text-[#FFEF00] transition-colors">
-                  <FaFacebook size={16} />
-                </a>
-              )}
-              {siteSettings.instagramUrl && (
-                <a href={siteSettings.instagramUrl} target="_blank" rel="noopener noreferrer"
-                  className="w-8 h-8 border-2 border-black rounded-full flex items-center justify-center hover:bg-black hover:text-[#FFEF00] transition-colors">
-                  <FaInstagram size={16} />
-                </a>
-              )}
+              <a href={siteSettings.youtubeUrl || 'https://www.youtube.com/'} target="_blank" rel="noopener noreferrer"
+                className="w-8 h-8 border-2 border-black rounded-full flex items-center justify-center hover:bg-black hover:text-[#FFEF00] transition-colors">
+                <FaYoutube size={16} />
+              </a>
+              <a href={siteSettings.facebookUrl || 'https://www.facebook.com/'} target="_blank" rel="noopener noreferrer"
+                className="w-8 h-8 border-2 border-black rounded-full flex items-center justify-center hover:bg-black hover:text-[#FFEF00] transition-colors">
+                <FaFacebook size={16} />
+              </a>
+              <a href={siteSettings.instagramUrl || 'https://www.instagram.com/'} target="_blank" rel="noopener noreferrer"
+                className="w-8 h-8 border-2 border-black rounded-full flex items-center justify-center hover:bg-black hover:text-[#FFEF00] transition-colors">
+                <FaInstagram size={16} />
+              </a>
             </div>
           </div>
 
           <div className="flex lg:hidden items-center gap-2">
             <div className="flex gap-1.5">
-              {siteSettings.youtubeUrl && (
-                <a href={siteSettings.youtubeUrl} target="_blank" rel="noopener noreferrer"
-                  className="w-8 h-8 border-2 border-black rounded-full flex items-center justify-center hover:bg-black hover:text-[#FFEF00] transition-colors">
-                  <FaYoutube size={14} />
-                </a>
-              )}
-              {siteSettings.facebookUrl && (
-                <a href={siteSettings.facebookUrl} target="_blank" rel="noopener noreferrer"
-                  className="w-8 h-8 border-2 border-black rounded-full flex items-center justify-center hover:bg-black hover:text-[#FFEF00] transition-colors">
-                  <FaFacebook size={14} />
-                </a>
-              )}
-              {siteSettings.instagramUrl && (
-                <a href={siteSettings.instagramUrl} target="_blank" rel="noopener noreferrer"
-                  className="w-8 h-8 border-2 border-black rounded-full flex items-center justify-center hover:bg-black hover:text-[#FFEF00] transition-colors">
-                  <FaInstagram size={14} />
-                </a>
-              )}
+              <a href={siteSettings.youtubeUrl || 'https://www.youtube.com/'} target="_blank" rel="noopener noreferrer"
+                className="w-8 h-8 border-2 border-black rounded-full flex items-center justify-center hover:bg-black hover:text-[#FFEF00] transition-colors">
+                <FaYoutube size={14} />
+              </a>
+              <a href={siteSettings.facebookUrl || 'https://www.facebook.com/'} target="_blank" rel="noopener noreferrer"
+                className="w-8 h-8 border-2 border-black rounded-full flex items-center justify-center hover:bg-black hover:text-[#FFEF00] transition-colors">
+                <FaFacebook size={14} />
+              </a>
+              <a href={siteSettings.instagramUrl || 'https://www.instagram.com/'} target="_blank" rel="noopener noreferrer"
+                className="w-8 h-8 border-2 border-black rounded-full flex items-center justify-center hover:bg-black hover:text-[#FFEF00] transition-colors">
+                <FaInstagram size={14} />
+              </a>
             </div>
             <button onClick={() => setIsMenuOpen(!isMenuOpen)}>
               {isMenuOpen ? <X /> : <Menu />}
@@ -1551,7 +1683,7 @@ function AppContent() {
             animate={{ opacity: 1, x: 0 }}
             className="flex flex-col"
           >
-            <h1 className="text-3xl sm:text-5xl md:text-7xl lg:text-[110px] font-black leading-tight tracking-tighter mb-6 sm:mb-8 text-black uppercase">
+            <h1 className="font-black leading-tight tracking-tighter mb-4 sm:mb-6 text-black uppercase" style={heroTitleStyle}>
               {siteSettings.heroTitle.split('<br />').map((line, i) => (
                 <React.Fragment key={i}>
                   {line}
@@ -1559,6 +1691,11 @@ function AppContent() {
                 </React.Fragment>
               ))}
             </h1>
+            {siteSettings.heroTagline && (
+              <p className="text-black/80 font-black tracking-wide uppercase mb-4 sm:mb-6" style={heroTaglineStyle}>
+                {siteSettings.heroTagline}
+              </p>
+            )}
             <div className="relative">
               <h2 className="text-white font-black text-[56px] sm:text-[120px] md:text-[140px] lg:text-[200px] leading-none sm:leading-tight tracking-tighter drop-shadow-[4px_4px_0px_rgba(0,0,0,1)] sm:drop-shadow-[8px_8px_0px_rgba(0,0,0,1)] mb-6 sm:mb-8 select-none">
                 {siteSettings.siteName}
@@ -1567,7 +1704,7 @@ function AppContent() {
                 {siteSettings.heroEst || 'EST. 2024'}
               </div>
             </div>
-            <p className="text-base sm:text-xl md:text-2xl font-black max-w-lg text-black leading-tight border-l-8 border-black pl-4 sm:pl-6">
+            <p className="font-black max-w-lg text-black leading-tight border-l-8 border-black pl-4 sm:pl-6" style={heroSubtitleStyle}>
               {siteSettings.heroSubtitle}
             </p>
           </motion.div>
@@ -1577,26 +1714,42 @@ function AppContent() {
             animate={{ opacity: 1, scale: 1 }}
             className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 md:gap-10"
           >
-            {[...Array(6)].map((_, i) => (
-              <div key={i} className="relative aspect-square group">
+            {visibleHeroGalleryItems.map((item, i) => (
+              <div key={`${item.id}-${i}`} className="relative aspect-square group">
                 {/* Corner Accents */}
                 {i === 0 && (
                   <div className="absolute -top-4 -left-4 w-12 h-12 border-t-[12px] border-l-[12px] border-[#0055FF] z-20" />
                 )}
-                {i === 5 && (
+                {i === visibleHeroGalleryItems.length - 1 && (
                   <div className="absolute -bottom-4 -right-4 w-12 h-12 border-b-[12px] border-r-[12px] border-[#0055FF] z-20" />
                 )}
                 
                 {/* The Shape */}
-                <div className="w-full h-full border-[8px] border-black rounded-tl-[100%] rounded-tr-[100%] rounded-br-[100%] rounded-bl-none overflow-hidden bg-white shadow-[8px_8px_0px_rgba(0,55,255,0.2)] transition-all group-hover:shadow-[12px_12px_0px_rgba(0,0,0,1)] group-hover:-translate-x-1 group-hover:-translate-y-1">
+                <div className="w-full h-full border-[8px] border-[#0055FF] rounded-tl-[100%] rounded-tr-[100%] rounded-br-[100%] rounded-bl-none overflow-hidden bg-white shadow-[8px_8px_0px_rgba(0,55,255,0.2)] transition-all group-hover:shadow-[12px_12px_0px_rgba(0,0,0,1)] group-hover:-translate-x-1 group-hover:-translate-y-1">
                   <img 
-                    src={siteSettings.heroImages?.[i] || `https://picsum.photos/seed/hero-${i}/400/400`} 
+                    src={item.url || `https://picsum.photos/seed/hero-${item.order || i}/400/400`} 
                     className="w-full h-full object-cover transition-all duration-500" 
                     referrerPolicy="no-referrer" 
                   />
+                  {(item.title || item.date) && (
+                    <div className="absolute left-0 right-0 bottom-0 bg-black/75 text-[#FFEF00] px-3 py-2">
+                      {item.title && <p className="text-xs sm:text-sm font-black leading-tight">{item.title}</p>}
+                      {item.date && <p className="text-[10px] sm:text-xs font-bold opacity-90">{item.date}</p>}
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
+            {hasMoreHeroItems && (
+              <div className="col-span-2 sm:col-span-3 flex justify-center mt-2 sm:mt-4">
+                <button
+                  onClick={() => setHeroVisibleCount(prev => prev + 6)}
+                  className="bg-black text-[#FFEF00] px-8 py-3 rounded-full font-black uppercase tracking-wide hover:scale-105 transition-transform"
+                >
+                  瀏覽更多
+                </button>
+              </div>
+            )}
           </motion.div>
         </div>
       </header>
@@ -2820,61 +2973,245 @@ function AppContent() {
                             <LayoutGrid size={32} /> 首頁區塊管理
                           </h3>
                           <div className="bg-white border-4 border-black p-8 rounded-3xl shadow-[8px_8px_0px_rgba(0,0,0,1)] space-y-8">
-                            <div className="grid md:grid-cols-2 gap-6">
-                              <div className="space-y-2">
-                                <label className="text-xs font-black uppercase">Hero 標題 (可用 &lt;br /&gt; 換行)</label>
-                                <input 
-                                  type="text" 
-                                  className="w-full border-4 border-black p-4 rounded-xl font-bold"
-                                  value={siteSettings.heroTitle}
-                                  onChange={e => setSiteSettings({...siteSettings, heroTitle: e.target.value})}
-                                />
+                            <div className="grid md:grid-cols-3 gap-5">
+                              <div className="space-y-3 border-2 border-black rounded-2xl p-4 bg-gray-50">
+                                <h4 className="text-sm font-black uppercase">Hero 標題</h4>
+                                <div className="space-y-2">
+                                  <label className="text-[10px] font-black uppercase">內容 (可用 &lt;br /&gt; 換行)</label>
+                                  <input 
+                                    type="text" 
+                                    className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                    value={siteSettings.heroTitle}
+                                    onChange={e => setSiteSettings({...siteSettings, heroTitle: e.target.value})}
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <label className="text-[10px] font-black uppercase">Google Fonts</label>
+                                  <select
+                                    className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                    value={siteSettings.heroTitleFont || 'Noto Sans TC'}
+                                    onChange={e => setSiteSettings({...siteSettings, heroTitleFont: e.target.value})}
+                                  >
+                                    {HERO_FONT_OPTIONS.map(option => (
+                                      <option key={option.value} value={option.value}>{option.label}</option>
+                                    ))}
+                                  </select>
+                                </div>
+                                <div className="space-y-2">
+                                  <label className="text-[10px] font-black uppercase">尺寸</label>
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <div className="space-y-1">
+                                      <label className="text-[10px] font-black uppercase">手機字級 (px)</label>
+                                      <input
+                                        type="number"
+                                        min={16}
+                                        max={180}
+                                        className="w-full border-2 border-black p-2 rounded-lg text-xs font-bold"
+                                        value={siteSettings.heroTitleSizeMobile || 48}
+                                        onChange={e => setSiteSettings({...siteSettings, heroTitleSizeMobile: Number(e.target.value) || 48})}
+                                      />
+                                    </div>
+                                    <div className="space-y-1">
+                                      <label className="text-[10px] font-black uppercase">桌機字級 (px)</label>
+                                      <input
+                                        type="number"
+                                        min={20}
+                                        max={220}
+                                        className="w-full border-2 border-black p-2 rounded-lg text-xs font-bold"
+                                        value={siteSettings.heroTitleSizeDesktop || 110}
+                                        onChange={e => setSiteSettings({...siteSettings, heroTitleSizeDesktop: Number(e.target.value) || 110})}
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
                               </div>
-                              <div className="space-y-2">
-                                <label className="text-xs font-black uppercase">Hero 標籤 (Tagline)</label>
-                                <input 
-                                  type="text" 
-                                  className="w-full border-4 border-black p-4 rounded-xl font-bold"
-                                  value={siteSettings.heroTagline}
-                                  onChange={e => setSiteSettings({...siteSettings, heroTagline: e.target.value})}
-                                />
+
+                              <div className="space-y-3 border-2 border-black rounded-2xl p-4 bg-gray-50">
+                                <h4 className="text-sm font-black uppercase">Tagline</h4>
+                                <div className="space-y-2">
+                                  <label className="text-[10px] font-black uppercase">內容</label>
+                                  <input 
+                                    type="text" 
+                                    className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                    value={siteSettings.heroTagline}
+                                    onChange={e => setSiteSettings({...siteSettings, heroTagline: e.target.value})}
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <label className="text-[10px] font-black uppercase">Google Fonts</label>
+                                  <select
+                                    className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                    value={siteSettings.heroTaglineFont || 'Montserrat'}
+                                    onChange={e => setSiteSettings({...siteSettings, heroTaglineFont: e.target.value})}
+                                  >
+                                    {HERO_FONT_OPTIONS.map(option => (
+                                      <option key={option.value} value={option.value}>{option.label}</option>
+                                    ))}
+                                  </select>
+                                </div>
+                                <div className="space-y-2">
+                                  <label className="text-[10px] font-black uppercase">尺寸</label>
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <div className="space-y-1">
+                                      <label className="text-[10px] font-black uppercase">手機字級 (px)</label>
+                                      <input
+                                        type="number"
+                                        min={12}
+                                        max={120}
+                                        className="w-full border-2 border-black p-2 rounded-lg text-xs font-bold"
+                                        value={siteSettings.heroTaglineSizeMobile || 20}
+                                        onChange={e => setSiteSettings({...siteSettings, heroTaglineSizeMobile: Number(e.target.value) || 20})}
+                                      />
+                                    </div>
+                                    <div className="space-y-1">
+                                      <label className="text-[10px] font-black uppercase">桌機字級 (px)</label>
+                                      <input
+                                        type="number"
+                                        min={14}
+                                        max={160}
+                                        className="w-full border-2 border-black p-2 rounded-lg text-xs font-bold"
+                                        value={siteSettings.heroTaglineSizeDesktop || 40}
+                                        onChange={e => setSiteSettings({...siteSettings, heroTaglineSizeDesktop: Number(e.target.value) || 40})}
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
                               </div>
-                              <div className="md:col-span-2 space-y-2">
-                                <label className="text-xs font-black uppercase">Hero 副標題</label>
-                                <textarea 
-                                  className="w-full border-4 border-black p-4 rounded-xl font-bold"
-                                  rows={3}
-                                  value={siteSettings.heroSubtitle}
-                                  onChange={e => setSiteSettings({...siteSettings, heroSubtitle: e.target.value})}
-                                />
+
+                              <div className="space-y-3 border-2 border-black rounded-2xl p-4 bg-gray-50">
+                                <h4 className="text-sm font-black uppercase">Hero 副標題</h4>
+                                <div className="space-y-2">
+                                  <label className="text-[10px] font-black uppercase">內容</label>
+                                  <textarea 
+                                    className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                    rows={3}
+                                    value={siteSettings.heroSubtitle}
+                                    onChange={e => setSiteSettings({...siteSettings, heroSubtitle: e.target.value})}
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <label className="text-[10px] font-black uppercase">Google Fonts</label>
+                                  <select
+                                    className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                    value={siteSettings.heroSubtitleFont || 'Noto Sans TC'}
+                                    onChange={e => setSiteSettings({...siteSettings, heroSubtitleFont: e.target.value})}
+                                  >
+                                    {HERO_FONT_OPTIONS.map(option => (
+                                      <option key={option.value} value={option.value}>{option.label}</option>
+                                    ))}
+                                  </select>
+                                </div>
+                                <div className="space-y-2">
+                                  <label className="text-[10px] font-black uppercase">尺寸</label>
+                                  <div className="grid grid-cols-2 gap-2">
+                                    <div className="space-y-1">
+                                      <label className="text-[10px] font-black uppercase">手機字級 (px)</label>
+                                      <input
+                                        type="number"
+                                        min={12}
+                                        max={90}
+                                        className="w-full border-2 border-black p-2 rounded-lg text-xs font-bold"
+                                        value={siteSettings.heroSubtitleSizeMobile || 20}
+                                        onChange={e => setSiteSettings({...siteSettings, heroSubtitleSizeMobile: Number(e.target.value) || 20})}
+                                      />
+                                    </div>
+                                    <div className="space-y-1">
+                                      <label className="text-[10px] font-black uppercase">桌機字級 (px)</label>
+                                      <input
+                                        type="number"
+                                        min={14}
+                                        max={120}
+                                        className="w-full border-2 border-black p-2 rounded-lg text-xs font-bold"
+                                        value={siteSettings.heroSubtitleSizeDesktop || 32}
+                                        onChange={e => setSiteSettings({...siteSettings, heroSubtitleSizeDesktop: Number(e.target.value) || 32})}
+                                      />
+                                    </div>
+                                  </div>
+                                </div>
                               </div>
                             </div>
 
                             <div className="space-y-4">
-                              <label className="text-xs font-black uppercase block">Hero 圖片 (6 張)</label>
-                              <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                                {[0, 1, 2, 3, 4, 5].map(i => (
-                                  <div key={i} className="space-y-2">
-                                    <FileUploader 
-                                      label={`圖片 ${i+1}`}
-                                      currentImage={siteSettings.heroImages?.[i]}
-                                      onUpload={(url) => {
-                                        const newImages = [...(siteSettings.heroImages || [])];
-                                        newImages[i] = url;
-                                        setSiteSettings({...siteSettings, heroImages: newImages});
-                                      }}
-                                    />
-                                    <input 
-                                      type="text" 
-                                      placeholder="或輸入 URL"
-                                      className="w-full border-2 border-black p-2 rounded-lg text-[10px] font-bold"
-                                      value={siteSettings.heroImages?.[i] || ''}
-                                      onChange={e => {
-                                        const newImages = [...(siteSettings.heroImages || [])];
-                                        newImages[i] = e.target.value;
-                                        setSiteSettings({...siteSettings, heroImages: newImages});
-                                      }}
-                                    />
+                              <div className="flex items-center justify-between gap-4">
+                                <label className="text-xs font-black uppercase block">Hero 圖片（不限張數，可自訂排序/標題/日期）</label>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    updateHeroGallery(prev => ([
+                                      ...prev,
+                                      {
+                                        id: Date.now().toString(),
+                                        url: '',
+                                        title: '',
+                                        date: '',
+                                        order: prev.length + 1
+                                      }
+                                    ]));
+                                  }}
+                                  className="bg-black text-[#FFEF00] px-4 py-2 rounded-full font-black text-xs uppercase flex items-center gap-2"
+                                >
+                                  <Plus size={14} /> 新增圖片
+                                </button>
+                              </div>
+
+                              <div className="space-y-4">
+                                {sortedHeroGalleryItems.map((item, index) => (
+                                  <div key={item.id} className="border-2 border-black rounded-2xl p-4 bg-white/70 space-y-3">
+                                    <div className="flex items-center justify-between">
+                                      <p className="text-xs font-black uppercase">圖片 {index + 1}</p>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          updateHeroGallery(prev => prev.filter(g => g.id !== item.id));
+                                        }}
+                                        className="text-red-600 hover:text-red-800 font-black text-xs flex items-center gap-1"
+                                      >
+                                        <Trash2 size={14} /> 刪除
+                                      </button>
+                                    </div>
+
+                                    <div className="grid md:grid-cols-2 gap-4">
+                                      <div className="space-y-2">
+                                        <FileUploader
+                                          label={`上傳圖片 ${index + 1}`}
+                                          currentImage={item.url}
+                                          onUpload={(url) => {
+                                            updateHeroGallery(prev => prev.map(g => g.id === item.id ? { ...g, url } : g));
+                                          }}
+                                        />
+                                        <input
+                                          type="text"
+                                          placeholder="或輸入圖片 URL"
+                                          className="w-full border-2 border-black p-2 rounded-lg text-xs font-bold"
+                                          value={item.url}
+                                          onChange={e => updateHeroGallery(prev => prev.map(g => g.id === item.id ? { ...g, url: e.target.value } : g))}
+                                        />
+                                      </div>
+
+                                      <div className="space-y-2">
+                                        <input
+                                          type="text"
+                                          placeholder="圖片標題"
+                                          className="w-full border-2 border-black p-2 rounded-lg text-xs font-bold"
+                                          value={item.title}
+                                          onChange={e => updateHeroGallery(prev => prev.map(g => g.id === item.id ? { ...g, title: e.target.value } : g))}
+                                        />
+                                        <input
+                                          type="date"
+                                          className="w-full border-2 border-black p-2 rounded-lg text-xs font-bold"
+                                          value={item.date}
+                                          onChange={e => updateHeroGallery(prev => prev.map(g => g.id === item.id ? { ...g, date: e.target.value } : g))}
+                                        />
+                                        <input
+                                          type="number"
+                                          min={1}
+                                          placeholder="排序（數字越小越前）"
+                                          className="w-full border-2 border-black p-2 rounded-lg text-xs font-bold"
+                                          value={item.order}
+                                          onChange={e => updateHeroGallery(prev => prev.map(g => g.id === item.id ? { ...g, order: Number(e.target.value) || 1 } : g))}
+                                        />
+                                      </div>
+                                    </div>
                                   </div>
                                 ))}
                               </div>
