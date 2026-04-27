@@ -40,7 +40,8 @@ import {
   Upload,
   UploadCloud,
   Loader2,
-  Database
+  Database,
+  ChevronDown
 } from 'lucide-react';
 import { 
   signInWithEmailAndPassword, 
@@ -621,6 +622,8 @@ function AppContent() {
     img: ''
   });
   const [adminEditingGroupCourseId, setAdminEditingGroupCourseId] = useState<string | null>(null);
+  const [expandedHeroItems, setExpandedHeroItems] = useState<Set<string>>(new Set());
+  const toggleHeroItem = (id: string) => setExpandedHeroItems(prev => { const s = new Set(prev); s.has(id) ? s.delete(id) : s.add(id); return s; });
 
   const showConfirm = (title: string, message: string, onConfirm: () => Promise<void> | void) => {
     setConfirmModal({ show: true, title, message, onConfirm, loading: false });
@@ -3107,180 +3110,163 @@ function AppContent() {
                           <h3 className="text-3xl font-black mb-8 flex items-center gap-3">
                             <LayoutGrid size={32} /> 首頁區塊管理
                           </h3>
-                          <div className="bg-white border-4 border-black p-8 rounded-3xl shadow-[8px_8px_0px_rgba(0,0,0,1)] space-y-8">
-                            <div className="grid md:grid-cols-3 gap-5">
-                              <div className="space-y-3 border-2 border-black rounded-2xl p-4 bg-gray-50">
-                                <h4 className="text-sm font-black uppercase">Hero 標題</h4>
+                          <div className="bg-white border-4 border-black p-8 rounded-3xl shadow-[8px_8px_0px_rgba(0,0,0,1)] space-y-4">
+                            {/* Hero 標題 */}
+                            <div className="border-2 border-black rounded-2xl p-4 bg-white/70 space-y-3">
+                              <p className="text-xs font-black uppercase">Hero 標題</p>
+                              <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                   <label className="text-[10px] font-black uppercase">內容</label>
                                   <textarea 
                                     className="w-full border-4 border-black p-4 rounded-xl font-bold"
-                                    rows={3}
+                                    rows={4}
                                     value={siteSettings.heroTitle.replace(/<br \/>/g, '\n')}
                                     onChange={e => setSiteSettings({...siteSettings, heroTitle: e.target.value.replace(/\n/g, '<br />')})}
                                   />
                                 </div>
                                 <div className="space-y-2">
-                                  <label className="text-[10px] font-black uppercase">Google Fonts</label>
-                                  <select
-                                    className="w-full border-4 border-black p-4 rounded-xl font-bold"
-                                    value={siteSettings.heroTitleFont || 'Noto Sans TC'}
-                                    onChange={e => setSiteSettings({...siteSettings, heroTitleFont: e.target.value})}
-                                  >
-                                    {HERO_FONT_OPTIONS.map(option => (
-                                      <option key={option.value} value={option.value}>{option.label}</option>
-                                    ))}
-                                  </select>
-                                </div>
-                                <RGBColorTool
-                                  label="Hero 標題顏色"
-                                  value={siteSettings.heroTitleColor || '#000000'}
-                                  onChange={color => setSiteSettings({...siteSettings, heroTitleColor: color})}
-                                />
-                                <RGBColorTool
-                                  label="主視覺大字顏色 (白色字)"
-                                  value={siteSettings.heroMainWordColor || '#FFFFFF'}
-                                  onChange={color => setSiteSettings({...siteSettings, heroMainWordColor: color})}
-                                />
-                                <div className="space-y-2">
-                                  <label className="text-[10px] font-black uppercase">尺寸</label>
-                                  <p className="text-[10px] font-bold text-black/70">會同步影響前台白色主視覺大字</p>
-                                  <div className="grid grid-cols-2 gap-2">
-                                    <div className="space-y-1">
-                                      <label className="text-[10px] font-black uppercase">手機字級 (px)</label>
-                                      <input
-                                        type="number"
-                                        min={16}
-                                        max={180}
-                                        className="w-full border-2 border-black p-2 rounded-lg text-xs font-bold"
-                                        value={siteSettings.heroTitleSizeMobile || 48}
-                                        onChange={e => setSiteSettings({...siteSettings, heroTitleSizeMobile: Number(e.target.value) || 48})}
-                                      />
-                                    </div>
-                                    <div className="space-y-1">
-                                      <label className="text-[10px] font-black uppercase">桌機字級 (px)</label>
-                                      <input
-                                        type="number"
-                                        min={20}
-                                        max={220}
-                                        className="w-full border-2 border-black p-2 rounded-lg text-xs font-bold"
-                                        value={siteSettings.heroTitleSizeDesktop || 110}
-                                        onChange={e => setSiteSettings({...siteSettings, heroTitleSizeDesktop: Number(e.target.value) || 110})}
-                                      />
+                                  <div className="space-y-1">
+                                    <label className="text-[10px] font-black uppercase">Google Fonts</label>
+                                    <select
+                                      className="w-full border-4 border-black p-3 rounded-xl font-bold text-sm"
+                                      value={siteSettings.heroTitleFont || 'Noto Sans TC'}
+                                      onChange={e => setSiteSettings({...siteSettings, heroTitleFont: e.target.value})}
+                                    >
+                                      {HERO_FONT_OPTIONS.map(option => (
+                                        <option key={option.value} value={option.value}>{option.label}</option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                  <RGBColorTool
+                                    label="Hero 標題顏色"
+                                    value={siteSettings.heroTitleColor || '#000000'}
+                                    onChange={color => setSiteSettings({...siteSettings, heroTitleColor: color})}
+                                  />
+                                  <RGBColorTool
+                                    label="主視覺大字顏色 (白色字)"
+                                    value={siteSettings.heroMainWordColor || '#FFFFFF'}
+                                    onChange={color => setSiteSettings({...siteSettings, heroMainWordColor: color})}
+                                  />
+                                  <div className="space-y-1">
+                                    <label className="text-[10px] font-black uppercase">尺寸</label>
+                                    <p className="text-[10px] font-bold text-black/70">會同步影響前台白色主視覺大字</p>
+                                    <div className="grid grid-cols-2 gap-2">
+                                      <div className="space-y-1">
+                                        <label className="text-[10px] font-black uppercase">手機 (px)</label>
+                                        <input type="number" min={16} max={180} className="w-full border-2 border-black p-2 rounded-lg text-xs font-bold"
+                                          value={siteSettings.heroTitleSizeMobile || 48}
+                                          onChange={e => setSiteSettings({...siteSettings, heroTitleSizeMobile: Number(e.target.value) || 48})} />
+                                      </div>
+                                      <div className="space-y-1">
+                                        <label className="text-[10px] font-black uppercase">桌機 (px)</label>
+                                        <input type="number" min={20} max={220} className="w-full border-2 border-black p-2 rounded-lg text-xs font-bold"
+                                          value={siteSettings.heroTitleSizeDesktop || 110}
+                                          onChange={e => setSiteSettings({...siteSettings, heroTitleSizeDesktop: Number(e.target.value) || 110})} />
+                                      </div>
                                     </div>
                                   </div>
                                 </div>
                               </div>
+                            </div>
 
-                              <div className="space-y-3 border-2 border-black rounded-2xl p-4 bg-gray-50">
-                                <h4 className="text-sm font-black uppercase">Tagline</h4>
+                            {/* Tagline */}
+                            <div className="border-2 border-black rounded-2xl p-4 bg-white/70 space-y-3">
+                              <p className="text-xs font-black uppercase">Tagline</p>
+                              <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                   <label className="text-[10px] font-black uppercase">內容</label>
                                   <textarea 
                                     className="w-full border-4 border-black p-4 rounded-xl font-bold"
-                                    rows={3}
+                                    rows={4}
                                     value={siteSettings.heroTagline}
                                     onChange={e => setSiteSettings({...siteSettings, heroTagline: e.target.value})}
                                   />
                                 </div>
                                 <div className="space-y-2">
-                                  <label className="text-[10px] font-black uppercase">Google Fonts</label>
-                                  <select
-                                    className="w-full border-4 border-black p-4 rounded-xl font-bold"
-                                    value={siteSettings.heroTaglineFont || 'Montserrat'}
-                                    onChange={e => setSiteSettings({...siteSettings, heroTaglineFont: e.target.value})}
-                                  >
-                                    {HERO_FONT_OPTIONS.map(option => (
-                                      <option key={option.value} value={option.value}>{option.label}</option>
-                                    ))}
-                                  </select>
-                                </div>
-                                <RGBColorTool
-                                  label="Tagline 顏色"
-                                  value={siteSettings.heroTaglineColor || '#1A1A1A'}
-                                  onChange={color => setSiteSettings({...siteSettings, heroTaglineColor: color})}
-                                />
-                                <div className="space-y-2">
-                                  <label className="text-[10px] font-black uppercase">尺寸</label>
-                                  <div className="grid grid-cols-2 gap-2">
-                                    <div className="space-y-1">
-                                      <label className="text-[10px] font-black uppercase">手機字級 (px)</label>
-                                      <input
-                                        type="number"
-                                        min={12}
-                                        max={120}
-                                        className="w-full border-2 border-black p-2 rounded-lg text-xs font-bold"
-                                        value={siteSettings.heroTaglineSizeMobile || 20}
-                                        onChange={e => setSiteSettings({...siteSettings, heroTaglineSizeMobile: Number(e.target.value) || 20})}
-                                      />
-                                    </div>
-                                    <div className="space-y-1">
-                                      <label className="text-[10px] font-black uppercase">桌機字級 (px)</label>
-                                      <input
-                                        type="number"
-                                        min={14}
-                                        max={160}
-                                        className="w-full border-2 border-black p-2 rounded-lg text-xs font-bold"
-                                        value={siteSettings.heroTaglineSizeDesktop || 40}
-                                        onChange={e => setSiteSettings({...siteSettings, heroTaglineSizeDesktop: Number(e.target.value) || 40})}
-                                      />
+                                  <div className="space-y-1">
+                                    <label className="text-[10px] font-black uppercase">Google Fonts</label>
+                                    <select
+                                      className="w-full border-4 border-black p-3 rounded-xl font-bold text-sm"
+                                      value={siteSettings.heroTaglineFont || 'Montserrat'}
+                                      onChange={e => setSiteSettings({...siteSettings, heroTaglineFont: e.target.value})}
+                                    >
+                                      {HERO_FONT_OPTIONS.map(option => (
+                                        <option key={option.value} value={option.value}>{option.label}</option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                  <RGBColorTool
+                                    label="Tagline 顏色"
+                                    value={siteSettings.heroTaglineColor || '#1A1A1A'}
+                                    onChange={color => setSiteSettings({...siteSettings, heroTaglineColor: color})}
+                                  />
+                                  <div className="space-y-1">
+                                    <label className="text-[10px] font-black uppercase">尺寸</label>
+                                    <div className="grid grid-cols-2 gap-2">
+                                      <div className="space-y-1">
+                                        <label className="text-[10px] font-black uppercase">手機 (px)</label>
+                                        <input type="number" min={12} max={120} className="w-full border-2 border-black p-2 rounded-lg text-xs font-bold"
+                                          value={siteSettings.heroTaglineSizeMobile || 20}
+                                          onChange={e => setSiteSettings({...siteSettings, heroTaglineSizeMobile: Number(e.target.value) || 20})} />
+                                      </div>
+                                      <div className="space-y-1">
+                                        <label className="text-[10px] font-black uppercase">桌機 (px)</label>
+                                        <input type="number" min={14} max={160} className="w-full border-2 border-black p-2 rounded-lg text-xs font-bold"
+                                          value={siteSettings.heroTaglineSizeDesktop || 40}
+                                          onChange={e => setSiteSettings({...siteSettings, heroTaglineSizeDesktop: Number(e.target.value) || 40})} />
+                                      </div>
                                     </div>
                                   </div>
                                 </div>
                               </div>
+                            </div>
 
-                              <div className="space-y-3 border-2 border-black rounded-2xl p-4 bg-gray-50">
-                                <h4 className="text-sm font-black uppercase">Hero 副標題</h4>
+                            {/* Hero 副標題 */}
+                            <div className="border-2 border-black rounded-2xl p-4 bg-white/70 space-y-3">
+                              <p className="text-xs font-black uppercase">Hero 副標題</p>
+                              <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-2">
                                   <label className="text-[10px] font-black uppercase">內容</label>
                                   <textarea 
                                     className="w-full border-4 border-black p-4 rounded-xl font-bold"
-                                    rows={3}
+                                    rows={4}
                                     value={siteSettings.heroSubtitle}
                                     onChange={e => setSiteSettings({...siteSettings, heroSubtitle: e.target.value})}
                                   />
                                 </div>
                                 <div className="space-y-2">
-                                  <label className="text-[10px] font-black uppercase">Google Fonts</label>
-                                  <select
-                                    className="w-full border-4 border-black p-4 rounded-xl font-bold"
-                                    value={siteSettings.heroSubtitleFont || 'Noto Sans TC'}
-                                    onChange={e => setSiteSettings({...siteSettings, heroSubtitleFont: e.target.value})}
-                                  >
-                                    {HERO_FONT_OPTIONS.map(option => (
-                                      <option key={option.value} value={option.value}>{option.label}</option>
-                                    ))}
-                                  </select>
-                                </div>
-                                <RGBColorTool
-                                  label="副標題顏色"
-                                  value={siteSettings.heroSubtitleColor || '#000000'}
-                                  onChange={color => setSiteSettings({...siteSettings, heroSubtitleColor: color})}
-                                />
-                                <div className="space-y-2">
-                                  <label className="text-[10px] font-black uppercase">尺寸</label>
-                                  <div className="grid grid-cols-2 gap-2">
-                                    <div className="space-y-1">
-                                      <label className="text-[10px] font-black uppercase">手機字級 (px)</label>
-                                      <input
-                                        type="number"
-                                        min={12}
-                                        max={90}
-                                        className="w-full border-2 border-black p-2 rounded-lg text-xs font-bold"
-                                        value={siteSettings.heroSubtitleSizeMobile || 20}
-                                        onChange={e => setSiteSettings({...siteSettings, heroSubtitleSizeMobile: Number(e.target.value) || 20})}
-                                      />
-                                    </div>
-                                    <div className="space-y-1">
-                                      <label className="text-[10px] font-black uppercase">桌機字級 (px)</label>
-                                      <input
-                                        type="number"
-                                        min={14}
-                                        max={120}
-                                        className="w-full border-2 border-black p-2 rounded-lg text-xs font-bold"
-                                        value={siteSettings.heroSubtitleSizeDesktop || 32}
-                                        onChange={e => setSiteSettings({...siteSettings, heroSubtitleSizeDesktop: Number(e.target.value) || 32})}
-                                      />
+                                  <div className="space-y-1">
+                                    <label className="text-[10px] font-black uppercase">Google Fonts</label>
+                                    <select
+                                      className="w-full border-4 border-black p-3 rounded-xl font-bold text-sm"
+                                      value={siteSettings.heroSubtitleFont || 'Noto Sans TC'}
+                                      onChange={e => setSiteSettings({...siteSettings, heroSubtitleFont: e.target.value})}
+                                    >
+                                      {HERO_FONT_OPTIONS.map(option => (
+                                        <option key={option.value} value={option.value}>{option.label}</option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                  <RGBColorTool
+                                    label="副標題顏色"
+                                    value={siteSettings.heroSubtitleColor || '#000000'}
+                                    onChange={color => setSiteSettings({...siteSettings, heroSubtitleColor: color})}
+                                  />
+                                  <div className="space-y-1">
+                                    <label className="text-[10px] font-black uppercase">尺寸</label>
+                                    <div className="grid grid-cols-2 gap-2">
+                                      <div className="space-y-1">
+                                        <label className="text-[10px] font-black uppercase">手機 (px)</label>
+                                        <input type="number" min={12} max={90} className="w-full border-2 border-black p-2 rounded-lg text-xs font-bold"
+                                          value={siteSettings.heroSubtitleSizeMobile || 20}
+                                          onChange={e => setSiteSettings({...siteSettings, heroSubtitleSizeMobile: Number(e.target.value) || 20})} />
+                                      </div>
+                                      <div className="space-y-1">
+                                        <label className="text-[10px] font-black uppercase">桌機 (px)</label>
+                                        <input type="number" min={14} max={120} className="w-full border-2 border-black p-2 rounded-lg text-xs font-bold"
+                                          value={siteSettings.heroSubtitleSizeDesktop || 32}
+                                          onChange={e => setSiteSettings({...siteSettings, heroSubtitleSizeDesktop: Number(e.target.value) || 32})} />
+                                      </div>
                                     </div>
                                   </div>
                                 </div>
@@ -3311,65 +3297,83 @@ function AppContent() {
                               </div>
 
                               <div className="space-y-4">
-                                {sortedHeroGalleryItems.map((item, index) => (
-                                  <div key={item.id} className="border-2 border-black rounded-2xl p-4 bg-white/70 space-y-3">
-                                    <div className="flex items-center justify-between">
-                                      <p className="text-xs font-black uppercase">圖片 {index + 1}</p>
+                                {sortedHeroGalleryItems.map((item, index) => {
+                                  const isExpanded = expandedHeroItems.has(item.id);
+                                  return (
+                                    <div key={item.id} className="border-2 border-black rounded-2xl bg-white/70 overflow-hidden">
                                       <button
                                         type="button"
-                                        onClick={() => {
-                                          updateHeroGallery(prev => prev.filter(g => g.id !== item.id));
-                                        }}
-                                        className="text-red-600 hover:text-red-800 font-black text-xs flex items-center gap-1"
+                                        onClick={() => toggleHeroItem(item.id)}
+                                        className="w-full flex items-center justify-between px-4 py-3 hover:bg-black/5 transition-colors"
                                       >
-                                        <Trash2 size={14} /> 刪除
+                                        <div className="flex items-center gap-3">
+                                          {item.url && (
+                                            <img src={item.url} alt="" className="w-10 h-10 object-cover rounded-lg border-2 border-black" />
+                                          )}
+                                          <p className="text-xs font-black uppercase">
+                                            圖片 {index + 1}{item.title ? ` — ${item.title}` : ''}
+                                          </p>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                          <button
+                                            type="button"
+                                            onClick={e => { e.stopPropagation(); updateHeroGallery(prev => prev.filter(g => g.id !== item.id)); }}
+                                            className="text-red-600 hover:text-red-800 font-black text-xs flex items-center gap-1"
+                                          >
+                                            <Trash2 size={14} />
+                                          </button>
+                                          <ChevronDown size={16} className={`transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                                        </div>
                                       </button>
-                                    </div>
 
-                                    <div className="grid md:grid-cols-2 gap-4">
-                                      <div className="space-y-2">
-                                        <FileUploader
-                                          label={`上傳圖片 ${index + 1}`}
-                                          currentImage={item.url}
-                                          onUpload={(url) => {
-                                            updateHeroGallery(prev => prev.map(g => g.id === item.id ? { ...g, url } : g));
-                                          }}
-                                        />
-                                        <input
-                                          type="text"
-                                          placeholder="或輸入圖片 URL"
-                                          className="w-full border-2 border-black p-2 rounded-lg text-xs font-bold"
-                                          value={item.url}
-                                          onChange={e => updateHeroGallery(prev => prev.map(g => g.id === item.id ? { ...g, url: e.target.value } : g))}
-                                        />
-                                      </div>
-
-                                      <div className="space-y-2">
-                                        <input
-                                          type="text"
-                                          placeholder="圖片標題"
-                                          className="w-full border-2 border-black p-2 rounded-lg text-xs font-bold"
-                                          value={item.title}
-                                          onChange={e => updateHeroGallery(prev => prev.map(g => g.id === item.id ? { ...g, title: e.target.value } : g))}
-                                        />
-                                        <input
-                                          type="date"
-                                          className="w-full border-2 border-black p-2 rounded-lg text-xs font-bold"
-                                          value={item.date}
-                                          onChange={e => updateHeroGallery(prev => prev.map(g => g.id === item.id ? { ...g, date: e.target.value } : g))}
-                                        />
-                                        <input
-                                          type="number"
-                                          min={1}
-                                          placeholder="排序（數字越小越前）"
-                                          className="w-full border-2 border-black p-2 rounded-lg text-xs font-bold"
-                                          value={item.order}
-                                          onChange={e => updateHeroGallery(prev => prev.map(g => g.id === item.id ? { ...g, order: Number(e.target.value) || 1 } : g))}
-                                        />
-                                      </div>
+                                      {isExpanded && (
+                                        <div className="px-4 pb-4 space-y-3 border-t-2 border-black/10 pt-3">
+                                          <div className="grid md:grid-cols-2 gap-4">
+                                            <div className="space-y-2">
+                                              <FileUploader
+                                                label={`上傳圖片 ${index + 1}`}
+                                                currentImage={item.url}
+                                                onUpload={(url) => {
+                                                  updateHeroGallery(prev => prev.map(g => g.id === item.id ? { ...g, url } : g));
+                                                }}
+                                              />
+                                              <input
+                                                type="text"
+                                                placeholder="或輸入圖片 URL"
+                                                className="w-full border-2 border-black p-2 rounded-lg text-xs font-bold"
+                                                value={item.url}
+                                                onChange={e => updateHeroGallery(prev => prev.map(g => g.id === item.id ? { ...g, url: e.target.value } : g))}
+                                              />
+                                            </div>
+                                            <div className="space-y-2">
+                                              <input
+                                                type="text"
+                                                placeholder="圖片標題"
+                                                className="w-full border-2 border-black p-2 rounded-lg text-xs font-bold"
+                                                value={item.title}
+                                                onChange={e => updateHeroGallery(prev => prev.map(g => g.id === item.id ? { ...g, title: e.target.value } : g))}
+                                              />
+                                              <input
+                                                type="date"
+                                                className="w-full border-2 border-black p-2 rounded-lg text-xs font-bold"
+                                                value={item.date}
+                                                onChange={e => updateHeroGallery(prev => prev.map(g => g.id === item.id ? { ...g, date: e.target.value } : g))}
+                                              />
+                                              <input
+                                                type="number"
+                                                min={1}
+                                                placeholder="排序（數字越小越前）"
+                                                className="w-full border-2 border-black p-2 rounded-lg text-xs font-bold"
+                                                value={item.order}
+                                                onChange={e => updateHeroGallery(prev => prev.map(g => g.id === item.id ? { ...g, order: Number(e.target.value) || 1 } : g))}
+                                              />
+                                            </div>
+                                          </div>
+                                        </div>
+                                      )}
                                     </div>
-                                  </div>
-                                ))}
+                                  );
+                                })}
                               </div>
                             </div>
                           </div>
