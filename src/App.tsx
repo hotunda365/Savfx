@@ -199,7 +199,7 @@ const MaskedImage = ({ src, maskId, className = "" }: { src: string, maskId: str
 );
 
 const SectionTitle = ({ children, subtitle, reverse = false }: { children: React.ReactNode, subtitle?: string, reverse?: boolean }) => (
-  <div className="mb-12 text-center">
+  <div className="mb-16 text-center">
     {subtitle && !reverse && <p className="text-black/60 font-black uppercase tracking-widest text-xs mb-2">{subtitle}</p>}
     <motion.h2 
       initial={{ opacity: 0, y: 20 }}
@@ -402,6 +402,7 @@ export default function App() {
 function AppContent() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
+  const [selectedLightboxItem, setSelectedLightboxItem] = useState<HeroGalleryItem | null>(null);
   const [heroVisibleCount, setHeroVisibleCount] = useState(6);
   const [selectedCourseDetail, setSelectedCourseDetail] = useState<any | null>(null);
   const [selectedCourse, setSelectedCourse] = useState<number>(2);
@@ -1416,8 +1417,6 @@ function AppContent() {
     });
   };
 
-  const heroImage = "https://picsum.photos/seed/interview/1200/1200";
-
   useEffect(() => {
     const drafts: Record<string, number> = {};
     tutors.forEach((tutor) => {
@@ -1778,7 +1777,7 @@ function AppContent() {
       </AnimatePresence>
 
       {/* Hero Section */}
-      <header className="pt-24 sm:pt-32 pb-14 sm:pb-20 px-4 sm:px-6 min-h-[88vh] sm:min-h-screen flex items-center relative overflow-hidden bg-[#FFEF00]">
+      <header className="pt-24 sm:pt-32 md:pt-[200px] pb-24 sm:pb-40 px-8 sm:px-16 min-h-0 sm:min-h-[80vh] flex items-start relative overflow-hidden bg-[#FFEF00]">
         {/* Decorative Shapes */}
         <BlueShape className="w-64 h-64 -top-20 -left-20 rotate-12" />
         <BlueShape className="w-96 h-96 -bottom-32 -right-32 -rotate-12" />
@@ -1802,7 +1801,7 @@ function AppContent() {
               ))}
             </h1>
             {siteSettings.heroTagline && (
-              <p className="text-black/80 font-black tracking-wide uppercase mb-4 sm:mb-6" style={heroTaglineStyle}>
+              <p className="text-black/80 font-black tracking-wide uppercase mb-4 sm:mb-6 whitespace-pre-line" style={heroTaglineStyle}>
                 {siteSettings.heroTagline}
               </p>
             )}
@@ -1814,7 +1813,7 @@ function AppContent() {
                 {siteSettings.heroEst || 'EST. 2024'}
               </div>
             </div>
-            <p className="font-black max-w-lg text-black leading-tight border-l-8 border-black pl-4 sm:pl-6" style={heroSubtitleStyle}>
+            <p className="font-black max-w-lg text-black leading-tight border-l-8 border-black pl-4 sm:pl-6 whitespace-pre-line" style={heroSubtitleStyle}>
               {siteSettings.heroSubtitle}
             </p>
           </motion.div>
@@ -1825,7 +1824,15 @@ function AppContent() {
             className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 md:gap-10"
           >
             {visibleHeroGalleryItems.map((item, i) => (
-              <div key={`${item.id}-${i}`} className="relative aspect-square group">
+              <button
+                key={`${item.id}-${i}`}
+                type="button"
+                onClick={() => {
+                  setSelectedLightboxItem(item);
+                  setIsLightboxOpen(true);
+                }}
+                className="relative aspect-square group text-left"
+              >
                 {/* Corner Accents */}
                 {i === 0 && (
                   <div className="absolute -top-4 -left-4 w-12 h-12 border-t-[12px] border-l-[12px] border-[#0055FF] z-20" />
@@ -1842,13 +1849,13 @@ function AppContent() {
                     referrerPolicy="no-referrer" 
                   />
                   {(item.title || item.date) && (
-                    <div className="absolute left-0 right-0 bottom-0 bg-black/75 text-[#FFEF00] px-3 py-2">
-                      {item.title && <p className="text-xs sm:text-sm font-black leading-tight">{item.title}</p>}
-                      {item.date && <p className="text-[10px] sm:text-xs font-bold opacity-90">{item.date}</p>}
+                    <div className="absolute left-0 right-0 bottom-0 flex flex-col items-start gap-1 p-2">
+                      {item.title && <span className="bg-[#0055FF] text-white text-xs sm:text-sm font-black px-2 py-0.5 rounded leading-tight">{item.title}</span>}
+                      {item.date && <span className="bg-[#0055FF] text-white text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded">{item.date}</span>}
                     </div>
                   )}
                 </div>
-              </div>
+              </button>
             ))}
             {hasMoreHeroItems && (
               <div className="col-span-2 sm:col-span-3 flex justify-center mt-2 sm:mt-4">
@@ -1866,29 +1873,47 @@ function AppContent() {
 
       {/* Lightbox Modal */}
       <AnimatePresence>
-        {isLightboxOpen && (
+        {isLightboxOpen && selectedLightboxItem && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-4 md:p-12"
-            onClick={() => setIsLightboxOpen(false)}
+            onClick={() => {
+              setIsLightboxOpen(false);
+              setSelectedLightboxItem(null);
+            }}
           >
             <motion.button
               className="absolute top-8 right-8 text-white hover:text-[#FFEF00] transition-colors"
-              onClick={() => setIsLightboxOpen(false)}
+              onClick={() => {
+                setIsLightboxOpen(false);
+                setSelectedLightboxItem(null);
+              }}
             >
               <X size={48} strokeWidth={3} />
             </motion.button>
-            <motion.img
+
+            <motion.div
               initial={{ scale: 0.8, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.8, opacity: 0 }}
-              src={heroImage}
-              alt="Full Screen Interview"
-              className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl border-4 border-white/20"
-              referrerPolicy="no-referrer"
-            />
+              onClick={(e) => e.stopPropagation()}
+              className="max-w-5xl w-full"
+            >
+              <img
+                src={selectedLightboxItem.url || `https://picsum.photos/seed/hero-${selectedLightboxItem.order || 1}/1200/1200`}
+                alt={selectedLightboxItem.title || 'Hero photo'}
+                className="w-full max-h-[78vh] object-contain rounded-2xl shadow-2xl border-4 border-white/20"
+                referrerPolicy="no-referrer"
+              />
+              {(selectedLightboxItem.title || selectedLightboxItem.date) && (
+                <div className="mt-4 bg-white text-black rounded-xl px-4 py-3 border-2 border-white/40">
+                  {selectedLightboxItem.title && <p className="text-lg sm:text-xl font-black leading-tight">{selectedLightboxItem.title}</p>}
+                  {selectedLightboxItem.date && <p className="text-sm sm:text-base font-bold mt-1 opacity-80">{selectedLightboxItem.date}</p>}
+                </div>
+              )}
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
@@ -1956,8 +1981,8 @@ function AppContent() {
       </AnimatePresence>
 
       {/* Individual Courses */}
-      <section id="courses-intro" className="py-14 sm:py-20 bg-white border-y-8 border-black">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+      <section id="courses-intro" className="py-24 sm:py-36 bg-white border-y-8 border-black">
+        <div className="max-w-7xl mx-auto px-8 sm:px-16">
           <SectionTitle subtitle={siteSettings.coursesIntroSubtitle || "專業文憑與證書課程"}>{siteSettings.coursesIntroTitle || "課程介紹"}</SectionTitle>
           <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-5 sm:gap-8">
             {courses.map((course, i) => (
@@ -1994,7 +2019,7 @@ function AppContent() {
       </section>
 
       {/* Course Selection Tool */}
-      <section id="courses" className="py-16 sm:py-24 px-4 sm:px-6 bg-[#FFEF00] relative overflow-hidden">
+      <section id="courses" className="py-24 sm:py-36 px-8 sm:px-16 bg-[#FFEF00] relative overflow-hidden">
         {/* Background Pattern */}
         <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle, black 2px, transparent 0)', backgroundSize: '24px 24px' }} />
         
@@ -2176,8 +2201,8 @@ function AppContent() {
       </section>
 
       {/* Group Courses */}
-      <section id="group-courses" className="py-20 bg-white border-y-8 border-black">
-        <div className="max-w-7xl mx-auto px-6">
+      <section id="group-courses" className="py-28 sm:py-40 bg-white border-y-8 border-black">
+        <div className="max-w-7xl mx-auto px-8 sm:px-16">
           <SectionTitle subtitle={siteSettings.groupCourseSubtitle || "適合學校、社福機構及私人團體"}>{siteSettings.groupCourseTitle || "團體課程"}</SectionTitle>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
             {groupCourses.length === 0 ? (
@@ -2224,7 +2249,7 @@ function AppContent() {
       </section>
 
       {/* Student Works */}
-      <section id="student-works" className="py-20 px-6 bg-[#FFEF00] border-y-8 border-black">
+      <section id="student-works" className="py-28 sm:py-40 px-8 sm:px-16 bg-[#FFEF00] border-y-8 border-black">
         <div className="max-w-7xl mx-auto">
           <SectionTitle subtitle={siteSettings.studentWorksSubtitle || "優秀學員作品展示"}>{siteSettings.studentWorksTitle || "學生作品"}</SectionTitle>
           <div className="bg-black text-[#FFEF00] p-8 md:p-12 border-8 border-black rounded-[3rem]">
@@ -2271,7 +2296,7 @@ function AppContent() {
       </section>
 
       {/* Business Cooperation */}
-      <section id="business" className="py-20 px-6 bg-white">
+      <section id="business" className="py-28 sm:py-40 px-8 sm:px-16 bg-white">
         <div className="max-w-7xl mx-auto">
           <SectionTitle subtitle={siteSettings.businessCoopSubtitle || "專業動畫製作與 AI 方案"}>{siteSettings.businessCoopTitle || "商業合作"}</SectionTitle>
           <div className="bg-[#FFEF00] text-black p-8 md:p-12 border-8 border-black rounded-[3rem]">
@@ -2322,8 +2347,8 @@ function AppContent() {
       </section>
 
       {/* Briefing Session Form */}
-      <section className="py-20 px-6 bg-[#FFEF00] border-y-8 border-black">
-        <div className="max-w-3xl mx-auto bg-white border-8 border-black p-12 text-center relative rounded-[3rem]">
+      <section className="py-28 sm:py-40 px-8 sm:px-16 bg-[#FFEF00] border-y-8 border-black">
+        <div className="max-w-3xl mx-auto bg-white border-8 border-black p-14 text-center relative rounded-[3rem]">
           <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-20 h-20 bg-black rounded-full flex items-center justify-center">
             <Play className="text-[#FFEF00] fill-[#FFEF00] w-8 h-8 ml-1" />
           </div>
@@ -2370,8 +2395,8 @@ function AppContent() {
       </section>
 
       {/* Testimonials */}
-      <section id="testimonials" className="py-20 bg-white">
-        <div className="max-w-7xl mx-auto px-6">
+      <section id="testimonials" className="py-28 sm:py-40 bg-white">
+        <div className="max-w-7xl mx-auto px-8 sm:px-16">
           <SectionTitle subtitle="聽聽學員怎麼說">學生見證</SectionTitle>
           <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-8 xl:gap-12">
             {testimonials.map((t, i) => (
@@ -2392,8 +2417,8 @@ function AppContent() {
       </section>
 
       {/* Tutor Profiles */}
-      <section id="tutors" className="py-20 bg-[#FFEF00] border-y-8 border-black">
-        <div className="max-w-7xl mx-auto px-6">
+      <section id="tutors" className="py-28 sm:py-40 bg-[#FFEF00] border-y-8 border-black">
+        <div className="max-w-7xl mx-auto px-8 sm:px-16">
           <SectionTitle subtitle="業界頂尖專家親自授課">專業團隊</SectionTitle>
           <div className="grid md:grid-cols-2 gap-12">
             {sortedTutors.map((tutor, i) => (
@@ -2424,8 +2449,8 @@ function AppContent() {
       </section>
 
       {/* Activity Review */}
-      <section id="activities" className="py-20 bg-white overflow-hidden">
-        <div className="max-w-7xl mx-auto px-6">
+      <section id="activities" className="py-28 sm:py-40 bg-white overflow-hidden">
+        <div className="max-w-7xl mx-auto px-8 sm:px-16">
             <div className="flex justify-between items-end mb-12">
               <SectionTitle subtitle="精彩瞬間與技術分享">活動回顧</SectionTitle>
             </div>
@@ -2566,8 +2591,8 @@ function AppContent() {
       </section>
 
       {/* Partners */}
-      <section className="py-20 bg-[#FFEF00] border-t-8 border-black">
-        <div className="max-w-7xl mx-auto px-6 text-center">
+      <section className="py-28 sm:py-40 bg-[#FFEF00] border-t-8 border-black">
+        <div className="max-w-7xl mx-auto px-8 sm:px-16 text-center">
           <h3 className="text-2xl font-black uppercase mb-12">{siteSettings.partnersTitle || "曾合作機構"}</h3>
           <div className="flex flex-wrap justify-center gap-12 opacity-50 hover:opacity-100 transition-all">
             {Array.from({ length: 6 }).map((_, i) => (
@@ -2683,10 +2708,10 @@ function AppContent() {
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: -20 }}
-            className="min-h-screen bg-white flex flex-col md:flex-row relative z-10"
+            className="h-screen bg-white flex flex-col md:flex-row relative z-10 overflow-hidden"
           >
             {/* Sidebar */}
-            <div className="w-full md:w-64 bg-black text-white p-8 flex flex-col gap-2 shrink-0">
+            <div className="w-full md:w-64 bg-black text-white p-8 flex flex-col gap-2 shrink-0 md:h-screen md:overflow-y-auto md:sticky md:top-0">
               <div className="flex items-center justify-between mb-8">
                 <h2 className="text-2xl font-black uppercase tracking-tighter text-[#FFEF00]">後台管理</h2>
                 <button onClick={() => setShowAdminPanel(false)} className="md:hidden text-white flex items-center gap-1 text-xs font-bold">
@@ -3087,12 +3112,12 @@ function AppContent() {
                               <div className="space-y-3 border-2 border-black rounded-2xl p-4 bg-gray-50">
                                 <h4 className="text-sm font-black uppercase">Hero 標題</h4>
                                 <div className="space-y-2">
-                                  <label className="text-[10px] font-black uppercase">內容 (可用 &lt;br /&gt; 換行)</label>
-                                  <input 
-                                    type="text" 
+                                  <label className="text-[10px] font-black uppercase">內容</label>
+                                  <textarea 
                                     className="w-full border-4 border-black p-4 rounded-xl font-bold"
-                                    value={siteSettings.heroTitle}
-                                    onChange={e => setSiteSettings({...siteSettings, heroTitle: e.target.value})}
+                                    rows={3}
+                                    value={siteSettings.heroTitle.replace(/<br \/>/g, '\n')}
+                                    onChange={e => setSiteSettings({...siteSettings, heroTitle: e.target.value.replace(/\n/g, '<br />')})}
                                   />
                                 </div>
                                 <div className="space-y-2">
@@ -3151,9 +3176,9 @@ function AppContent() {
                                 <h4 className="text-sm font-black uppercase">Tagline</h4>
                                 <div className="space-y-2">
                                   <label className="text-[10px] font-black uppercase">內容</label>
-                                  <input 
-                                    type="text" 
+                                  <textarea 
                                     className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                    rows={3}
                                     value={siteSettings.heroTagline}
                                     onChange={e => setSiteSettings({...siteSettings, heroTagline: e.target.value})}
                                   />
