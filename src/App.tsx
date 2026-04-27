@@ -38,7 +38,6 @@ import {
   AlertCircle,
   Camera,
   Upload,
-  UploadCloud,
   Loader2,
   Database
 } from 'lucide-react';
@@ -50,7 +49,6 @@ import {
   User
 } from 'firebase/auth';
 import { auth } from './firebase';
-import { FaYoutube, FaFacebook, FaInstagram } from 'react-icons/fa';
 
 enum OperationType {
   CREATE = 'create',
@@ -106,14 +104,8 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
 
 const apiPath = (collection: string, id?: string) => id ? `/api/collections/${collection}/${id}` : `/api/collections/${collection}`;
 
-async function apiFetchCollection(collection: string, limit?: number, offset?: number) {
-  let url = apiPath(collection);
-  const params = new URLSearchParams();
-  if (limit !== undefined) params.append('limit', limit.toString());
-  if (offset !== undefined) params.append('offset', offset.toString());
-  if (params.toString()) url += `?${params.toString()}`;
-
-  const res = await fetch(url);
+async function apiFetchCollection(collection: string) {
+  const res = await fetch(apiPath(collection));
   if (!res.ok) throw new Error(`Failed to fetch collection: ${collection}`);
   return res.json();
 }
@@ -274,7 +266,6 @@ export default function App() {
 function AppContent() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLightboxOpen, setIsLightboxOpen] = useState(false);
-  const [selectedCourseDetail, setSelectedCourseDetail] = useState<any | null>(null);
   const [selectedCourse, setSelectedCourse] = useState<number>(2);
   const [selectedUnits, setSelectedUnits] = useState<number[]>([]);
   const [briefingForm, setBriefingForm] = useState({ email: '', phone: '' });
@@ -307,7 +298,6 @@ function AppContent() {
       contactEmail: 'info@savfx.edu.hk',
       contactPhone: '+852 2345 6789',
       address: '香港九龍...',
-      youtubeUrl: 'https://youtube.com/savfx',
       facebookUrl: 'https://facebook.com/savfx',
       instagramUrl: 'https://instagram.com/savfx',
       heroTagline: 'Professional AI Animation School',
@@ -327,10 +317,6 @@ function AppContent() {
         'AI 輔助高效動畫流程',
         '影視級後期合成特效'
       ],
-      studentWorksTitle: '學生作品',
-      studentWorksSubtitle: '優秀學員作品展示',
-      studentWorksContent: '我們的學生以 AI 與傳統動畫技術創作出色作品，每一件作品都是創意與技術的完美結合。',
-      studentWorksYoutubeUrl: '',
       briefingTitle: '課程簡介會',
       briefingSubtitle: '留下您的聯絡資料，我們將把 YouTube 簡介會影片傳送給您。',
       partnersTitle: '曾合作機構'
@@ -347,9 +333,6 @@ function AppContent() {
   const [isSavingCourses, setIsSavingCourses] = useState(false);
   const [isSavingActivities, setIsSavingActivities] = useState(false);
   const [isSavingTutors, setIsSavingTutors] = useState(false);
-  const [isSubmittingBriefing, setIsSubmittingBriefing] = useState(false);
-  const [savingTutorPriorityId, setSavingTutorPriorityId] = useState<string | null>(null);
-  const [savingTutorMaskId, setSavingTutorMaskId] = useState<string | null>(null);
   const [isSavingTestimonials, setIsSavingTestimonials] = useState(false);
   const [isSavingGroupCourses, setIsSavingGroupCourses] = useState(false);
   const [dataLoaded, setDataLoaded] = useState({
@@ -359,8 +342,7 @@ function AppContent() {
     activities: false,
     tutors: false,
     testimonials: false,
-    groupCourses: false,
-    briefingLeads: false
+    groupCourses: false
   });
 
   const handleSeedData = async () => {
@@ -381,8 +363,8 @@ function AppContent() {
         ];
 
         const defaultCourses = [
-          { id: 1, name: "專業證書課程", type: "Certificate", mandatory: [2, 3, 4, 5], minUnits: 4, allowExtra: false, title: "專業證書課程", subtitle: "Professional Certificate", desc: "快速提升 AI 視覺應用能力", startDate: "", classTime: "", tuition: "", mask: "mask-graduation-cap", img: "course-1" },
-          { id: 2, name: "一年制文憑課程", type: "Diploma", mandatory: [2, 3, 4, 5], minUnits: 16, allowExtra: true, title: "一年制文憑課程", subtitle: "One-Year Diploma", desc: "全面掌握動畫與特效技術", startDate: "", classTime: "", tuition: "", mask: "mask-book", img: "course-2" }
+          { id: 1, name: "專業證書課程", type: "Certificate", mandatory: [2, 3, 4, 5], minUnits: 4, allowExtra: false, title: "專業證書課程", subtitle: "Professional Certificate", desc: "快速提升 AI 視覺應用能力", mask: "mask-graduation-cap", img: "course-1" },
+          { id: 2, name: "一年制文憑課程", type: "Diploma", mandatory: [2, 3, 4, 5], minUnits: 16, allowExtra: true, title: "一年制文憑課程", subtitle: "One-Year Diploma", desc: "全面掌握動畫與特效技術", mask: "mask-book", img: "course-2" }
         ];
 
         const defaultGroupCourses = [
@@ -413,19 +395,12 @@ function AppContent() {
   };
 
   const [activities, setActivities] = useState<any[]>(() => getInitialList('activities', []));
-  const [activitiesPage, setActivitiesPage] = useState(0);
-  const [hasMoreActivities, setHasMoreActivities] = useState(true);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const ACTIVITIES_PER_PAGE = 12;
-
   const [groupCourses, setGroupCourses] = useState<any[]>(() => getInitialList('groupCourses', []));
   const [unitNames, setUnitNames] = useState<any[]>(() => getInitialList('units', []));
   const [adminUnitNames, setAdminUnitNames] = useState<any[]>(() => getInitialList('units', []));
   const [courses, setCourses] = useState<any[]>(() => getInitialList('courses', []));
   const [tutors, setTutors] = useState<any[]>(() => getInitialList('tutors', []));
   const [testimonials, setTestimonials] = useState<any[]>(() => getInitialList('testimonials', []));
-  const [studentWorks, setStudentWorks] = useState<any[]>(() => getInitialList('studentWorks', []));
-  const [briefingLeads, setBriefingLeads] = useState<any[]>(() => getInitialList('briefingLeads', []));
 
   // Persistence Effects
   useEffect(() => { localStorage.setItem('savfx_cache_activities', JSON.stringify(activities)); }, [activities]);
@@ -434,8 +409,6 @@ function AppContent() {
   useEffect(() => { localStorage.setItem('savfx_cache_courses', JSON.stringify(courses)); }, [courses]);
   useEffect(() => { localStorage.setItem('savfx_cache_tutors', JSON.stringify(tutors)); }, [tutors]);
   useEffect(() => { localStorage.setItem('savfx_cache_testimonials', JSON.stringify(testimonials)); }, [testimonials]);
-  useEffect(() => { localStorage.setItem('savfx_cache_studentWorks', JSON.stringify(studentWorks)); }, [studentWorks]);
-  useEffect(() => { localStorage.setItem('savfx_cache_briefingLeads', JSON.stringify(briefingLeads)); }, [briefingLeads]);
   const [confirmModal, setConfirmModal] = useState<{
     show: boolean;
     title: string;
@@ -741,10 +714,8 @@ function AppContent() {
       };
 
       fetchCollection('activities', async () => {
-        const items = await apiFetchCollection('activities', ACTIVITIES_PER_PAGE, 0);
-        setActivities(sortActivitiesByDateDesc(items.map(normalizeActivity)));
-        setActivitiesPage(0);
-        setHasMoreActivities(items.length >= ACTIVITIES_PER_PAGE);
+        const items = await apiFetchCollection('activities');
+        setActivities(items.sort((a: any, b: any) => Number(b.id) - Number(a.id)));
       }, 'activities');
 
       fetchCollection('groupCourses', async () => {
@@ -777,21 +748,6 @@ function AppContent() {
         const items = await apiFetchCollection('testimonials');
         setTestimonials(items);
       }, 'testimonials');
-
-      fetchCollection('studentWorks', async () => {
-        const items = await apiFetchCollection('studentWorks');
-        setStudentWorks(items);
-      }, 'studentWorks');
-
-      fetchCollection('briefingLeads', async () => {
-        const items = await apiFetchCollection('briefingLeads');
-        const sorted = items.sort((a: any, b: any) => {
-          const aTime = Date.parse(a.createdAt || '') || Number(a.id) || 0;
-          const bTime = Date.parse(b.createdAt || '') || Number(b.id) || 0;
-          return bTime - aTime;
-        });
-        setBriefingLeads(sorted);
-      }, 'briefingLeads');
     };
 
     loadSettings();
@@ -809,8 +765,7 @@ function AppContent() {
             activities: true,
             tutors: true,
             testimonials: true,
-            groupCourses: true,
-            briefingLeads: true
+            groupCourses: true
           };
         }
         return prev;
@@ -862,13 +817,8 @@ function AppContent() {
   const handleLogout = () => signOut(auth);
 
   const [newActivity, setNewActivity] = useState({ title: '', content: '', date: '', img: '', tags: '#SAVFX, #AI, #動畫' });
-  const [newTutor, setNewTutor] = useState({ name: '', role: '', desc: '', img: '', priority: 0, mask: 'mask-notebook' });
-  const [tutorPriorityDrafts, setTutorPriorityDrafts] = useState<Record<string, number>>({});
-  const [tutorMaskDrafts, setTutorMaskDrafts] = useState<Record<string, string>>({});
+  const [newTutor, setNewTutor] = useState({ name: '', role: '', desc: '', img: '' });
   const [newTestimonial, setNewTestimonial] = useState({ name: '', text: '', img: '' });
-  const [newStudentWork, setNewStudentWork] = useState({ title: '', youtubeUrl: '' });
-  const [editingStudentWorkId, setEditingStudentWorkId] = useState<string | null>(null);
-  const [isSavingStudentWorks, setIsSavingStudentWorks] = useState(false);
   const [newCourse, setNewCourse] = useState({ 
     name: '', 
     type: 'Diploma', 
@@ -878,9 +828,6 @@ function AppContent() {
     title: '',
     subtitle: '',
     desc: '',
-    startDate: '',
-    classTime: '',
-    tuition: '',
     mask: 'mask-book',
     img: ''
   });
@@ -890,60 +837,6 @@ function AppContent() {
   const [showEditCombinationModal, setShowEditCombinationModal] = useState(false);
   const [editingCourse, setEditingCourse] = useState<any>(null);
   const [showAddForm, setShowAddForm] = useState(false);
-
-  const normalizeLegacySavfxImageUrl = (url?: string) => {
-    if (!url) return '';
-    let normalized = url.trim();
-    if (!normalized) return '';
-
-    if (normalized.startsWith('//')) {
-      normalized = `https:${normalized}`;
-    } else if (normalized.startsWith('/')) {
-      normalized = `https://www.savfx.com.hk${normalized}`;
-    }
-
-    // Scraper produced "https://www.savfx.com.hk_XXXX.jpg" (missing slash+path).
-    // Real URL is https://www.savfx.com.hk/images/lib/_XXXX.jpg
-    return normalized.replace(
-      /^https?:\/\/www\.savfx\.com\.hk_(.+)$/i,
-      'https://www.savfx.com.hk/images/lib/_$1'
-    );
-  };
-
-  const normalizeActivity = (item: any) => {
-    const imgRaw = (item?.img || item?.image || '').toString();
-    const tags = Array.isArray(item?.tags)
-      ? item.tags
-      : Array.isArray(item?.hashtags)
-        ? item.hashtags
-        : (item?.tags || item?.hashtags || '')
-            .toString()
-            .split(',')
-            .map((t: string) => t.trim())
-            .filter((t: string) => t !== '');
-
-    return {
-      ...item,
-      img: normalizeLegacySavfxImageUrl(imgRaw),
-      tags
-    };
-  };
-
-  const getActivityImageUrl = (item: any) => {
-    const normalized = normalizeActivity(item);
-    return normalized.img || 'https://picsum.photos/seed/activity-fallback/900/1200';
-  };
-
-  const parseActivityDateForSort = (dateStr: string): number => {
-    const m = String(dateStr || '').match(/(\d{4})年\s*(\d{1,2})月\s*(\d{1,2})日/);
-    if (m) return Number(m[1]) * 10000 + Number(m[2]) * 100 + Number(m[3]);
-    const t = Date.parse(String(dateStr || ''));
-    return isNaN(t) ? 0 : t;
-  };
-
-  // Sort newest first (higher date number = newer)
-  const sortActivitiesByDateDesc = (items: any[]): any[] =>
-    [...items].sort((a, b) => parseActivityDateForSort(b.date) - parseActivityDateForSort(a.date));
 
   const handleAddCourse = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -967,9 +860,6 @@ function AppContent() {
         title: '',
         subtitle: '',
         desc: '',
-        startDate: '',
-        classTime: '',
-        tuition: '',
         mask: 'mask-book',
         img: 'https://picsum.photos/seed/course/800/600'
       });
@@ -1046,35 +936,15 @@ function AppContent() {
     }
   };
 
-  const handleLoadMoreActivities = async () => {
-    if (isLoadingMore || !hasMoreActivities) return;
-    setIsLoadingMore(true);
-    try {
-      const nextOffset = (activitiesPage + 1) * ACTIVITIES_PER_PAGE;
-      const newItems = await apiFetchCollection('activities', ACTIVITIES_PER_PAGE, nextOffset);
-      if (newItems.length > 0) {
-        setActivities(prev => sortActivitiesByDateDesc([...prev, ...newItems.map(normalizeActivity)]));
-        setActivitiesPage(prev => prev + 1);
-      }
-      if (newItems.length < ACTIVITIES_PER_PAGE) {
-        setHasMoreActivities(false);
-      }
-    } catch (err) {
-      console.error("Failed to load more activities:", err);
-    } finally {
-      setIsLoadingMore(false);
-    }
-  };
-
   const handleAddActivity = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSavingActivities(true);
     const id = Date.now();
-    const activity = normalizeActivity({
+    const activity = {
       ...newActivity,
       id,
       tags: newActivity.tags.split(',').map(t => t.trim()).filter(t => t !== '')
-    });
+    };
     try {
       await apiSetDoc('activities', id.toString(), activity);
       setActivities(prev => [activity, ...prev]);
@@ -1105,58 +975,15 @@ function AppContent() {
     e.preventDefault();
     setIsSavingTutors(true);
     const id = Date.now().toString();
-    const priority = Number.isFinite(Number(newTutor.priority)) ? Number(newTutor.priority) : 0;
-    const tutorPayload = { ...newTutor, priority };
     try {
-      await apiSetDoc('tutors', id, tutorPayload);
-      setTutors(prev => [...prev, { id, ...tutorPayload }]);
-      setNewTutor({ name: '', role: '', desc: '', img: '', priority: 0, mask: 'mask-notebook' });
+      await apiSetDoc('tutors', id, newTutor);
+      setTutors(prev => [...prev, { id, ...newTutor }]);
+      setNewTutor({ name: '', role: '', desc: '', img: '' });
       showToast("導師已新增");
     } catch (error) {
       handleFirestoreError(error, OperationType.CREATE, `tutors/${id}`);
     } finally {
       setIsSavingTutors(false);
-    }
-  };
-
-  const handleUpdateTutorPriority = async (id: string) => {
-    const tutor = tutors.find(t => t.id?.toString() === id.toString());
-    if (!tutor) return;
-
-    const nextPriority = Number.isFinite(Number(tutorPriorityDrafts[id])) ? Number(tutorPriorityDrafts[id]) : 0;
-    const nextMask = tutorMaskDrafts[id] ?? tutor.mask ?? 'mask-notebook';
-    setSavingTutorPriorityId(id.toString());
-
-    try {
-      const updatedTutor = { ...tutor, priority: nextPriority, mask: nextMask };
-      await apiSetDoc('tutors', id.toString(), updatedTutor);
-      setTutors(prev => prev.map(t => t.id?.toString() === id.toString() ? updatedTutor : t));
-      showToast("導師資料已更新");
-    } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, `tutors/${id}`);
-    } finally {
-      setSavingTutorPriorityId(null);
-    }
-  };
-
-  const handleUpdateTutorMask = async (id: string, nextMask: string) => {
-    const tutor = tutors.find(t => t.id?.toString() === id.toString());
-    if (!tutor) return;
-
-    const previousMask = tutor.mask || 'mask-notebook';
-    setTutorMaskDrafts(prev => ({ ...prev, [id]: nextMask }));
-    setSavingTutorMaskId(id.toString());
-
-    try {
-      const updatedTutor = { ...tutor, mask: nextMask };
-      await apiSetDoc('tutors', id.toString(), updatedTutor);
-      setTutors(prev => prev.map(t => t.id?.toString() === id.toString() ? updatedTutor : t));
-      showToast("導師遮罩已更新");
-    } catch (error) {
-      setTutorMaskDrafts(prev => ({ ...prev, [id]: previousMask }));
-      handleFirestoreError(error, OperationType.UPDATE, `tutors/${id}`);
-    } finally {
-      setSavingTutorMaskId(null);
     }
   };
 
@@ -1202,73 +1029,7 @@ function AppContent() {
     });
   };
 
-  const handleSaveStudentWork = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSavingStudentWorks(true);
-    const id = editingStudentWorkId || Date.now().toString();
-    try {
-      await apiSetDoc('studentWorks', id, newStudentWork);
-      if (editingStudentWorkId) {
-        setStudentWorks(prev => prev.map(w => w.id === id ? { id, ...newStudentWork } : w));
-        showToast("作品已更新");
-      } else {
-        setStudentWorks(prev => [...prev, { id, ...newStudentWork }]);
-        showToast("作品已新增");
-      }
-      setNewStudentWork({ title: '', youtubeUrl: '' });
-      setEditingStudentWorkId(null);
-    } catch (error) {
-      handleFirestoreError(error, OperationType.WRITE, `studentWorks/${id}`);
-    } finally {
-      setIsSavingStudentWorks(false);
-    }
-  };
-
-  const handleDeleteStudentWork = async (id: string) => {
-    showConfirm("確定刪除", "確定刪除此學生作品？", async () => {
-      try {
-        await apiDeleteDoc('studentWorks', id);
-        setStudentWorks(prev => prev.filter(w => w.id !== id));
-        showToast("作品已刪除");
-      } catch (error: any) {
-        showToast(error.message || "刪除失敗", "error");
-      }
-    });
-  };
-
   const heroImage = "https://picsum.photos/seed/interview/1200/1200";
-
-  useEffect(() => {
-    const drafts: Record<string, number> = {};
-    tutors.forEach((tutor) => {
-      const tutorId = tutor.id?.toString();
-      if (!tutorId) return;
-      const parsedPriority = Number(tutor.priority);
-      drafts[tutorId] = Number.isFinite(parsedPriority) ? parsedPriority : 0;
-    });
-    setTutorPriorityDrafts(drafts);
-  }, [tutors]);
-
-  useEffect(() => {
-    const drafts: Record<string, string> = {};
-    tutors.forEach((tutor) => {
-      const tutorId = tutor.id?.toString();
-      if (!tutorId) return;
-      drafts[tutorId] = tutor.mask || 'mask-notebook';
-    });
-    setTutorMaskDrafts(drafts);
-  }, [tutors]);
-
-  const getTutorPriority = (tutor: any) => {
-    const parsed = Number(tutor?.priority);
-    return Number.isFinite(parsed) ? parsed : 0;
-  };
-
-  const sortedTutors = [...tutors].sort((a, b) => {
-    const priorityDiff = getTutorPriority(a) - getTutorPriority(b);
-    if (priorityDiff !== 0) return priorityDiff;
-    return a.id.toString().localeCompare(b.id.toString());
-  });
 
   const currentCourse = courses.find(c => c.id === selectedCourse) || courses[1] || { mandatory: [], allowExtra: false, name: '', minUnits: 0 };
 
@@ -1325,34 +1086,10 @@ function AppContent() {
 
   const totalPrice = calculateTotalPrice();
 
-  const handleBriefingSubmit = async (e: React.FormEvent) => {
+  const handleBriefingSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-
-    const email = briefingForm.email.trim();
-    const phone = briefingForm.phone.trim();
-    if (!email || !phone) return;
-
-    const id = Date.now().toString();
-    const leadPayload = {
-      id,
-      email,
-      phone,
-      createdAt: new Date().toISOString()
-    };
-
-    setIsSubmittingBriefing(true);
-    try {
-      await apiSetDoc('briefingLeads', id, leadPayload);
-      setBriefingLeads(prev => [leadPayload, ...prev]);
-      setBriefingForm({ email: '', phone: '' });
-      setIsSubmitted(true);
-      setTimeout(() => setIsSubmitted(false), 3000);
-      showToast("提交成功！我們會盡快聯絡您。", "success");
-    } catch (error) {
-      handleFirestoreError(error, OperationType.CREATE, `briefingLeads/${id}`);
-    } finally {
-      setIsSubmittingBriefing(false);
-    }
+    setIsSubmitted(true);
+    setTimeout(() => setIsSubmitted(false), 3000);
   };
 
   return (
@@ -1416,11 +1153,11 @@ function AppContent() {
             exit={{ opacity: 0 }}
           >
             {/* Navigation */}
-      <nav className="fixed top-0 w-full z-50 bg-[#FFEF00] border-b border-black px-4 sm:px-6 py-3 sm:py-4">
+      <nav className="fixed top-0 w-full z-50 bg-[#FFEF00] border-b border-black px-6 py-4">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-3">
-              <div className="relative w-11 h-10 sm:w-14 sm:h-12 rounded-3xl border-2 border-black bg-[#FFEF00] flex items-center justify-center overflow-hidden">
+              <div className="relative w-14 h-12 rounded-3xl border-2 border-black bg-[#FFEF00] flex items-center justify-center overflow-hidden">
                 {siteSettings.logoUrl ? (
                   <img src={siteSettings.logoUrl} alt="Logo" className="w-full h-full object-contain" referrerPolicy="no-referrer" />
                 ) : (
@@ -1432,20 +1169,17 @@ function AppContent() {
                 )}
               </div>
               <div className="leading-tight">
-                <h1 className="text-xl sm:text-4xl font-black tracking-tighter text-black">{siteSettings.siteName}</h1>
+                <h1 className="text-2xl sm:text-4xl font-black tracking-tighter text-black">{siteSettings.siteName}</h1>
                 <p className="text-[10px] uppercase tracking-[0.3em] text-black/70">AI Studio</p>
               </div>
             </div>
           </div>
           
-          <div className="hidden md:flex gap-6 font-bold text-base text-black items-center">
+          <div className="hidden md:flex gap-8 font-bold text-base text-black items-center">
+            <a href="#courses-intro" className="hover:opacity-70 transition-opacity">課程介紹</a>
             <a href="#courses" className="hover:opacity-70 transition-opacity">個人課程</a>
-            <a href="#group-courses" className="hover:opacity-70 transition-opacity">團體課程</a>
-            <a href="#student-works" className="hover:opacity-70 transition-opacity">學生作品</a>
-            <a href="#testimonials" className="hover:opacity-70 transition-opacity">學生見證</a>
-            <a href="#tutors" className="hover:opacity-70 transition-opacity">專業團隊</a>
-            <a href="#business" className="hover:opacity-70 transition-opacity">商業合作</a>
-            <a href="#activities" className="hover:opacity-70 transition-opacity">活動回顧</a>
+            <a href="#tutors" className="hover:opacity-70 transition-opacity">導師簡介</a>
+            <a href="#activities" className="hover:opacity-70 transition-opacity">活動重溫</a>
             <a href="#contact" className="hover:opacity-70 transition-opacity">聯絡我們</a>
             {isAdmin && (
               <button 
@@ -1464,26 +1198,6 @@ function AppContent() {
                 <LogOut size={18} /> 登出
               </button>
             )}
-            <div className="flex gap-2 ml-2">
-              {siteSettings.youtubeUrl && (
-                <a href={siteSettings.youtubeUrl} target="_blank" rel="noopener noreferrer"
-                  className="w-8 h-8 border-2 border-black rounded-full flex items-center justify-center hover:bg-black hover:text-[#FFEF00] transition-colors">
-                  <FaYoutube size={16} />
-                </a>
-              )}
-              {siteSettings.facebookUrl && (
-                <a href={siteSettings.facebookUrl} target="_blank" rel="noopener noreferrer"
-                  className="w-8 h-8 border-2 border-black rounded-full flex items-center justify-center hover:bg-black hover:text-[#FFEF00] transition-colors">
-                  <FaFacebook size={16} />
-                </a>
-              )}
-              {siteSettings.instagramUrl && (
-                <a href={siteSettings.instagramUrl} target="_blank" rel="noopener noreferrer"
-                  className="w-8 h-8 border-2 border-black rounded-full flex items-center justify-center hover:bg-black hover:text-[#FFEF00] transition-colors">
-                  <FaInstagram size={16} />
-                </a>
-              )}
-            </div>
           </div>
 
           <button className="md:hidden" onClick={() => setIsMenuOpen(!isMenuOpen)}>
@@ -1501,54 +1215,17 @@ function AppContent() {
             exit={{ opacity: 0, x: '100%' }}
             className="fixed inset-0 z-40 bg-[#FFEF00] flex flex-col items-center justify-center gap-8 text-3xl font-black uppercase"
           >
-            {/* Social Icons - Top Right Corner */}
-            <div className="absolute top-20 right-6 flex gap-4">
-              {siteSettings.youtubeUrl && (
-                <a 
-                  href={siteSettings.youtubeUrl} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="w-12 h-12 border-2 border-black rounded-full flex items-center justify-center hover:bg-black hover:text-[#FFEF00] transition-colors cursor-pointer"
-                >
-                  <FaYoutube size={24} />
-                </a>
-              )}
-              {siteSettings.facebookUrl && (
-                <a 
-                  href={siteSettings.facebookUrl} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="w-12 h-12 border-2 border-black rounded-full flex items-center justify-center hover:bg-black hover:text-[#FFEF00] transition-colors cursor-pointer"
-                >
-                  <FaFacebook size={24} />
-                </a>
-              )}
-              {siteSettings.instagramUrl && (
-                <a 
-                  href={siteSettings.instagramUrl} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="w-12 h-12 border-2 border-black rounded-full flex items-center justify-center hover:bg-black hover:text-[#FFEF00] transition-colors cursor-pointer"
-                >
-                  <Camera size={24} />
-                </a>
-              )}
-            </div>
-            
+            <a href="#courses-intro" onClick={() => setIsMenuOpen(false)}>課程介紹</a>
             <a href="#courses" onClick={() => setIsMenuOpen(false)}>個人課程</a>
-            <a href="#group-courses" onClick={() => setIsMenuOpen(false)}>團體課程</a>
-            <a href="#student-works" onClick={() => setIsMenuOpen(false)}>學生作品</a>
-            <a href="#testimonials" onClick={() => setIsMenuOpen(false)}>學生見證</a>
-            <a href="#tutors" onClick={() => setIsMenuOpen(false)}>專業團隊</a>
-            <a href="#business" onClick={() => setIsMenuOpen(false)}>商業合作</a>
-            <a href="#activities" onClick={() => setIsMenuOpen(false)}>活動回顧</a>
+            <a href="#tutors" onClick={() => setIsMenuOpen(false)}>導師簡介</a>
+            <a href="#activities" onClick={() => setIsMenuOpen(false)}>活動重溫</a>
             <a href="#contact" onClick={() => setIsMenuOpen(false)}>聯絡我們</a>
           </motion.div>
         )}
       </AnimatePresence>
 
       {/* Hero Section */}
-      <header className="pt-24 sm:pt-32 pb-14 sm:pb-20 px-4 sm:px-6 min-h-[88vh] sm:min-h-screen flex items-center relative overflow-hidden bg-[#FFEF00]">
+      <header className="pt-32 pb-20 px-6 min-h-screen flex items-center relative overflow-hidden bg-[#FFEF00]">
         {/* Decorative Shapes */}
         <BlueShape className="w-64 h-64 -top-20 -left-20 rotate-12" />
         <BlueShape className="w-96 h-96 -bottom-32 -right-32 -rotate-12" />
@@ -1557,13 +1234,16 @@ function AppContent() {
         <div className="absolute inset-0 pointer-events-none opacity-[0.08]" 
              style={{ backgroundImage: 'linear-gradient(45deg, #000 25%, transparent 25%, transparent 50%, #000 50%, #000 75%, transparent 75%, transparent)', backgroundSize: '60px 60px' }}></div>
 
-        <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-8 sm:gap-12 items-center w-full relative z-10">
+        <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-12 items-center w-full relative z-10">
           <motion.div
             initial={{ opacity: 0, x: -50 }}
             animate={{ opacity: 1, x: 0 }}
             className="flex flex-col"
           >
-            <h1 className="text-3xl sm:text-5xl md:text-7xl lg:text-[110px] font-black leading-tight tracking-tighter mb-6 sm:mb-8 text-black uppercase">
+            <div className="inline-block bg-black text-[#FFEF00] px-4 py-1 self-start font-black text-sm mb-6 uppercase tracking-widest">
+              {siteSettings.heroTagline || 'Professional AI Animation School'}
+            </div>
+            <h1 className="text-4xl sm:text-5xl md:text-7xl lg:text-[110px] font-black leading-tight tracking-tighter mb-8 text-black uppercase">
               {siteSettings.heroTitle.split('<br />').map((line, i) => (
                 <React.Fragment key={i}>
                   {line}
@@ -1572,14 +1252,14 @@ function AppContent() {
               ))}
             </h1>
             <div className="relative">
-              <h2 className="text-white font-black text-[56px] sm:text-[120px] md:text-[140px] lg:text-[200px] leading-none sm:leading-tight tracking-tighter drop-shadow-[4px_4px_0px_rgba(0,0,0,1)] sm:drop-shadow-[8px_8px_0px_rgba(0,0,0,1)] mb-6 sm:mb-8 select-none">
+              <h2 className="text-white font-black text-[80px] sm:text-[120px] md:text-[140px] lg:text-[200px] leading-tight tracking-tighter drop-shadow-[8px_8px_0px_rgba(0,0,0,1)] mb-8 select-none">
                 {siteSettings.siteName}
               </h2>
               <div className="absolute -top-4 -right-4 bg-[#0055FF] text-white px-3 py-1 font-black text-xs rotate-12">
                 {siteSettings.heroEst || 'EST. 2024'}
               </div>
             </div>
-            <p className="text-base sm:text-xl md:text-2xl font-black max-w-lg text-black leading-tight border-l-8 border-black pl-4 sm:pl-6">
+            <p className="text-xl md:text-2xl font-black max-w-lg text-black leading-tight border-l-8 border-black pl-6">
               {siteSettings.heroSubtitle}
             </p>
           </motion.div>
@@ -1587,7 +1267,7 @@ function AppContent() {
           <motion.div 
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4 md:gap-10"
+            className="grid grid-cols-2 sm:grid-cols-3 gap-4 md:gap-10"
           >
             {[...Array(6)].map((_, i) => (
               <div key={i} className="relative aspect-square group">
@@ -1642,100 +1322,26 @@ function AppContent() {
         )}
       </AnimatePresence>
 
-      <AnimatePresence>
-        {selectedCourseDetail && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[110] bg-black/70 flex items-center justify-center p-3 sm:p-6"
-            onClick={() => setSelectedCourseDetail(null)}
-          >
-            <motion.div
-              initial={{ scale: 0.95, opacity: 0, y: 16 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.95, opacity: 0, y: 16 }}
-              transition={{ duration: 0.2 }}
-              onClick={(e) => e.stopPropagation()}
-              className="relative bg-[#FFEF00] border-4 sm:border-6 border-black rounded-3xl w-full max-w-3xl max-h-[92vh] overflow-y-auto p-5 sm:p-8 shadow-[10px_10px_0px_rgba(0,0,0,1)]"
-            >
-              <button
-                onClick={() => setSelectedCourseDetail(null)}
-                className="absolute top-3 right-3 sm:top-4 sm:right-4 w-10 h-10 rounded-full bg-black text-[#FFEF00] border-2 border-black flex items-center justify-center"
-                aria-label="關閉課程詳情"
-              >
-                <X size={20} />
-              </button>
-
-              <div className="pr-10 sm:pr-12">
-                <h3 className="text-2xl sm:text-4xl font-black leading-tight break-words [overflow-wrap:anywhere]">
-                  {selectedCourseDetail.title || selectedCourseDetail.name}
-                </h3>
-                {selectedCourseDetail.subtitle && (
-                  <p className="mt-1 text-sm sm:text-base font-black text-black/80 break-words [overflow-wrap:anywhere]">
-                    {selectedCourseDetail.subtitle}
-                  </p>
-                )}
-              </div>
-
-              <div className="my-5 sm:my-6 flex justify-center">
-                <MaskedImage
-                  src={(selectedCourseDetail.img?.startsWith('http') || selectedCourseDetail.img?.startsWith('data:') || selectedCourseDetail.img?.startsWith('/'))
-                    ? selectedCourseDetail.img
-                    : `https://picsum.photos/seed/${selectedCourseDetail.img || 'course'}/700/500`}
-                  maskId={selectedCourseDetail.mask || 'mask-cloud'}
-                  className="w-40 h-40 sm:w-56 sm:h-56 bg-white border-2 sm:border-4 border-black"
-                />
-              </div>
-
-              <div className="bg-white/60 border-2 border-black rounded-2xl p-4 sm:p-5 text-sm sm:text-base font-bold leading-relaxed whitespace-pre-line break-words [overflow-wrap:anywhere]">
-                {selectedCourseDetail.desc || '暫無課程介紹'}
-              </div>
-
-              {(selectedCourseDetail.startDate || selectedCourseDetail.classTime || selectedCourseDetail.tuition) && (
-                <div className="mt-4 sm:mt-5 bg-black text-[#FFEF00] rounded-2xl p-4 space-y-2 text-xs sm:text-sm font-black break-words [overflow-wrap:anywhere]">
-                  {selectedCourseDetail.startDate && <p className="whitespace-pre-line">開課日期: {selectedCourseDetail.startDate}</p>}
-                  {selectedCourseDetail.classTime && <p className="whitespace-pre-line">上課時間: {selectedCourseDetail.classTime}</p>}
-                  {selectedCourseDetail.tuition && <p className="whitespace-pre-line">課程學費: {selectedCourseDetail.tuition}</p>}
-                </div>
-              )}
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
       {/* Individual Courses */}
-      <section id="courses-intro" className="py-14 sm:py-20 bg-white border-y-8 border-black">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
+      <section id="courses-intro" className="py-20 bg-white border-y-8 border-black">
+        <div className="max-w-7xl mx-auto px-6">
           <SectionTitle subtitle={siteSettings.coursesIntroSubtitle || "專業文憑與證書課程"}>{siteSettings.coursesIntroTitle || "課程介紹"}</SectionTitle>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-8">
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
             {courses.map((course, i) => (
               <motion.div 
                 key={i}
                 whileHover={{ y: -10 }}
-                className="bg-[#FFEF00] border-4 border-black p-5 sm:p-8 flex flex-col items-center text-center rounded-3xl min-w-0 overflow-hidden"
+                className="bg-[#FFEF00] border-4 border-black p-8 flex flex-col items-center text-center rounded-3xl"
               >
                 <MaskedImage 
                   src={(course.img?.startsWith('http') || course.img?.startsWith('data:') || course.img?.startsWith('/')) ? course.img : `https://picsum.photos/seed/${course.img || 'course'}/400/400`} 
                   maskId={course.mask || 'mask-cloud'} 
-                  className="w-28 h-28 sm:w-40 sm:h-40 mb-4 sm:mb-6 bg-white border-2 border-black"
+                  className="w-40 h-40 mb-6 bg-white border-2 border-black"
                 />
-                <h3 className="text-lg sm:text-xl font-black leading-tight mb-1 break-words [overflow-wrap:anywhere]">{course.title || course.name}</h3>
-                {course.subtitle && <p className="text-sm font-black mb-2 break-words [overflow-wrap:anywhere]">{course.subtitle}</p>}
-                <p className="font-bold text-black/70 mb-6 text-sm whitespace-pre-line break-words [overflow-wrap:anywhere] max-h-48 sm:max-h-56 overflow-y-auto pr-1 custom-scrollbar w-full">{course.desc}</p>
-                {(course.startDate || course.classTime || course.tuition) && (
-                  <div className="w-full text-left text-xs font-black text-black/70 mb-5 space-y-1 break-words [overflow-wrap:anywhere]">
-                    {course.startDate && <p className="whitespace-pre-line">開課日期: {course.startDate}</p>}
-                    {course.classTime && <p className="whitespace-pre-line">上課時間: {course.classTime}</p>}
-                    {course.tuition && <p className="whitespace-pre-line">課程學費: {course.tuition}</p>}
-                  </div>
-                )}
-                <button
-                  onClick={() => setSelectedCourseDetail(course)}
-                  className="mt-auto bg-black text-[#FFEF00] w-full py-3 font-bold uppercase rounded-full text-sm"
-                >
-                  查看詳情
-                </button>
+                <h3 className="text-xl font-black leading-tight mb-1">{course.title || course.name}</h3>
+                {course.subtitle && <p className="text-sm font-black mb-2">{course.subtitle}</p>}
+                <p className="font-bold text-black/70 mb-6 text-sm">{course.desc}</p>
+                <button className="mt-auto bg-black text-[#FFEF00] w-full py-3 font-bold uppercase rounded-full text-sm">查看詳情</button>
               </motion.div>
             ))}
           </div>
@@ -1743,7 +1349,7 @@ function AppContent() {
       </section>
 
       {/* Course Selection Tool */}
-      <section id="courses" className="py-16 sm:py-24 px-4 sm:px-6 bg-[#FFEF00] relative overflow-hidden">
+      <section id="courses" className="py-24 px-6 bg-[#FFEF00] relative overflow-hidden">
         {/* Background Pattern */}
         <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(circle, black 2px, transparent 0)', backgroundSize: '24px 24px' }} />
         
@@ -1751,12 +1357,12 @@ function AppContent() {
           <SectionTitle subtitle={siteSettings.personalCourseSubtitle || "選擇您的專業路徑與單元組合"}>{siteSettings.personalCourseTitle || "個人課程"}</SectionTitle>
           
           {/* Course Selector Tabs */}
-          <div className="flex flex-wrap gap-2 sm:gap-4 mb-10 sm:mb-16 justify-center">
+          <div className="flex flex-wrap gap-2 sm:gap-4 mb-16 justify-center">
             {courses.map(course => (
               <button
                 key={course.id}
                 onClick={() => handleCourseChange(course.id)}
-                className={`w-full sm:w-auto px-4 sm:px-10 py-2.5 sm:py-5 rounded-full font-black text-xs sm:text-sm transition-all border-[4px] shadow-lg ${
+                className={`px-6 sm:px-10 py-3 sm:py-5 rounded-full font-black text-xs sm:text-sm transition-all border-[4px] shadow-lg ${
                   selectedCourse === course.id 
                     ? 'bg-black text-[#FFEF00] border-black scale-105' 
                     : 'bg-white text-black border-black hover:bg-black/5'
@@ -1767,29 +1373,29 @@ function AppContent() {
             ))}
           </div>
 
-          <div className="bg-black text-[#FFEF00] p-4 sm:p-10 md:p-16 border-[6px] sm:border-[10px] border-white shadow-[10px_10px_0px_rgba(0,0,0,1)] sm:shadow-[20px_20px_0px_rgba(0,0,0,1)] rounded-[2rem] sm:rounded-[4rem] relative">
-            <div className="grid lg:grid-cols-2 gap-8 sm:gap-16 items-start">
-              <div className="space-y-7 sm:space-y-10">
-                <h3 className="text-2xl sm:text-4xl md:text-5xl font-black leading-tight tracking-tighter">{currentCourse.name}</h3>
+          <div className="bg-black text-[#FFEF00] p-6 sm:p-10 md:p-16 border-[6px] sm:border-[10px] border-white shadow-[10px_10px_0px_rgba(0,0,0,1)] sm:shadow-[20px_20px_0px_rgba(0,0,0,1)] rounded-[2rem] sm:rounded-[4rem] relative">
+            <div className="grid lg:grid-cols-2 gap-16 items-start">
+              <div className="space-y-10">
+                <h3 className="text-3xl sm:text-4xl md:text-5xl font-black leading-tight tracking-tighter">{currentCourse.name}</h3>
                 
                 <div className="space-y-6">
-                  <p className="text-base sm:text-xl font-bold leading-relaxed opacity-90">
+                  <p className="text-xl font-bold leading-relaxed opacity-90">
                     {selectedCourse === 1 
                       ? "本證書課程包含 4 個核心 AI 單元，旨在快速提升您的 AI 視覺應用能力。" 
                       : "本一年制文憑課程包含核心必修單元，並允許學生根據興趣自由加選其他單元。"}
                   </p>
                   
                   <ul className="space-y-3">
-                    <li className="flex items-center gap-3 text-sm sm:text-lg font-black">
+                    <li className="flex items-center gap-3 text-lg font-black">
                       <div className="w-2 h-2 bg-[#FFEF00] rounded-full" />
                       單元 1-4：$1,600 / 每個
                     </li>
-                    <li className="flex items-center gap-3 text-sm sm:text-lg font-black">
+                    <li className="flex items-center gap-3 text-lg font-black">
                       <div className="w-2 h-2 bg-[#FFEF00] rounded-full" />
                       其他單元：$3,000 / 每個
                     </li>
                     {currentCourse.allowExtra && (
-                      <li className="flex items-center gap-3 text-sm sm:text-lg font-black">
+                      <li className="flex items-center gap-3 text-lg font-black">
                         <div className="w-2 h-2 bg-[#FFEF00] rounded-full" />
                         超過 16 個單元後，額外單元享 8 折優惠！
                       </li>
@@ -1797,9 +1403,9 @@ function AppContent() {
                   </ul>
                 </div>
 
-                <div className="flex items-end gap-3 sm:gap-4">
+                <div className="flex items-end gap-4">
                   <div className="text-6xl sm:text-8xl font-black leading-none">{selectedUnits.filter(idx => idx < unitNames.length).length}</div>
-                  <div className="text-base sm:text-2xl font-black mb-1 sm:mb-2">
+                  <div className="text-xl sm:text-2xl font-black mb-2">
                     <span className="opacity-60">/ {unitNames.length}</span>
                     <br />
                     已選單元
@@ -1817,13 +1423,13 @@ function AppContent() {
                     )}
                   </div>
                   
-                  <div className="flex items-center gap-3 flex-wrap">
+                  <div className="flex items-center gap-3">
                     {selectedUnits.filter(idx => idx < unitNames.length).length < currentCourse.minUnits ? (
-                      <div className="text-red-500 text-xs sm:text-sm font-black flex items-center gap-2 bg-red-500/10 px-3 sm:px-4 py-2 rounded-full border border-red-500/20">
+                      <div className="text-red-500 text-sm font-black flex items-center gap-2 bg-red-500/10 px-4 py-2 rounded-full border border-red-500/20">
                         <X size={18} /> 還差 {currentCourse.minUnits - selectedUnits.filter(idx => idx < unitNames.length).length} 個單元即可報名
                       </div>
                     ) : (
-                      <div className="text-[#00FF00] text-xs sm:text-sm font-black flex items-center gap-2 bg-[#00FF00]/10 px-3 sm:px-4 py-2 rounded-full border border-[#00FF00]/20">
+                      <div className="text-[#00FF00] text-sm font-black flex items-center gap-2 bg-[#00FF00]/10 px-4 py-2 rounded-full border border-[#00FF00]/20">
                         <CheckCircle2 size={18} /> 已達最低報名要求
                       </div>
                     )}
@@ -1839,13 +1445,13 @@ function AppContent() {
                   />
                 </div>
 
-                <div className="flex flex-wrap gap-2 sm:gap-3 pt-2 sm:pt-4">
+                <div className="flex flex-wrap gap-3 pt-4">
                   <button 
                     onClick={() => {
                       const allIndices = unitNames.map((_, i) => i);
                       setSelectedUnits([...new Set([...selectedUnits, ...allIndices])]);
                     }}
-                    className="w-full sm:w-auto px-4 sm:px-6 py-2.5 sm:py-3 rounded-full font-black text-xs transition-all border-[3px] border-white bg-white text-black hover:bg-[#FFEF00] hover:border-[#FFEF00] shadow-md"
+                    className="px-6 py-3 rounded-full font-black text-xs transition-all border-[3px] border-white bg-white text-black hover:bg-[#FFEF00] hover:border-[#FFEF00] shadow-md"
                   >
                     全選單元
                   </button>
@@ -1855,7 +1461,7 @@ function AppContent() {
                       const courseMandatory = currentCourse.mandatory || [];
                       setSelectedUnits([...new Set([...courseMandatory, ...globalMandatory])]);
                     }}
-                    className="w-full sm:w-auto px-4 sm:px-6 py-2.5 sm:py-3 rounded-full font-black text-xs transition-all border-[3px] border-white bg-white text-black hover:bg-[#FFEF00] hover:border-[#FFEF00] shadow-md"
+                    className="px-6 py-3 rounded-full font-black text-xs transition-all border-[3px] border-white bg-white text-black hover:bg-[#FFEF00] hover:border-[#FFEF00] shadow-md"
                   >
                     重設必修
                   </button>
@@ -1864,7 +1470,7 @@ function AppContent() {
                       const indices = [0, 1, 2, 3];
                       setSelectedUnits([...new Set([...selectedUnits, ...indices])]);
                     }}
-                    className="w-full sm:w-auto px-4 sm:px-6 py-2.5 sm:py-3 rounded-full font-black text-xs transition-all border-[3px] border-white bg-white text-black hover:bg-[#FFEF00] hover:border-[#FFEF00] shadow-md"
+                    className="px-6 py-3 rounded-full font-black text-xs transition-all border-[3px] border-white bg-white text-black hover:bg-[#FFEF00] hover:border-[#FFEF00] shadow-md"
                   >
                     選取單元 1-4
                   </button>
@@ -1872,7 +1478,7 @@ function AppContent() {
               </div>
               
               <div className="relative">
-                <div className="grid grid-cols-3 gap-2 sm:gap-4 h-[380px] sm:h-[420px] overflow-y-auto p-3 sm:p-6 bg-[#1A1A1A] custom-scrollbar rounded-[2rem] sm:rounded-[3rem] border-4 border-white/10 shadow-inner">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 max-h-[700px] overflow-y-auto p-8 bg-[#1A1A1A] custom-scrollbar rounded-[3rem] border-4 border-white/10 shadow-inner">
                   {unitNames.length === 0 ? (
                     <div className="flex flex-col items-center justify-center text-center p-12 w-full col-span-full min-h-[400px]">
                       <BookOpen size={64} className="mb-6 opacity-20 text-white" />
@@ -1892,23 +1498,23 @@ function AppContent() {
                             whileTap={isMandatory ? {} : { scale: 0.95 }}
                             onClick={() => toggleUnit(i)}
                             disabled={isMandatory}
-                            className={`p-2 sm:p-3 border-[3px] flex flex-col items-center justify-center font-black text-[10px] sm:text-[13px] transition-all rounded-xl sm:rounded-2xl min-h-[86px] sm:min-h-[92px] h-auto text-center leading-tight relative shadow-xl ${
+                            className={`p-4 border-[3px] flex flex-col items-center justify-center font-black text-[13px] transition-all rounded-2xl min-h-[85px] h-auto text-center leading-tight relative shadow-xl ${
                               isHighlighted 
                                 ? 'bg-[#FFEF00] text-black border-white shadow-[#FFEF00]/30' 
                                 : 'bg-[#2A2A2A] border-white/10 hover:border-white/30 text-white/80 hover:text-white'
                             } ${isMandatory ? 'cursor-default' : 'cursor-pointer'}`}
                           >
-                            <span className="block break-words leading-tight">{unit.name}</span>
-                            <div className="flex items-center gap-1 sm:gap-2 mt-1">
-                              <span className="text-[9px] sm:text-[10px] opacity-40">(U{i+1})</span>
+                            <span className="block">{unit.name}</span>
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-[10px] opacity-40">(U{i+1})</span>
                               {unit.price > 0 && (
-                                <span className="text-[9px] sm:text-[10px] font-black text-black/60 bg-black/5 px-1 sm:px-1.5 rounded-md">
+                                <span className="text-[10px] font-black text-black/60 bg-black/5 px-1.5 rounded-md">
                                   ${unit.price}
                                 </span>
                               )}
                             </div>
                             {isMandatory && (
-                              <div className="absolute top-1 right-1 sm:top-2 sm:right-2 flex items-center gap-1 bg-black text-[#FFEF00] px-1 sm:px-1.5 py-0.5 rounded-md text-[7px] sm:text-[8px] font-black uppercase tracking-tighter border border-white/20 shadow-sm">
+                              <div className="absolute top-2 right-2 flex items-center gap-1 bg-black text-[#FFEF00] px-1.5 py-0.5 rounded-md text-[8px] font-black uppercase tracking-tighter border border-white/20 shadow-sm">
                                 必修
                               </div>
                             )}
@@ -1918,6 +1524,10 @@ function AppContent() {
                     </>
                   )}
                 </div>
+                {/* Custom Scrollbar Indicator */}
+                <div className="absolute top-8 right-2 bottom-8 w-1.5 bg-white/5 rounded-full overflow-hidden">
+                  <div className="w-full bg-[#FFEF00] rounded-full" style={{ height: '30%', marginTop: '10%' }} />
+                </div>
               </div>
             </div>
           </div>
@@ -1925,7 +1535,7 @@ function AppContent() {
       </section>
 
       {/* Group Courses */}
-      <section id="group-courses" className="py-20 bg-white border-y-8 border-black">
+      <section className="py-20 bg-white border-y-8 border-black">
         <div className="max-w-7xl mx-auto px-6">
           <SectionTitle subtitle={siteSettings.groupCourseSubtitle || "適合學校、社福機構及私人團體"}>{siteSettings.groupCourseTitle || "團體課程"}</SectionTitle>
           <div className="grid md:grid-cols-3 gap-8">
@@ -1972,55 +1582,8 @@ function AppContent() {
         </div>
       </section>
 
-      {/* Student Works */}
-      <section id="student-works" className="py-20 px-6 bg-[#FFEF00] border-y-8 border-black">
-        <div className="max-w-7xl mx-auto">
-          <SectionTitle subtitle={siteSettings.studentWorksSubtitle || "優秀學員作品展示"}>{siteSettings.studentWorksTitle || "學生作品"}</SectionTitle>
-          <div className="bg-black text-[#FFEF00] p-8 md:p-12 border-8 border-black rounded-[3rem]">
-            <div className="mb-8">
-              <h3 className="text-4xl font-black mb-4">{siteSettings.studentWorksTitle || "學生創作展示"}</h3>
-              <p className="text-xl font-bold text-[#FFEF00]/80 mb-6">
-                {siteSettings.studentWorksContent || "我們的學生以 AI 與傳統動畫技術創作出色作品，每一件作品都是創意與技術的完美結合。"}
-              </p>
-              <a 
-                href={siteSettings.youtubeUrl || '#'} 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-3 bg-[#FFEF00] text-black px-8 py-3 font-black uppercase rounded-full hover:scale-105 transition-transform"
-              >
-                <FaYoutube size={20} /> 訂閱 YouTube 頻道
-              </a>
-            </div>
-            {studentWorks.length === 0 ? (
-              <div className="flex flex-col items-center justify-center gap-4 text-[#FFEF00]/40 py-16">
-                <FaYoutube size={64} />
-                <p className="font-black uppercase text-sm">暫無作品，敬請期待</p>
-              </div>
-            ) : (
-              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {studentWorks.map((w, i) => (
-                  <div key={w.id || i} className="flex flex-col gap-3">
-                    <div className="aspect-video rounded-2xl overflow-hidden border-4 border-[#FFEF00]/30 bg-[#FFEF00]/10">
-                      <iframe
-                        className="w-full h-full"
-                        src={(w.youtubeUrl || '').replace('watch?v=', 'embed/')}
-                        title={w.title}
-                        frameBorder="0"
-                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                        allowFullScreen
-                      />
-                    </div>
-                    <p className="font-black text-base">{w.title}</p>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-      </section>
-
       {/* Business Cooperation */}
-      <section id="business" className="py-20 px-6 bg-white">
+      <section className="py-20 px-6">
         <div className="max-w-7xl mx-auto">
           <SectionTitle subtitle={siteSettings.businessCoopSubtitle || "專業動畫製作與 AI 方案"}>{siteSettings.businessCoopTitle || "商業合作"}</SectionTitle>
           <div className="bg-[#FFEF00] text-black p-8 md:p-12 border-8 border-black rounded-[3rem]">
@@ -2071,7 +1634,7 @@ function AppContent() {
       </section>
 
       {/* Briefing Session Form */}
-      <section className="py-20 px-6 bg-[#FFEF00] border-y-8 border-black">
+      <section className="py-20 px-6 bg-[#FFEF00]">
         <div className="max-w-3xl mx-auto bg-white border-8 border-black p-12 text-center relative rounded-[3rem]">
           <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-20 h-20 bg-black rounded-full flex items-center justify-center">
             <Play className="text-[#FFEF00] fill-[#FFEF00] w-8 h-8 ml-1" />
@@ -2098,11 +1661,9 @@ function AppContent() {
             />
             <button 
               type="submit" 
-              disabled={isSubmittingBriefing}
-              className={`w-full bg-black text-[#FFEF00] py-4 font-black uppercase text-xl hover:scale-[1.02] transition-transform rounded-full flex items-center justify-center gap-2 ${isSubmittingBriefing ? 'opacity-70 cursor-not-allowed' : ''}`}
+              className="w-full bg-black text-[#FFEF00] py-4 font-black uppercase text-xl hover:scale-[1.02] transition-transform rounded-full"
             >
-              {isSubmittingBriefing ? <Loader2 className="animate-spin" size={20} /> : null}
-              {isSubmittingBriefing ? '提交中...' : '獲取簡介會影片'}
+              獲取簡介會影片
             </button>
           </form>
 
@@ -2119,9 +1680,9 @@ function AppContent() {
       </section>
 
       {/* Testimonials */}
-      <section id="testimonials" className="py-20 bg-white">
+      <section className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-6">
-          <SectionTitle subtitle="聽聽學員怎麼說">學生見證</SectionTitle>
+          <SectionTitle subtitle="聽聽學員怎麼說">學員感想</SectionTitle>
           <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-12">
             {testimonials.map((t, i) => (
               <div key={i} className="flex flex-col items-center">
@@ -2143,9 +1704,9 @@ function AppContent() {
       {/* Tutor Profiles */}
       <section id="tutors" className="py-20 bg-[#FFEF00] border-y-8 border-black">
         <div className="max-w-7xl mx-auto px-6">
-          <SectionTitle subtitle="業界頂尖專家親自授課">專業團隊</SectionTitle>
+          <SectionTitle subtitle="業界頂尖專家親自授課">導師簡介</SectionTitle>
           <div className="grid md:grid-cols-2 gap-12">
-            {sortedTutors.map((tutor, i) => (
+            {tutors.map((tutor, i) => (
               <motion.div 
                 key={i} 
                 whileHover={{ scale: 1.02 }}
@@ -2154,7 +1715,7 @@ function AppContent() {
                 <div className="relative w-32 h-32 flex-shrink-0 mx-auto xl:mx-0">
                   <MaskedImage 
                     src={(tutor.img.startsWith('http') || tutor.img.startsWith('data:') || tutor.img.startsWith('/')) ? tutor.img : `https://picsum.photos/seed/${tutor.img}/300/300`} 
-                    maskId={tutorMaskDrafts[tutor.id?.toString()] || tutor.mask || 'mask-notebook'} 
+                    maskId="mask-notebook" 
                     className="w-full h-full bg-black transition-all duration-500 object-cover"
                   />
                   <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-[#0055FF] rounded-full border-2 border-black" />
@@ -2173,10 +1734,10 @@ function AppContent() {
       </section>
 
       {/* Activity Review */}
-      <section id="activities" className="py-20 bg-white overflow-hidden">
+      <section id="activities" className="py-20 bg-[#F5F5F5] overflow-hidden border-t-8 border-black">
         <div className="max-w-7xl mx-auto px-6">
             <div className="flex justify-between items-end mb-12">
-              <SectionTitle subtitle="精彩瞬間與技術分享">活動回顧</SectionTitle>
+              <SectionTitle subtitle="精彩瞬間與技術分享">活動重溫</SectionTitle>
             </div>
 
           {isAdmin && showAddForm && (
@@ -2252,11 +1813,19 @@ function AppContent() {
                 {/* Image Container */}
                 <div className="relative overflow-hidden bg-gray-200 border-b-4 border-black">
                   <img 
-                    src={getActivityImageUrl(activity)} 
+                    src={activity.img} 
                     alt={activity.title} 
                     className="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-110"
-                    onError={(e) => { (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/activity-fallback/900/600'; }}
+                    referrerPolicy="no-referrer"
                   />
+                  {isAdmin && (
+                    <button 
+                      onClick={() => handleDeleteActivity(activity.id)}
+                      className="absolute top-4 right-4 bg-red-600 text-white p-2 rounded-full hover:scale-110 transition-transform z-10"
+                    >
+                      <Trash2 size={18} />
+                    </button>
+                  )}
                   {/* SAVFX Logo Overlay */}
                   <div className="absolute top-4 left-4 flex items-center gap-1 bg-black text-[#FFEF00] px-3 py-1 rounded-full border-2 border-white/20">
                     <svg width="20" height="14" viewBox="0 0 120 80" className="stroke-[#FFEF00] stroke-[12] fill-none">
@@ -2290,32 +1859,11 @@ function AppContent() {
               </motion.div>
             ))}
           </div>
-
-          {hasMoreActivities && (
-            <div className="mt-16 flex justify-center pb-12 text-black">
-              <button
-                onClick={handleLoadMoreActivities}
-                disabled={isLoadingMore}
-                className={`px-10 py-4 rounded-full bg-[#0055FF] text-white font-black hover:bg-black transition-all transform hover:scale-105 active:scale-95 flex items-center gap-3 shadow-lg shadow-blue-500/20 uppercase tracking-widest ${
-                  isLoadingMore ? 'opacity-50 cursor-not-allowed' : ''
-                }`}
-              >
-                {isLoadingMore ? (
-                  <>
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    正在載入中...
-                  </>
-                ) : (
-                  '瀏覽更多活動回顧'
-                )}
-              </button>
-            </div>
-          )}
         </div>
       </section>
 
       {/* Partners */}
-      <section className="py-20 bg-[#FFEF00] border-t-8 border-black">
+      <section className="py-20 bg-white border-t-8 border-black">
         <div className="max-w-7xl mx-auto px-6 text-center">
           <h3 className="text-2xl font-black uppercase mb-12">{siteSettings.partnersTitle || "曾合作機構"}</h3>
           <div className="flex flex-wrap justify-center gap-12 opacity-50 hover:opacity-100 transition-all">
@@ -2408,7 +1956,7 @@ function AppContent() {
       <motion.button 
         whileHover={{ scale: 1.1 }}
         whileTap={{ scale: 0.9 }}
-        className="hidden md:flex fixed bottom-8 right-8 bg-black text-[#FFEF00] w-16 h-16 rounded-full items-center justify-center shadow-2xl z-50 border-4 border-white"
+        className="fixed bottom-8 right-8 bg-black text-[#FFEF00] w-16 h-16 rounded-full flex items-center justify-center shadow-2xl z-50 border-4 border-white"
       >
         <MousePointer2 />
       </motion.button>
@@ -2450,11 +1998,10 @@ function AppContent() {
                 { id: 'courses', label: '課程管理', icon: GraduationCap },
                 { id: 'units', label: '個人課程管理', icon: BookOpen },
                 { id: 'group-courses', label: '團體課程管理', icon: Users },
-                { id: 'briefing-leads', label: '簡介會留名', icon: FileText },
                 { id: 'tutors', label: '導師管理', icon: Users },
-                { id: 'student-works', label: '學生作品', icon: Film },
-                { id: 'testimonials', label: '學生見證', icon: MessageSquare },
+                { id: 'testimonials', label: '學員感想', icon: MessageSquare },
                 { id: 'activities', label: '活動管理', icon: Film },
+                { id: 'danger', label: '系統維護', icon: Trash2 },
               ].map(tab => (
                 <button
                   key={tab.id}
@@ -2517,7 +2064,6 @@ function AppContent() {
                             { label: '課程數量', value: courses.length, icon: GraduationCap, color: 'bg-green-500', tab: 'courses' },
                             { label: '導師人數', value: tutors.length, icon: Users, color: 'bg-purple-500', tab: 'tutors' },
                             { label: '活動記錄', value: activities.length, icon: Film, color: 'bg-orange-500', tab: 'activities' },
-                            { label: '留名數量', value: briefingLeads.length, icon: FileText, color: 'bg-pink-500', tab: 'briefing-leads' },
                           ].map((stat, i) => (
                             <button 
                               key={i} 
@@ -2533,34 +2079,24 @@ function AppContent() {
                           ))}
                         </div>
 
-                        <div className="bg-white border-4 border-black p-8 rounded-[2rem] shadow-[8px_8px_0px_rgba(0,0,0,1)]">
-                          <div className="flex items-center justify-between mb-5">
-                            <h4 className="text-xl font-black uppercase flex items-center gap-2">
-                              <FileText size={20} /> 最新留名資料
+                        <div className="grid md:grid-cols-2 gap-8">
+                          <div className="bg-white border-4 border-black p-8 rounded-[2rem] shadow-[8px_8px_0px_rgba(0,0,0,1)]">
+                            <h4 className="text-xl font-black mb-6 uppercase flex items-center gap-2">
+                              <Database size={20} /> 系統初始化
                             </h4>
-                            <button
-                              onClick={() => setAdminActiveTab('briefing-leads')}
-                              className="text-xs font-black uppercase bg-black text-[#FFEF00] px-3 py-2 rounded-full"
+                            <p className="text-sm font-bold text-black/60 mb-6">
+                              如果您的網站還沒有任何單元或課程資料，可以使用此功能快速建立預設資料。
+                            </p>
+                            <button 
+                              onClick={handleSeedData}
+                              disabled={isSavingUnits}
+                              className={`w-full bg-black text-[#FFEF00] py-4 rounded-xl font-black flex items-center justify-center gap-2 hover:scale-105 transition-transform ${isSavingUnits ? 'opacity-70 cursor-not-allowed' : ''}`}
                             >
-                              查看全部
+                              {isSavingUnits ? <Loader2 className="animate-spin" size={20} /> : <Database size={20} />}
+                              {isSavingUnits ? '正在初始化...' : '初始化預設資料'}
                             </button>
                           </div>
-                          {briefingLeads.length === 0 ? (
-                            <p className="text-sm font-bold text-black/60">暫時未有留名資料</p>
-                          ) : (
-                            <div className="space-y-3 max-h-[300px] overflow-y-auto custom-scrollbar pr-2">
-                              {briefingLeads.slice(0, 5).map((lead) => (
-                                <div key={lead.id} className="border-2 border-black/10 rounded-xl p-3 bg-gray-50">
-                                  <p className="font-black text-sm break-words [overflow-wrap:anywhere]">{lead.email}</p>
-                                  <p className="font-bold text-sm text-black/70">{lead.phone}</p>
-                                  <p className="text-xs font-bold text-black/50 mt-1">{lead.createdAt ? new Date(lead.createdAt).toLocaleString() : '-'}</p>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                        </div>
 
-                        <div className="grid md:grid-cols-2 gap-8">
                           <div className="bg-white border-4 border-black p-8 rounded-[2rem] shadow-[8px_8px_0px_rgba(0,0,0,1)]">
                             <h4 className="text-xl font-black mb-6 uppercase flex items-center gap-2">
                               <MousePointer2 size={20} /> 快速操作
@@ -2596,46 +2132,26 @@ function AppContent() {
                               </button>
                             </div>
                           </div>
+
+                          <div className="bg-[#0055FF] text-white p-8 rounded-[2rem] border-4 border-black flex flex-col justify-center">
+                            <h4 className="text-xl font-black mb-4 uppercase">系統狀態</h4>
+                            <div className="space-y-4">
+                              <div className="flex items-center gap-3">
+                                <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse" />
+                                <p className="font-bold">Firebase 資料庫連線正常</p>
+                              </div>
+                              <div className="flex items-center gap-3">
+                                <div className="w-3 h-3 bg-green-400 rounded-full" />
+                                <p className="font-bold">身份驗證服務已啟動</p>
+                              </div>
+                              <div className="pt-4 border-t border-white/20">
+                                <p className="text-sm font-bold opacity-70">最後同步時間: {new Date().toLocaleTimeString()}</p>
+                                <p className="text-sm font-bold opacity-70">當前用戶: {user?.email}</p>
+                              </div>
+                            </div>
+                          </div>
                         </div>
                       </div>
-                    )}
-
-                    {adminActiveTab === 'briefing-leads' && (
-                      <section>
-                        <h3 className="text-3xl font-black mb-8 flex items-center gap-3">
-                          <FileText size={32} /> 簡介會留名
-                        </h3>
-
-                        <div className="bg-white border-4 border-black p-6 md:p-8 rounded-3xl shadow-[8px_8px_0px_rgba(0,0,0,1)]">
-                          {briefingLeads.length === 0 ? (
-                            <div className="text-center py-14 bg-black/5 rounded-3xl border-4 border-dashed border-black/10">
-                              <FileText size={48} className="mx-auto mb-4 opacity-20" />
-                              <p className="font-black text-black/60">暫時未有留名資料</p>
-                            </div>
-                          ) : (
-                            <div className="overflow-x-auto">
-                              <table className="w-full min-w-[680px] border-collapse">
-                                <thead>
-                                  <tr className="border-b-4 border-black/15">
-                                    <th className="text-left py-3 px-2 text-xs font-black uppercase">時間</th>
-                                    <th className="text-left py-3 px-2 text-xs font-black uppercase">Email</th>
-                                    <th className="text-left py-3 px-2 text-xs font-black uppercase">電話</th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {briefingLeads.map((lead) => (
-                                    <tr key={lead.id} className="border-b border-black/10">
-                                      <td className="py-3 px-2 text-sm font-bold text-black/60 whitespace-nowrap">{lead.createdAt ? new Date(lead.createdAt).toLocaleString() : '-'}</td>
-                                      <td className="py-3 px-2 text-sm font-black break-words [overflow-wrap:anywhere]">{lead.email}</td>
-                                      <td className="py-3 px-2 text-sm font-bold">{lead.phone}</td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-                          )}
-                        </div>
-                      </section>
                     )}
 
                     {adminActiveTab === 'courses' && (
@@ -2707,33 +2223,6 @@ function AppContent() {
                                   <option value="true">是</option>
                                   <option value="false">否</option>
                                 </select>
-                              </div>
-                              <div className="space-y-1">
-                                <label className="text-[10px] font-black uppercase ml-1">開課日期</label>
-                                <input 
-                                  type="date"
-                                  className="w-full border-2 border-black p-3 rounded-xl font-bold text-sm"
-                                  value={newCourse.startDate}
-                                  onChange={e => setNewCourse({...newCourse, startDate: e.target.value})}
-                                />
-                              </div>
-                              <div className="space-y-1">
-                                <label className="text-[10px] font-black uppercase ml-1">上課時間</label>
-                                <input 
-                                  type="text" placeholder="例如: 逢六 14:00-17:00"
-                                  className="w-full border-2 border-black p-3 rounded-xl font-bold text-sm"
-                                  value={newCourse.classTime}
-                                  onChange={e => setNewCourse({...newCourse, classTime: e.target.value})}
-                                />
-                              </div>
-                              <div className="space-y-1">
-                                <label className="text-[10px] font-black uppercase ml-1">課程學費</label>
-                                <input 
-                                  type="text" placeholder="例如: HK$12,800"
-                                  className="w-full border-2 border-black p-3 rounded-xl font-bold text-sm"
-                                  value={newCourse.tuition}
-                                  onChange={e => setNewCourse({...newCourse, tuition: e.target.value})}
-                                />
                               </div>
                               <div className="md:col-span-2 space-y-1">
                                 <label className="text-[10px] font-black uppercase ml-1 flex justify-between items-center">
@@ -2952,31 +2441,6 @@ function AppContent() {
                               />
                             </div>
                             <div className="space-y-2">
-                              <label className="text-xs font-black uppercase">學生作品 - 標題</label>
-                              <input type="text" className="w-full border-4 border-black p-4 rounded-xl font-bold"
-                                value={siteSettings.studentWorksTitle || ''}
-                                onChange={e => setSiteSettings({...siteSettings, studentWorksTitle: e.target.value})} />
-                            </div>
-                            <div className="space-y-2">
-                              <label className="text-xs font-black uppercase">學生作品 - 副標題</label>
-                              <input type="text" className="w-full border-4 border-black p-4 rounded-xl font-bold"
-                                value={siteSettings.studentWorksSubtitle || ''}
-                                onChange={e => setSiteSettings({...siteSettings, studentWorksSubtitle: e.target.value})} />
-                            </div>
-                            <div className="space-y-2">
-                              <label className="text-xs font-black uppercase">學生作品 - 內容簡介</label>
-                              <input type="text" className="w-full border-4 border-black p-4 rounded-xl font-bold"
-                                value={siteSettings.studentWorksContent || ''}
-                                onChange={e => setSiteSettings({...siteSettings, studentWorksContent: e.target.value})} />
-                            </div>
-                            <div className="space-y-2">
-                              <label className="text-xs font-black uppercase">學生作品 - YouTube 連結</label>
-                              <input type="url" className="w-full border-4 border-black p-4 rounded-xl font-bold"
-                                value={siteSettings.studentWorksYoutubeUrl || ''}
-                                placeholder="https://www.youtube.com/watch?v=..."
-                                onChange={e => setSiteSettings({...siteSettings, studentWorksYoutubeUrl: e.target.value})} />
-                            </div>
-                            <div className="space-y-2">
                               <label className="text-xs font-black uppercase">商業合作 - 標題</label>
                               <input 
                                 type="text" 
@@ -3165,16 +2629,6 @@ function AppContent() {
                                 placeholder="https://instagram.com/..."
                               />
                             </div>
-                            <div className="space-y-2">
-                              <label className="text-xs font-black uppercase">YouTube 連結</label>
-                              <input 
-                                type="url" 
-                                className="w-full border-4 border-black p-4 rounded-xl font-bold"
-                                value={siteSettings.youtubeUrl || ''}
-                                onChange={e => setSiteSettings({...siteSettings, youtubeUrl: e.target.value})}
-                                placeholder="https://youtube.com/..."
-                              />
-                            </div>
                           </div>
                         </div>
 
@@ -3255,9 +2709,6 @@ function AppContent() {
                                     title: '',
                                     subtitle: '',
                                     desc: '',
-                                    startDate: '',
-                                    classTime: '',
-                                    tuition: '',
                                     mask: 'mask-cloud',
                                     img: 'https://picsum.photos/seed/course/800/600'
                                   });
@@ -3582,36 +3033,6 @@ function AppContent() {
                                     </div>
                                   </div>
 
-                                  <div className="grid md:grid-cols-3 gap-6">
-                                    <div className="space-y-2">
-                                      <label className="text-xs font-black uppercase ml-1">開課日期</label>
-                                      <input 
-                                        type="date"
-                                        className="w-full border-4 border-black p-4 rounded-xl font-bold"
-                                        value={editingCourse.startDate || ''}
-                                        onChange={e => setEditingCourse({...editingCourse, startDate: e.target.value})}
-                                      />
-                                    </div>
-                                    <div className="space-y-2">
-                                      <label className="text-xs font-black uppercase ml-1">上課時間</label>
-                                      <input 
-                                        type="text" placeholder="例如: 逢六 14:00-17:00"
-                                        className="w-full border-4 border-black p-4 rounded-xl font-bold"
-                                        value={editingCourse.classTime || ''}
-                                        onChange={e => setEditingCourse({...editingCourse, classTime: e.target.value})}
-                                      />
-                                    </div>
-                                    <div className="space-y-2">
-                                      <label className="text-xs font-black uppercase ml-1">課程學費</label>
-                                      <input 
-                                        type="text" placeholder="例如: HK$12,800"
-                                        className="w-full border-4 border-black p-4 rounded-xl font-bold"
-                                        value={editingCourse.tuition || ''}
-                                        onChange={e => setEditingCourse({...editingCourse, tuition: e.target.value})}
-                                      />
-                                    </div>
-                                  </div>
-
                                   <div className="space-y-2">
                                     <label className="text-xs font-black uppercase ml-1">課程簡介</label>
                                     <textarea 
@@ -3767,36 +3188,6 @@ function AppContent() {
                                         type="text" placeholder="首頁顯示副標題"
                                         className="w-full border-4 border-black p-4 rounded-xl font-bold"
                                         value={newCourse.subtitle} onChange={e => setNewCourse({...newCourse, subtitle: e.target.value})}
-                                      />
-                                    </div>
-                                  </div>
-
-                                  <div className="grid md:grid-cols-3 gap-6">
-                                    <div className="space-y-2">
-                                      <label className="text-xs font-black uppercase ml-1">開課日期</label>
-                                      <input 
-                                        type="date"
-                                        className="w-full border-4 border-black p-4 rounded-xl font-bold"
-                                        value={newCourse.startDate}
-                                        onChange={e => setNewCourse({...newCourse, startDate: e.target.value})}
-                                      />
-                                    </div>
-                                    <div className="space-y-2">
-                                      <label className="text-xs font-black uppercase ml-1">上課時間</label>
-                                      <input 
-                                        type="text" placeholder="例如: 逢六 14:00-17:00"
-                                        className="w-full border-4 border-black p-4 rounded-xl font-bold"
-                                        value={newCourse.classTime}
-                                        onChange={e => setNewCourse({...newCourse, classTime: e.target.value})}
-                                      />
-                                    </div>
-                                    <div className="space-y-2">
-                                      <label className="text-xs font-black uppercase ml-1">課程學費</label>
-                                      <input 
-                                        type="text" placeholder="例如: HK$12,800"
-                                        className="w-full border-4 border-black p-4 rounded-xl font-bold"
-                                        value={newCourse.tuition}
-                                        onChange={e => setNewCourse({...newCourse, tuition: e.target.value})}
                                       />
                                     </div>
                                   </div>
@@ -4009,53 +3400,12 @@ function AppContent() {
                           <Users size={32} /> 導師管理
                         </h3>
                         <div className="grid md:grid-cols-2 gap-6 mb-12">
-                          {sortedTutors.map(t => (
+                          {tutors.map(t => (
                             <div key={t.id} className="bg-white border-4 border-black p-6 rounded-3xl flex gap-4 items-center shadow-[4px_4px_0px_rgba(0,0,0,1)]">
                               <img src={t.img} className="w-16 h-16 rounded-full border-2 border-black object-cover" referrerPolicy="no-referrer" />
                               <div className="flex-1">
                                 <p className="font-black text-lg">{t.name}</p>
                                 <p className="text-xs font-bold text-black/60 uppercase tracking-widest">{t.role}</p>
-                              </div>
-                              <div className="flex flex-col gap-2 shrink-0">
-                                <div className="flex items-center gap-2 bg-[#FFEF00]/20 border-2 border-black rounded-xl px-2 py-1">
-                                  <label className="text-[10px] font-black uppercase text-black">排序</label>
-                                  <input
-                                    type="number"
-                                    className="w-16 border-2 border-black p-1 rounded-lg font-black text-sm bg-white"
-                                    value={tutorPriorityDrafts[t.id?.toString()] ?? getTutorPriority(t)}
-                                    onChange={(e) => {
-                                      const value = Number(e.target.value);
-                                      setTutorPriorityDrafts(prev => ({
-                                        ...prev,
-                                        [t.id.toString()]: Number.isFinite(value) ? value : 0
-                                      }));
-                                    }}
-                                  />
-                                  <button
-                                    onClick={() => handleUpdateTutorPriority(t.id.toString())}
-                                    disabled={savingTutorPriorityId === t.id?.toString()}
-                                    className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase border-2 border-black bg-white ${savingTutorPriorityId === t.id?.toString() ? 'opacity-60 cursor-not-allowed' : 'hover:bg-black hover:text-[#FFEF00]'}`}
-                                  >
-                                    {savingTutorPriorityId === t.id?.toString() ? '儲存中' : '儲存'}
-                                  </button>
-                                </div>
-                                <div className="flex items-center gap-2 bg-white border-2 border-black rounded-xl px-2 py-1">
-                                  <label className="text-[10px] font-black uppercase text-black whitespace-nowrap">遮罩</label>
-                                  <select
-                                    className="border border-black p-1 rounded-lg font-bold text-xs bg-white"
-                                    value={tutorMaskDrafts[t.id?.toString()] ?? (t.mask || 'mask-notebook')}
-                                    onChange={(e) => handleUpdateTutorMask(t.id.toString(), e.target.value)}
-                                    disabled={savingTutorMaskId === t.id?.toString()}
-                                  >
-                                    <option value="mask-notebook">筆記本</option>
-                                    <option value="mask-dream">夢想</option>
-                                    <option value="mask-cloud">雲朵</option>
-                                    <option value="mask-book">書本</option>
-                                    <option value="mask-film">底片</option>
-                                    <option value="mask-graduation-cap">畢業帽</option>
-                                  </select>
-                                  {savingTutorMaskId === t.id?.toString() && <span className="text-[10px] font-black text-black/60 whitespace-nowrap">儲存中</span>}
-                                </div>
                               </div>
                               <button onClick={() => handleDeleteTutor(t.id)} className="text-red-600 p-2 hover:bg-red-50 rounded-full transition-colors">
                                 <Trash2 size={20} />
@@ -4083,30 +3433,6 @@ function AppContent() {
                                   className="w-full border-2 border-black p-3 rounded-xl font-bold text-sm"
                                   value={newTutor.role} onChange={e => setNewTutor({...newTutor, role: e.target.value})}
                                 />
-                              </div>
-                              <div className="space-y-1">
-                                <label className="text-[10px] font-black uppercase ml-1">Priority (排序)</label>
-                                <input 
-                                  type="number" placeholder="數字越小越前" required
-                                  className="w-full border-2 border-black p-3 rounded-xl font-bold text-sm"
-                                  value={newTutor.priority}
-                                  onChange={e => setNewTutor({...newTutor, priority: Number(e.target.value)})}
-                                />
-                              </div>
-                              <div className="space-y-1">
-                                <label className="text-[10px] font-black uppercase ml-1">遮罩類型</label>
-                                <select
-                                  className="w-full border-2 border-black p-3 rounded-xl font-bold text-sm bg-white"
-                                  value={newTutor.mask}
-                                  onChange={e => setNewTutor({...newTutor, mask: e.target.value})}
-                                >
-                                  <option value="mask-notebook">筆記本</option>
-                                  <option value="mask-dream">夢想</option>
-                                  <option value="mask-cloud">雲朵</option>
-                                  <option value="mask-book">書本</option>
-                                  <option value="mask-film">底片</option>
-                                  <option value="mask-graduation-cap">畢業帽</option>
-                                </select>
                               </div>
                               <div className="md:col-span-2 space-y-1">
                                 <FileUploader 
@@ -4146,97 +3472,10 @@ function AppContent() {
                       </section>
                     )}
 
-                    {adminActiveTab === 'student-works' && (
-                      <section>
-                        <h3 className="text-3xl font-black mb-8 flex items-center gap-3">
-                          <FaYoutube size={32} /> 學生作品管理
-                        </h3>
-                        <div className="grid md:grid-cols-2 gap-6 mb-12">
-                          {studentWorks.length === 0 && (
-                            <p className="font-black text-black/30 col-span-2">尚無學生作品，請新增。</p>
-                          )}
-                          {studentWorks.map(w => (
-                            <div key={w.id} className="bg-white border-4 border-black p-5 rounded-3xl shadow-[4px_4px_0px_rgba(0,0,0,1)]">
-                              <div className="aspect-video rounded-xl overflow-hidden border-2 border-black mb-4 bg-black">
-                                <iframe
-                                  className="w-full h-full"
-                                  src={(w.youtubeUrl || '').replace('watch?v=', 'embed/')}
-                                  title={w.title}
-                                  frameBorder="0"
-                                  allowFullScreen
-                                />
-                              </div>
-                              <p className="font-black text-lg mb-1 truncate">{w.title}</p>
-                              <p className="text-xs text-black/50 font-bold mb-4 truncate">{w.youtubeUrl}</p>
-                              <div className="flex gap-2">
-                                <button
-                                  onClick={() => { setNewStudentWork({ title: w.title, youtubeUrl: w.youtubeUrl }); setEditingStudentWorkId(w.id); }}
-                                  className="flex-1 flex items-center justify-center gap-2 bg-[#FFEF00] border-2 border-black py-2 rounded-full font-black text-sm hover:scale-105 transition-transform"
-                                >
-                                  <Edit2 size={16} /> 修改
-                                </button>
-                                <button
-                                  onClick={() => handleDeleteStudentWork(w.id)}
-                                  className="flex items-center justify-center gap-2 bg-red-500 text-white border-2 border-black px-4 py-2 rounded-full font-black text-sm hover:scale-105 transition-transform"
-                                >
-                                  <Trash2 size={16} />
-                                </button>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-
-                        <div className="bg-white border-4 border-black p-8 rounded-3xl shadow-[8px_8px_0px_rgba(0,0,0,1)]">
-                          <h4 className="text-xl font-black mb-6 uppercase">
-                            {editingStudentWorkId ? '修改學生作品' : '新增學生作品'}
-                          </h4>
-                          <form onSubmit={handleSaveStudentWork} className="space-y-4">
-                            <div className="space-y-1">
-                              <label className="text-[10px] font-black uppercase ml-1">作品標題</label>
-                              <input
-                                type="text" required placeholder="例如：2024屆學生動畫作品集"
-                                className="w-full border-2 border-black p-3 rounded-xl font-bold text-sm"
-                                value={newStudentWork.title}
-                                onChange={e => setNewStudentWork({ ...newStudentWork, title: e.target.value })}
-                              />
-                            </div>
-                            <div className="space-y-1">
-                              <label className="text-[10px] font-black uppercase ml-1">YouTube 連結</label>
-                              <input
-                                type="url" required placeholder="https://www.youtube.com/watch?v=..."
-                                className="w-full border-2 border-black p-3 rounded-xl font-bold text-sm"
-                                value={newStudentWork.youtubeUrl}
-                                onChange={e => setNewStudentWork({ ...newStudentWork, youtubeUrl: e.target.value })}
-                              />
-                            </div>
-                            <div className="flex gap-3">
-                              <button
-                                type="submit"
-                                disabled={isSavingStudentWorks}
-                                className={`flex-1 bg-black text-[#FFEF00] py-4 rounded-full font-black uppercase text-sm hover:scale-[1.02] transition-transform flex items-center justify-center gap-2 ${isSavingStudentWorks ? 'opacity-70 cursor-not-allowed' : ''}`}
-                              >
-                                {isSavingStudentWorks ? <Loader2 className="animate-spin" size={20} /> : null}
-                                {isSavingStudentWorks ? '儲存中...' : editingStudentWorkId ? '更新作品' : '新增作品'}
-                              </button>
-                              {editingStudentWorkId && (
-                                <button
-                                  type="button"
-                                  onClick={() => { setNewStudentWork({ title: '', youtubeUrl: '' }); setEditingStudentWorkId(null); }}
-                                  className="px-6 py-4 rounded-full font-black uppercase text-sm border-2 border-black hover:bg-black hover:text-white transition-colors"
-                                >
-                                  取消
-                                </button>
-                              )}
-                            </div>
-                          </form>
-                        </div>
-                      </section>
-                    )}
-
                     {adminActiveTab === 'testimonials' && (
                       <section>
                         <h3 className="text-3xl font-black mb-8 flex items-center gap-3">
-                          <MessageSquare size={32} /> 學生見證管理
+                          <MessageSquare size={32} /> 學員感想管理
                         </h3>
                         <div className="grid md:grid-cols-2 gap-6 mb-12">
                           {testimonials.map(t => (
@@ -4305,75 +3544,9 @@ function AppContent() {
 
                     {adminActiveTab === 'activities' && (
                       <section>
-                        {/* 🚀 強制置頂的批次匯入區域 */}
-                        <div className="bg-[#0055FF] border-[6px] border-black p-10 rounded-[3rem] shadow-[12px_12px_0px_rgba(0,0,0,1)] mb-16 relative overflow-hidden">
-                          <div className="absolute top-[-20px] right-[-20px] opacity-10 rotate-12">
-                            <Database size={200} />
-                          </div>
-                          
-                          <div className="relative z-10">
-                            <h3 className="text-4xl font-[1000] text-white mb-4 flex items-center gap-4 italic tracking-tighter">
-                              <UploadCloud size={48} className="text-[#FFEF00]" /> 
-                              數據大遷移 (Phase 3)
-                            </h3>
-                            <p className="font-bold text-lg text-white/90 mb-8 max-w-2xl leading-relaxed">
-                              已經成功抓取 <span className="bg-[#FFEF00] text-black px-2 py-1 rounded-lg">1144 筆</span> 歷史數據！<br/>
-                              請點擊下方按鈕，選擇 <code className="bg-black/30 px-2 py-1 rounded">scripts/migrated_activities.json</code> 開始匯入。
-                            </p>
-                            
-                            <div className="flex flex-col items-start gap-4">
-                              <input 
-                                type="file" accept=".json" id="bulk-import-json-fix" className="hidden"
-                                onChange={async (e) => {
-                                  const file = e.target.files?.[0];
-                                  if (!file) return;
-                                  try {
-                                    const text = await file.text();
-                                    const data = JSON.parse(text);
-                                    if (!Array.isArray(data)) throw new Error("無效 JSON");
-                                    if (!confirm(`確定要匯入這 ${data.length} 筆活動資料嗎？這可能需要幾分鐘。`)) return;
-                                    
-                                    setIsSavingActivities(true);
-                                    let count = 0;
-                                    for (const item of data) {
-                                      const id = item.id || `migrated-${Date.now()}-${count}`;
-                                      const normalized = normalizeActivity({
-                                        ...item,
-                                        id,
-                                        tags: Array.isArray(item.tags) ? item.tags : (item.tags || '').split(',').map((t: any) => t.trim())
-                                      });
-                                      await apiSetDoc('activities', id.toString(), normalized);
-                                      count++;
-                                    }
-                                    showToast(`🎉 成功匯入 ${count} 筆資料！`);
-                                    window.location.reload(); // 強制刷新獲取最新數據
-                                  } catch (err) {
-                                    showToast("匯入出錯，請檢查檔案", "error");
-                                  } finally {
-                                    setIsSavingActivities(false);
-                                  }
-                                }}
-                              />
-                              <label 
-                                htmlFor="bulk-import-json-fix"
-                                className={`cursor-pointer inline-flex items-center justify-center gap-4 bg-[#FFEF00] text-black px-12 py-6 rounded-full font-[1000] text-2xl uppercase hover:scale-110 active:scale-95 transition-all shadow-[8px_8px_0px_rgba(0,0,0,1)] border-4 border-black ${isSavingActivities ? 'opacity-50 pointer-events-none' : ''}`}
-                              >
-                                {isSavingActivities ? <Loader2 className="animate-spin" size={32} /> : <Database size={32} />}
-                                {isSavingActivities ? '正在寫入 1144 筆數據...' : '立即開始匯入資料'}
-                              </label>
-                              {isSavingActivities && (
-                                <div className="mt-4 bg-black/20 p-4 rounded-2xl border-2 border-dashed border-white/50 w-full text-white font-black text-center">
-                                  ⏳ 請耐心等候，系統正在處理大量數據，請勿重新整理頁面...
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-
                         <h3 className="text-3xl font-black mb-8 flex items-center gap-3">
-                          <Film size={32} /> 單筆新增活動
+                          <Film size={32} /> 活動管理
                         </h3>
-
                         <div className="grid grid-cols-1 gap-4 mb-12">
                           {activities.map(a => (
                             <div key={a.id} className="bg-white border-4 border-black p-6 rounded-3xl flex gap-6 items-center shadow-[4px_4px_0px_rgba(0,0,0,1)]">
@@ -4456,7 +3629,7 @@ function AppContent() {
                       </section>
                     )}
 
-                    {adminActiveTab === 'danger-disabled' && (
+                    {adminActiveTab === 'danger' && (
                       <section>
                         <h3 className="text-3xl font-black mb-8 flex items-center gap-3 text-red-600">
                           <Trash2 size={32} /> 系統維護
