@@ -1415,6 +1415,13 @@ function AppContent() {
     fontFamily: `"${heroSubtitleFont}", sans-serif`,
     fontSize: getResponsiveFontSize(heroSubtitleSizeMobile, heroSubtitleSizeDesktop)
   };
+  const heroMainWordStyle: React.CSSProperties = {
+    fontFamily: `"${heroTitleFont}", sans-serif`,
+    fontSize: getResponsiveFontSize(
+      Math.round(heroTitleSizeMobile * 1.15),
+      Math.round(heroTitleSizeDesktop * 1.8)
+    )
+  };
 
   const handleCourseChange = (courseId: number) => {
     const course = courses.find(c => c.id === courseId);
@@ -1677,7 +1684,7 @@ function AppContent() {
         <div className="absolute inset-0 pointer-events-none opacity-[0.08]" 
              style={{ backgroundImage: 'linear-gradient(45deg, #000 25%, transparent 25%, transparent 50%, #000 50%, #000 75%, transparent 75%, transparent)', backgroundSize: '60px 60px' }}></div>
 
-        <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-8 sm:gap-12 items-center w-full relative z-10">
+        <div className="max-w-7xl mx-auto grid md:grid-cols-2 gap-8 sm:gap-12 items-start w-full relative z-10">
           <motion.div
             initial={{ opacity: 0, x: -50 }}
             animate={{ opacity: 1, x: 0 }}
@@ -1697,7 +1704,7 @@ function AppContent() {
               </p>
             )}
             <div className="relative">
-              <h2 className="text-white font-black text-[56px] sm:text-[120px] md:text-[140px] lg:text-[200px] leading-none sm:leading-tight tracking-tighter drop-shadow-[4px_4px_0px_rgba(0,0,0,1)] sm:drop-shadow-[8px_8px_0px_rgba(0,0,0,1)] mb-6 sm:mb-8 select-none">
+              <h2 className="text-white font-black leading-none sm:leading-tight tracking-tighter drop-shadow-[4px_4px_0px_rgba(0,0,0,1)] sm:drop-shadow-[8px_8px_0px_rgba(0,0,0,1)] mb-6 sm:mb-8 select-none" style={heroMainWordStyle}>
                 {siteSettings.siteName}
               </h2>
               <div className="absolute -top-4 -right-4 bg-[#0055FF] text-white px-3 py-1 font-black text-xs rotate-12">
@@ -2999,6 +3006,7 @@ function AppContent() {
                                 </div>
                                 <div className="space-y-2">
                                   <label className="text-[10px] font-black uppercase">尺寸</label>
+                                  <p className="text-[10px] font-bold text-black/70">會同步影響前台白色主視覺大字</p>
                                   <div className="grid grid-cols-2 gap-2">
                                     <div className="space-y-1">
                                       <label className="text-[10px] font-black uppercase">手機字級 (px)</label>
