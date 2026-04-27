@@ -254,6 +254,93 @@ const getResponsiveFontSize = (mobile: number, desktop: number) => (
   `clamp(${mobile}px, calc(${mobile}px + (${desktop} - ${mobile}) * ((100vw - 375px) / 1065)), ${desktop}px)`
 );
 
+const clampRgbChannel = (value: number) => Math.max(0, Math.min(255, Math.round(value)));
+
+const normalizeHexColor = (value: string | undefined, fallback: string) => {
+  const raw = (value || '').trim();
+  if (/^#[0-9a-fA-F]{6}$/.test(raw)) return raw.toUpperCase();
+  if (/^#[0-9a-fA-F]{3}$/.test(raw)) {
+    const shortHex = raw.slice(1);
+    return `#${shortHex.split('').map(ch => `${ch}${ch}`).join('').toUpperCase()}`;
+  }
+  return fallback.toUpperCase();
+};
+
+const hexToRgb = (hex: string) => {
+  const normalized = normalizeHexColor(hex, '#000000').slice(1);
+  return {
+    r: parseInt(normalized.slice(0, 2), 16),
+    g: parseInt(normalized.slice(2, 4), 16),
+    b: parseInt(normalized.slice(4, 6), 16)
+  };
+};
+
+const rgbToHex = (rgb: { r: number; g: number; b: number }) => {
+  const r = clampRgbChannel(rgb.r).toString(16).padStart(2, '0');
+  const g = clampRgbChannel(rgb.g).toString(16).padStart(2, '0');
+  const b = clampRgbChannel(rgb.b).toString(16).padStart(2, '0');
+  return `#${r}${g}${b}`.toUpperCase();
+};
+
+const RGBColorTool = ({
+  label,
+  value,
+  onChange
+}: {
+  label: string;
+  value: string;
+  onChange: (nextColor: string) => void;
+}) => {
+  const safeColor = normalizeHexColor(value, '#000000');
+  const rgb = hexToRgb(safeColor);
+
+  const setChannel = (channel: 'r' | 'g' | 'b', nextValue: number) => {
+    onChange(rgbToHex({ ...rgb, [channel]: nextValue }));
+  };
+
+  return (
+    <div className="space-y-2 border-2 border-black rounded-xl p-3 bg-white">
+      <div className="flex items-center justify-between gap-3">
+        <label className="text-[10px] font-black uppercase">{label}</label>
+        <div className="flex items-center gap-2">
+          <input
+            type="color"
+            value={safeColor}
+            onChange={e => onChange(e.target.value.toUpperCase())}
+            className="h-7 w-10 border-2 border-black rounded cursor-pointer"
+            aria-label={`${label} 色盤`}
+          />
+          <span className="text-[10px] font-black">{safeColor}</span>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-2">
+        {(['r', 'g', 'b'] as const).map(channel => (
+          <div key={channel} className="space-y-1">
+            <label className="text-[10px] font-black uppercase">{channel.toUpperCase()}</label>
+            <input
+              type="range"
+              min={0}
+              max={255}
+              value={rgb[channel]}
+              onChange={e => setChannel(channel, Number(e.target.value))}
+              className="w-full"
+            />
+            <input
+              type="number"
+              min={0}
+              max={255}
+              value={rgb[channel]}
+              onChange={e => setChannel(channel, Number(e.target.value) || 0)}
+              className="w-full border-2 border-black rounded-md px-2 py-1 text-[10px] font-black"
+            />
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 interface ErrorBoundaryProps {
   children: React.ReactNode;
 }
@@ -349,12 +436,16 @@ function AppContent() {
       heroTitleFont: 'Noto Sans TC',
       heroTitleSizeMobile: 48,
       heroTitleSizeDesktop: 110,
+      heroTitleColor: '#000000',
       heroTaglineFont: 'Montserrat',
       heroTaglineSizeMobile: 20,
       heroTaglineSizeDesktop: 40,
+      heroTaglineColor: '#1A1A1A',
+      heroMainWordColor: '#FFFFFF',
       heroSubtitleFont: 'Noto Sans TC',
       heroSubtitleSizeMobile: 20,
       heroSubtitleSizeDesktop: 32,
+      heroSubtitleColor: '#000000',
       heroSubtitle: '全港首個專為創意人設計的 AI 動畫與多媒體課程，從零開始，助你成為業界頂尖專家。',
       contactEmail: 'info@savfx.edu.hk',
       contactPhone: '+852 2345 6789',
@@ -776,12 +867,16 @@ function AppContent() {
           heroTitleFont: data?.heroTitleFont || 'Noto Sans TC',
           heroTitleSizeMobile: Number(data?.heroTitleSizeMobile) || 48,
           heroTitleSizeDesktop: Number(data?.heroTitleSizeDesktop) || 110,
+          heroTitleColor: normalizeHexColor(data?.heroTitleColor, '#000000'),
           heroTaglineFont: data?.heroTaglineFont || 'Montserrat',
           heroTaglineSizeMobile: Number(data?.heroTaglineSizeMobile) || 20,
           heroTaglineSizeDesktop: Number(data?.heroTaglineSizeDesktop) || 40,
+          heroTaglineColor: normalizeHexColor(data?.heroTaglineColor, '#1A1A1A'),
+          heroMainWordColor: normalizeHexColor(data?.heroMainWordColor, '#FFFFFF'),
           heroSubtitleFont: data?.heroSubtitleFont || 'Noto Sans TC',
           heroSubtitleSizeMobile: Number(data?.heroSubtitleSizeMobile) || 20,
           heroSubtitleSizeDesktop: Number(data?.heroSubtitleSizeDesktop) || 32,
+          heroSubtitleColor: normalizeHexColor(data?.heroSubtitleColor, '#000000'),
           heroGallery: mappedHeroGallery,
           heroImages: mappedHeroGallery.map((item: HeroGalleryItem) => item.url)
         };
@@ -1395,6 +1490,10 @@ function AppContent() {
   const heroTitleFont = siteSettings.heroTitleFont || 'Noto Sans TC';
   const heroTaglineFont = siteSettings.heroTaglineFont || 'Montserrat';
   const heroSubtitleFont = siteSettings.heroSubtitleFont || 'Noto Sans TC';
+  const heroTitleColor = normalizeHexColor(siteSettings.heroTitleColor, '#000000');
+  const heroTaglineColor = normalizeHexColor(siteSettings.heroTaglineColor, '#1A1A1A');
+  const heroMainWordColor = normalizeHexColor(siteSettings.heroMainWordColor, '#FFFFFF');
+  const heroSubtitleColor = normalizeHexColor(siteSettings.heroSubtitleColor, '#000000');
 
   const heroTitleSizeMobile = Number(siteSettings.heroTitleSizeMobile) || 48;
   const heroTitleSizeDesktop = Number(siteSettings.heroTitleSizeDesktop) || 110;
@@ -1405,22 +1504,26 @@ function AppContent() {
 
   const heroTitleStyle: React.CSSProperties = {
     fontFamily: `"${heroTitleFont}", sans-serif`,
-    fontSize: getResponsiveFontSize(heroTitleSizeMobile, heroTitleSizeDesktop)
+    fontSize: getResponsiveFontSize(heroTitleSizeMobile, heroTitleSizeDesktop),
+    color: heroTitleColor
   };
   const heroTaglineStyle: React.CSSProperties = {
     fontFamily: `"${heroTaglineFont}", sans-serif`,
-    fontSize: getResponsiveFontSize(heroTaglineSizeMobile, heroTaglineSizeDesktop)
+    fontSize: getResponsiveFontSize(heroTaglineSizeMobile, heroTaglineSizeDesktop),
+    color: heroTaglineColor
   };
   const heroSubtitleStyle: React.CSSProperties = {
     fontFamily: `"${heroSubtitleFont}", sans-serif`,
-    fontSize: getResponsiveFontSize(heroSubtitleSizeMobile, heroSubtitleSizeDesktop)
+    fontSize: getResponsiveFontSize(heroSubtitleSizeMobile, heroSubtitleSizeDesktop),
+    color: heroSubtitleColor
   };
   const heroMainWordStyle: React.CSSProperties = {
     fontFamily: `"${heroTitleFont}", sans-serif`,
     fontSize: getResponsiveFontSize(
       Math.round(heroTitleSizeMobile * 1.15),
       Math.round(heroTitleSizeDesktop * 1.8)
-    )
+    ),
+    color: heroMainWordColor
   };
 
   const handleCourseChange = (courseId: number) => {
@@ -3004,6 +3107,16 @@ function AppContent() {
                                     ))}
                                   </select>
                                 </div>
+                                <RGBColorTool
+                                  label="Hero 標題顏色"
+                                  value={siteSettings.heroTitleColor || '#000000'}
+                                  onChange={color => setSiteSettings({...siteSettings, heroTitleColor: color})}
+                                />
+                                <RGBColorTool
+                                  label="主視覺大字顏色 (白色字)"
+                                  value={siteSettings.heroMainWordColor || '#FFFFFF'}
+                                  onChange={color => setSiteSettings({...siteSettings, heroMainWordColor: color})}
+                                />
                                 <div className="space-y-2">
                                   <label className="text-[10px] font-black uppercase">尺寸</label>
                                   <p className="text-[10px] font-bold text-black/70">會同步影響前台白色主視覺大字</p>
@@ -3057,6 +3170,11 @@ function AppContent() {
                                     ))}
                                   </select>
                                 </div>
+                                <RGBColorTool
+                                  label="Tagline 顏色"
+                                  value={siteSettings.heroTaglineColor || '#1A1A1A'}
+                                  onChange={color => setSiteSettings({...siteSettings, heroTaglineColor: color})}
+                                />
                                 <div className="space-y-2">
                                   <label className="text-[10px] font-black uppercase">尺寸</label>
                                   <div className="grid grid-cols-2 gap-2">
@@ -3109,6 +3227,11 @@ function AppContent() {
                                     ))}
                                   </select>
                                 </div>
+                                <RGBColorTool
+                                  label="副標題顏色"
+                                  value={siteSettings.heroSubtitleColor || '#000000'}
+                                  onChange={color => setSiteSettings({...siteSettings, heroSubtitleColor: color})}
+                                />
                                 <div className="space-y-2">
                                   <label className="text-[10px] font-black uppercase">尺寸</label>
                                   <div className="grid grid-cols-2 gap-2">
