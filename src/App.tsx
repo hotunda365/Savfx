@@ -1438,29 +1438,29 @@ function AppContent() {
             </div>
           </div>
           
-          <div className="hidden md:flex gap-6 font-bold text-base text-black items-center">
-            <a href="#courses" className="hover:opacity-70 transition-opacity">個人課程</a>
-            <a href="#group-courses" className="hover:opacity-70 transition-opacity">團體課程</a>
-            <a href="#student-works" className="hover:opacity-70 transition-opacity">學生作品</a>
-            <a href="#testimonials" className="hover:opacity-70 transition-opacity">學生見證</a>
-            <a href="#tutors" className="hover:opacity-70 transition-opacity">專業團隊</a>
-            <a href="#business" className="hover:opacity-70 transition-opacity">商業合作</a>
-            <a href="#activities" className="hover:opacity-70 transition-opacity">活動回顧</a>
-            <a href="#contact" className="hover:opacity-70 transition-opacity">聯絡我們</a>
+          <div className="hidden lg:flex gap-4 xl:gap-6 font-bold text-sm xl:text-base text-black items-center">
+            <a href="#courses" className="hover:opacity-70 transition-opacity whitespace-nowrap">個人課程</a>
+            <a href="#group-courses" className="hover:opacity-70 transition-opacity whitespace-nowrap">團體課程</a>
+            <a href="#student-works" className="hover:opacity-70 transition-opacity whitespace-nowrap">學生作品</a>
+            <a href="#testimonials" className="hover:opacity-70 transition-opacity whitespace-nowrap">學生見證</a>
+            <a href="#tutors" className="hover:opacity-70 transition-opacity whitespace-nowrap">專業團隊</a>
+            <a href="#business" className="hover:opacity-70 transition-opacity whitespace-nowrap">商業合作</a>
+            <a href="#activities" className="hover:opacity-70 transition-opacity whitespace-nowrap">活動回顧</a>
+            <a href="#contact" className="hover:opacity-70 transition-opacity whitespace-nowrap">聯絡我們</a>
             {isAdmin && (
               <button 
                 onClick={() => setShowAdminPanel(true)}
-                className="flex items-center gap-2 bg-black text-[#FFEF00] px-4 py-2 rounded-full hover:scale-105 transition-transform"
+                className="flex items-center gap-2 bg-black text-[#FFEF00] px-4 py-2 rounded-full hover:scale-105 transition-transform whitespace-nowrap"
               >
                 <Settings size={18} /> 管理
               </button>
             )}
             {!isAdmin ? (
-              <button onClick={() => setShowLoginModal(true)} className="hover:opacity-70 transition-opacity flex items-center gap-1">
+              <button onClick={() => setShowLoginModal(true)} className="hover:opacity-70 transition-opacity flex items-center gap-1 whitespace-nowrap">
                 <LogIn size={18} /> 登入
               </button>
             ) : (
-              <button onClick={handleLogout} className="hover:opacity-70 transition-opacity flex items-center gap-1">
+              <button onClick={handleLogout} className="hover:opacity-70 transition-opacity flex items-center gap-1 whitespace-nowrap">
                 <LogOut size={18} /> 登出
               </button>
             )}
@@ -1486,7 +1486,7 @@ function AppContent() {
             </div>
           </div>
 
-          <button className="md:hidden" onClick={() => setIsMenuOpen(!isMenuOpen)}>
+          <button className="lg:hidden" onClick={() => setIsMenuOpen(!isMenuOpen)}>
             {isMenuOpen ? <X /> : <Menu />}
           </button>
         </div>
@@ -1708,7 +1708,7 @@ function AppContent() {
       <section id="courses-intro" className="py-14 sm:py-20 bg-white border-y-8 border-black">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <SectionTitle subtitle={siteSettings.coursesIntroSubtitle || "專業文憑與證書課程"}>{siteSettings.coursesIntroTitle || "課程介紹"}</SectionTitle>
-          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-8">
+          <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-5 sm:gap-8">
             {courses.map((course, i) => (
               <motion.div 
                 key={i}
@@ -1872,7 +1872,7 @@ function AppContent() {
               </div>
               
               <div className="relative">
-                <div className="grid grid-cols-3 gap-2 sm:gap-4 h-[380px] sm:h-[420px] overflow-y-auto p-3 sm:p-6 bg-[#1A1A1A] custom-scrollbar rounded-[2rem] sm:rounded-[3rem] border-4 border-white/10 shadow-inner">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4 h-[380px] sm:h-[420px] overflow-y-auto p-3 sm:p-6 bg-[#1A1A1A] custom-scrollbar rounded-[2rem] sm:rounded-[3rem] border-4 border-white/10 shadow-inner">
                   {unitNames.length === 0 ? (
                     <div className="flex flex-col items-center justify-center text-center p-12 w-full col-span-full min-h-[400px]">
                       <BookOpen size={64} className="mb-6 opacity-20 text-white" />
@@ -1928,7 +1928,7 @@ function AppContent() {
       <section id="group-courses" className="py-20 bg-white border-y-8 border-black">
         <div className="max-w-7xl mx-auto px-6">
           <SectionTitle subtitle={siteSettings.groupCourseSubtitle || "適合學校、社福機構及私人團體"}>{siteSettings.groupCourseTitle || "團體課程"}</SectionTitle>
-          <div className="grid md:grid-cols-3 gap-8">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-8">
             {groupCourses.length === 0 ? (
               [
                 { title: "3D Printing 工作坊", desc: "親手體驗 3D 打印技術與建模", mask: "mask-book", img: "3d-print" },
@@ -2122,7 +2122,7 @@ function AppContent() {
       <section id="testimonials" className="py-20 bg-white">
         <div className="max-w-7xl mx-auto px-6">
           <SectionTitle subtitle="聽聽學員怎麼說">學生見證</SectionTitle>
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-12">
+          <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-8 xl:gap-12">
             {testimonials.map((t, i) => (
               <div key={i} className="flex flex-col items-center">
                 <MaskedImage 
@@ -2270,7 +2270,7 @@ function AppContent() {
                 </div>
 
                 {/* Content */}
-                <div className="p-8 flex flex-col flex-grow bg-white">
+                <div className="p-5 sm:p-8 flex flex-col flex-grow bg-white">
                   <h3 className="text-2xl font-black text-black mb-4 leading-tight group-hover:text-[#0055FF] transition-colors">
                     {activity.title}
                   </h3>
