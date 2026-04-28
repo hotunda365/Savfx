@@ -201,7 +201,7 @@ const MaskedImage = ({ src, maskId, className = "" }: { src: string, maskId: str
 
 const SectionTitle = ({ children, subtitle, reverse = false }: { children: React.ReactNode, subtitle?: string, reverse?: boolean }) => (
   <div className="mb-16 text-center">
-    {subtitle && !reverse && <p className="text-black/60 font-black uppercase tracking-widest text-xs mb-2">{subtitle}</p>}
+    {subtitle && !reverse && <p className="text-black/60 font-black uppercase tracking-wide text-base md:text-lg mb-2">{subtitle}</p>}
     <motion.h2 
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
@@ -209,7 +209,7 @@ const SectionTitle = ({ children, subtitle, reverse = false }: { children: React
     >
       {children}
     </motion.h2>
-    {subtitle && reverse && <p className="text-black/60 font-black uppercase tracking-widest text-xs mt-2">{subtitle}</p>}
+    {subtitle && reverse && <p className="text-black/60 font-black uppercase tracking-wide text-base md:text-lg mt-2">{subtitle}</p>}
     <div className="w-24 h-2 bg-black mx-auto mt-4" />
   </div>
 );
@@ -2356,7 +2356,7 @@ function AppContent() {
             <Play className="text-[#FFEF00] fill-[#FFEF00] w-8 h-8 ml-1" />
           </div>
           <h2 className="text-4xl font-black mb-4 mt-4">{siteSettings.briefingTitle || "課程簡介會"}</h2>
-          <p className="font-bold mb-8">{siteSettings.briefingSubtitle || "留下您的聯絡資料，我們將把 YouTube 簡介會影片傳送給您。"}</p>
+          <p className="text-black/60 font-black uppercase tracking-wide text-base md:text-lg mb-8">{siteSettings.briefingSubtitle || "留下您的聯絡資料，我們將把 YouTube 簡介會影片傳送給您。"}</p>
           
           <form onSubmit={handleBriefingSubmit} className="space-y-4">
             <input 
