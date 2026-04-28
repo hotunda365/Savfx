@@ -199,17 +199,17 @@ const MaskedImage = ({ src, maskId, className = "" }: { src: string, maskId: str
   </div>
 );
 
-const SectionTitle = ({ children, subtitle, reverse = false }: { children: React.ReactNode, subtitle?: string, reverse?: boolean }) => (
-  <div className="mb-16 text-center">
-    {subtitle && !reverse && <p className="text-black/60 font-black uppercase tracking-wide text-base md:text-lg mb-2">{subtitle}</p>}
+const SectionTitle = ({ children, subtitle }: { children: React.ReactNode, subtitle?: string, reverse?: boolean }) => (
+  <div className="mb-16 text-center px-2 md:px-0">
     <motion.h2 
       initial={{ opacity: 0, y: 20 }}
       whileInView={{ opacity: 1, y: 0 }}
-      className="text-4xl md:text-6xl font-black uppercase tracking-tighter text-black mb-2 leading-tight"
+      className="font-black uppercase tracking-tighter text-black mb-3 leading-tight w-full whitespace-nowrap"
+      style={{ fontSize: 'clamp(1rem, 7.5vw, 4.5rem)' }}
     >
       {children}
     </motion.h2>
-    {subtitle && reverse && <p className="text-black/60 font-black uppercase tracking-wide text-base md:text-lg mt-2">{subtitle}</p>}
+    {subtitle && <p className="text-black/60 font-black uppercase tracking-wide text-[clamp(1rem,4vw,1.5rem)] md:text-2xl mt-1">{subtitle}</p>}
     <div className="w-24 h-2 bg-black mx-auto mt-4" />
   </div>
 );
