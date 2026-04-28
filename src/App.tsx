@@ -2060,26 +2060,26 @@ function AppContent() {
       </AnimatePresence>
 
       {/* Individual Courses */}
-      <section id="courses-intro" className="py-24 sm:py-36 bg-white border-y-8 border-black">
+      <section id="courses-intro" className="py-12 sm:py-16 bg-white border-y-8 border-black">
         <div className="max-w-7xl mx-auto px-8 sm:px-16">
           <SectionTitle subtitle={siteSettings.coursesIntroSubtitle || "專業文憑與證書課程"}>{siteSettings.coursesIntroTitle || "課程介紹"}</SectionTitle>
-          <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-5 sm:gap-8">
+          <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
             {courses.map((course, i) => (
               <motion.div 
                 key={i}
                 whileHover={{ y: -10 }}
-                className="bg-[#FFEF00] border-4 border-black p-5 sm:p-8 flex flex-col items-center text-center rounded-3xl min-w-0 overflow-hidden"
+                className="bg-[#FFEF00] border-4 border-black p-4 sm:p-6 flex flex-col items-start text-left rounded-3xl min-w-0 overflow-hidden"
               >
                 <MaskedImage 
                   src={(course.img?.startsWith('http') || course.img?.startsWith('data:') || course.img?.startsWith('/')) ? course.img : `https://picsum.photos/seed/${course.img || 'course'}/400/400`} 
                   maskId={course.mask || 'mask-cloud'} 
-                  className="w-28 h-28 sm:w-40 sm:h-40 mb-4 sm:mb-6 bg-white border-2 border-black"
+                  className="w-24 h-24 sm:w-32 sm:h-32 mb-3 sm:mb-4 bg-white border-2 border-black self-center"
                 />
-                <h3 className="text-lg sm:text-xl font-black leading-tight mb-1 break-words [overflow-wrap:anywhere]">{course.title || course.name}</h3>
-                {course.subtitle && <p className="text-sm font-black mb-2 break-words [overflow-wrap:anywhere]">{course.subtitle}</p>}
-                <p className="font-bold text-black/70 mb-6 text-sm whitespace-pre-line break-words [overflow-wrap:anywhere] max-h-48 sm:max-h-56 overflow-y-auto pr-1 custom-scrollbar w-full">{course.desc}</p>
+                <h3 className="text-2xl sm:text-3xl font-black leading-tight mb-1 break-words [overflow-wrap:anywhere] w-full">{course.title || course.name}</h3>
+                {course.subtitle && <p className="text-base font-black mb-2 break-words [overflow-wrap:anywhere] w-full">{course.subtitle}</p>}
+                <p className="font-bold text-black/70 mb-3 text-base whitespace-pre-line break-words [overflow-wrap:anywhere] max-h-36 sm:max-h-44 overflow-y-auto pr-1 custom-scrollbar w-full">{course.desc}</p>
                 {(course.startDate || course.classTime || course.tuition) && (
-                  <div className="w-full text-left text-xs font-black text-black/70 mb-5 space-y-1 break-words [overflow-wrap:anywhere]">
+                  <div className="w-full text-left text-xs font-black text-black/70 mb-3 space-y-1 break-words [overflow-wrap:anywhere]">
                     {course.startDate && <p className="whitespace-pre-line">開課日期: {course.startDate}</p>}
                     {course.classTime && <p className="whitespace-pre-line">上課時間: {course.classTime}</p>}
                     {course.tuition && <p className="whitespace-pre-line">課程學費: {course.tuition}</p>}
