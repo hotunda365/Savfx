@@ -5040,6 +5040,34 @@ function AppContent() {
                                       value={editingMask.name}
                                       onChange={e => setEditingMask({...editingMask, name: e.target.value})}
                                     />
+                                    <label className="flex items-center gap-2 cursor-pointer border-2 border-dashed border-black rounded-xl p-3 hover:bg-[#FFEF00]/10 transition-colors text-sm font-bold">
+                                      <Upload size={16} className="shrink-0" />
+                                      重新上傳 SVG
+                                      <input
+                                        type="file"
+                                        accept=".svg,image/svg+xml"
+                                        className="hidden"
+                                        onChange={e => {
+                                          const file = e.target.files?.[0];
+                                          if (!file) return;
+                                          const reader = new FileReader();
+                                          reader.onload = ev => {
+                                            try {
+                                              const text = ev.target?.result as string;
+                                              const parser = new DOMParser();
+                                              const doc = parser.parseFromString(text, 'image/svg+xml');
+                                              const paths = Array.from(doc.querySelectorAll('path'));
+                                              if (paths.length === 0) { showToast('SVG 中找不到 <path> 元素', 'error'); return; }
+                                              const combined = paths.map(p => p.getAttribute('d') || '').join(' ').trim();
+                                              setEditingMask(prev => prev ? {...prev, path: combined} : prev);
+                                              showToast(`已匯入 ${paths.length} 個 path`);
+                                            } catch { showToast('SVG 解析失敗', 'error'); }
+                                          };
+                                          reader.readAsText(file);
+                                          e.target.value = '';
+                                        }}
+                                      />
+                                    </label>
                                     <textarea
                                       className="w-full border-2 border-black p-3 rounded-xl font-mono text-xs"
                                       rows={3}
@@ -5105,6 +5133,70 @@ function AppContent() {
                                 onChange={e => setNewMask({...newMask, name: e.target.value})}
                               />
                             </div>
+
+                            {/* SVG upload */}
+                            <div className="space-y-1">
+                              <label className="text-xs font-black uppercase">上傳 SVG 檔案
+                                <span className="ml-2 text-[10px] font-bold text-black/40 normal-case">自動擷取 path 資料</span>
+                              </label>
+                              <label className="flex items-center gap-3 cursor-pointer border-2 border-dashed border-black rounded-xl p-4 hover:bg-[#FFEF00]/10 transition-colors">
+                                <Upload size={20} className="shrink-0" />
+                                <span className="font-bold text-sm">選擇 .svg 檔案</span>
+                                <input
+                                  type="file"
+                                  accept=".svg,image/svg+xml"
+                                  className="hidden"
+                                  onChange={e => {
+                                    const file = e.target.files?.[0];
+                                    if (!file) return;
+                                    const reader = new FileReader();
+                                    reader.onload = ev => {
+                                      try {
+                                        const text = ev.target?.result as string;
+                                        const parser = new DOMParser();
+                                        const doc = parser.parseFromString(text, 'image/svg+xml');
+                                        const svgEl = doc.querySelector('svg');
+                                        const paths = Array.from(doc.querySelectorAll('path'));
+                                        if (paths.length === 0) { showToast('SVG 中找不到 <path> 元素', 'error'); return; }
+
+                                        // Determine viewBox for normalization
+                                        const vb = svgEl?.getAttribute('viewBox')?.split(/[\s,]+/).map(Number) || [];
+                                        const vbW = vb[2] || Number(svgEl?.getAttribute('width')) || 100;
+                                        const vbH = vb[3] || Number(svgEl?.getAttribute('height')) || 100;
+
+                                        // Normalize path coordinates to 0-1 range if viewBox is not already 0-1
+                                        const needsNorm = vbW > 2 || vbH > 2;
+                                        let combinedPath = paths.map(p => p.getAttribute('d') || '').join(' ').trim();
+
+                                        if (needsNorm) {
+                                          // Simple regex-based coordinate scaling: replace all numeric pairs
+                                          combinedPath = combinedPath.replace(/(-?\d+(?:\.\d+)?)/g, (match, num) => {
+                                            // We can't reliably distinguish X vs Y from regex alone,
+                                            // so store the raw path and let user know to verify
+                                            return num;
+                                          });
+                                          showToast(`已匯入 ${paths.length} 個 path（viewBox ${vbW}x${vbH}，請確認座標是否需要手動換算至 0~1）`);
+                                        } else {
+                                          showToast(`已匯入 ${paths.length} 個 path`);
+                                        }
+
+                                        // Auto-fill name from filename if empty
+                                        const fileName = file.name.replace(/\.svg$/i, '');
+                                        setNewMask(prev => ({
+                                          name: prev.name || fileName,
+                                          path: combinedPath
+                                        }));
+                                      } catch {
+                                        showToast('SVG 解析失敗，請手動輸入 Path', 'error');
+                                      }
+                                    };
+                                    reader.readAsText(file);
+                                    e.target.value = '';
+                                  }}
+                                />
+                              </label>
+                            </div>
+
                             <div className="space-y-1">
                               <label className="text-xs font-black uppercase">SVG Path
                                 <span className="ml-2 text-[10px] font-bold text-black/40 normal-case">
