@@ -160,7 +160,18 @@ async function apiDeleteDocs(collection: string, ids: string[]) {
 }
 
 // --- Custom Masks (SVG Paths) ---
-const SVGMasks = () => (
+type CustomMask = { id: string; name: string; path: string };
+
+const BUILTIN_MASKS: { id: string; name: string }[] = [
+  { id: 'mask-graduation-cap', name: '畢業帽' },
+  { id: 'mask-book',           name: '書本' },
+  { id: 'mask-dream',          name: '夢想' },
+  { id: 'mask-film',           name: '底片' },
+  { id: 'mask-notebook',       name: '筆記本' },
+  { id: 'mask-cloud',          name: '雲朵' },
+];
+
+const SVGMasks = ({ custom = [] }: { custom?: CustomMask[] }) => (
   <svg width="0" height="0" className="absolute">
     <defs>
       <clipPath id="mask-graduation-cap" clipPathUnits="objectBoundingBox">
@@ -181,6 +192,11 @@ const SVGMasks = () => (
       <clipPath id="mask-cloud" clipPathUnits="objectBoundingBox">
         <path d="M0.25,0.4 C0.1,0.4 0,0.5 0,0.65 C0,0.8 0.1,0.9 0.25,0.9 H0.75 C0.9,0.9 1,0.8 1,0.65 C1,0.5 0.9,0.4 0.75,0.4 C0.75,0.2 0.6,0.1 0.45,0.1 C0.35,0.1 0.25,0.2 0.25,0.4" />
       </clipPath>
+      {custom.map(m => (
+        <clipPath key={m.id} id={`mask-custom-${m.id}`} clipPathUnits="objectBoundingBox">
+          <path d={m.path} />
+        </clipPath>
+      ))}
     </defs>
   </svg>
 );
@@ -508,6 +524,10 @@ function AppContent() {
   const [savingTutorMaskId, setSavingTutorMaskId] = useState<string | null>(null);
   const [isSavingTestimonials, setIsSavingTestimonials] = useState(false);
   const [isSavingGroupCourses, setIsSavingGroupCourses] = useState(false);
+  const [customMasks, setCustomMasks] = useState<CustomMask[]>([]);
+  const [isSavingMasks, setIsSavingMasks] = useState(false);
+  const [newMask, setNewMask] = useState<{ name: string; path: string }>({ name: '', path: '' });
+  const [editingMask, setEditingMask] = useState<CustomMask | null>(null);
   const [dataLoaded, setDataLoaded] = useState({
     settings: false,
     units: false,
@@ -976,6 +996,9 @@ function AppContent() {
         });
         setBriefingLeads(sorted);
       }, 'briefingLeads');
+
+      // Load custom masks (non-critical, no dataLoaded key needed)
+      apiFetchCollection('masks').then((items: CustomMask[]) => setCustomMasks(items)).catch(() => {});
     };
 
     loadSettings();
@@ -1270,6 +1293,59 @@ function AppContent() {
     } finally {
       setIsSavingActivities(false);
     }
+  };
+
+  const renderMaskOptions = () => (
+    <>
+      {BUILTIN_MASKS.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+      {customMasks.length > 0 && <optgroup label="── 自訂遮罩 ──">
+        {customMasks.map(m => <option key={m.id} value={`mask-custom-${m.id}`}>{m.name}</option>)}
+      </optgroup>}
+    </>
+  );
+
+  const handleAddMask = async () => {
+    if (!newMask.name.trim() || !newMask.path.trim()) { showToast('請填寫名稱與 SVG Path', 'error'); return; }
+    setIsSavingMasks(true);
+    try {
+      const id = Date.now().toString();
+      const maskData: CustomMask = { id, name: newMask.name.trim(), path: newMask.path.trim() };
+      await apiSetDoc('masks', id, maskData);
+      setCustomMasks(prev => [...prev, maskData]);
+      setNewMask({ name: '', path: '' });
+      showToast('遮罩已新增');
+    } catch (error) {
+      showToast('新增失敗', 'error');
+    } finally {
+      setIsSavingMasks(false);
+    }
+  };
+
+  const handleUpdateMask = async () => {
+    if (!editingMask) return;
+    setIsSavingMasks(true);
+    try {
+      await apiSetDoc('masks', editingMask.id, editingMask);
+      setCustomMasks(prev => prev.map(m => m.id === editingMask.id ? editingMask : m));
+      setEditingMask(null);
+      showToast('遮罩已更新');
+    } catch (error) {
+      showToast('更新失敗', 'error');
+    } finally {
+      setIsSavingMasks(false);
+    }
+  };
+
+  const handleDeleteMask = async (id: string) => {
+    showConfirm('確定刪除', '確定刪除此自訂遮罩？刪除後使用此遮罩的元素將顯示異常。', async () => {
+      try {
+        await apiDeleteDoc('masks', id);
+        setCustomMasks(prev => prev.filter(m => m.id !== id));
+        showToast('遮罩已刪除');
+      } catch (error: any) {
+        showToast(error.message || '刪除失敗', 'error');
+      }
+    });
   };
 
   const handleDeleteActivity = async (id: string) => {
@@ -1619,7 +1695,7 @@ function AppContent() {
       <div className="fixed inset-0 pointer-events-none opacity-[0.02]" 
            style={{ backgroundImage: 'linear-gradient(45deg, #000 25%, transparent 25%, transparent 50%, #000 50%, #000 75%, transparent 75%, transparent)', backgroundSize: '100px 100px' }}></div>
       
-      <SVGMasks />
+      <SVGMasks custom={customMasks} />
       
       {/* Login Modal */}
       {showLoginModal && (
@@ -2734,6 +2810,7 @@ function AppContent() {
                 { id: 'student-works', label: '學生作品', icon: Film },
                 { id: 'testimonials', label: '學生見證', icon: MessageSquare },
                 { id: 'activities', label: '活動管理', icon: Film },
+                { id: 'masks', label: '遮罩管理', icon: Box },
               ].map(tab => (
                 <button
                   key={tab.id}
@@ -3090,11 +3167,7 @@ function AppContent() {
                                   className="w-full border-2 border-black p-3 rounded-xl font-bold text-sm bg-white"
                                   value={newCourse.mask} onChange={e => setNewCourse({...newCourse, mask: e.target.value})}
                                 >
-                                  <option value="mask-cloud">雲朵</option>
-                                  <option value="mask-book">書本</option>
-                                  <option value="mask-dream">夢想</option>
-                                  <option value="mask-film">底片</option>
-                                  <option value="mask-notebook">筆記本</option>
+                                  {renderMaskOptions()}
                                 </select>
                               </div>
                             </div>
@@ -4129,11 +4202,7 @@ function AppContent() {
                                         className="w-full border-4 border-black p-4 rounded-xl font-bold bg-white"
                                         value={editingCourse.mask} onChange={e => setEditingCourse({...editingCourse, mask: e.target.value})}
                                       >
-                                        <option value="mask-cloud">雲朵</option>
-                                        <option value="mask-book">書本</option>
-                                        <option value="mask-dream">夢想</option>
-                                        <option value="mask-film">底片</option>
-                                        <option value="mask-notebook">筆記本</option>
+                                        {renderMaskOptions()}
                                       </select>
                                     </div>
                                   </div>
@@ -4363,11 +4432,7 @@ function AppContent() {
                                     value={adminGroupCourseForm.mask}
                                     onChange={e => setAdminGroupCourseForm({...adminGroupCourseForm, mask: e.target.value})}
                                   >
-                                    <option value="mask-cloud">Cloud</option>
-                                    <option value="mask-dream">Dream</option>
-                                    <option value="mask-book">Book</option>
-                                    <option value="mask-film">Film</option>
-                                    <option value="mask-star">Star</option>
+                                    {renderMaskOptions()}
                                   </select>
                                 </div>
                                 <div className="space-y-2">
@@ -4532,12 +4597,7 @@ function AppContent() {
                                     onChange={(e) => handleUpdateTutorMask(t.id.toString(), e.target.value)}
                                     disabled={savingTutorMaskId === t.id?.toString()}
                                   >
-                                    <option value="mask-notebook">筆記本</option>
-                                    <option value="mask-dream">夢想</option>
-                                    <option value="mask-cloud">雲朵</option>
-                                    <option value="mask-book">書本</option>
-                                    <option value="mask-film">底片</option>
-                                    <option value="mask-graduation-cap">畢業帽</option>
+                                    {renderMaskOptions()}
                                   </select>
                                   {savingTutorMaskId === t.id?.toString() && <span className="text-[10px] font-black text-black/60 whitespace-nowrap">儲存中</span>}
                                 </div>
@@ -4585,12 +4645,7 @@ function AppContent() {
                                   value={newTutor.mask}
                                   onChange={e => setNewTutor({...newTutor, mask: e.target.value})}
                                 >
-                                  <option value="mask-notebook">筆記本</option>
-                                  <option value="mask-dream">夢想</option>
-                                  <option value="mask-cloud">雲朵</option>
-                                  <option value="mask-book">書本</option>
-                                  <option value="mask-film">底片</option>
-                                  <option value="mask-graduation-cap">畢業帽</option>
+                                  {renderMaskOptions()}
                                 </select>
                               </div>
                               <div className="md:col-span-2 space-y-1">
@@ -4937,6 +4992,157 @@ function AppContent() {
                               {isSavingActivities ? '正在發佈...' : '發佈活動'}
                             </button>
                           </form>
+                        </div>
+                      </section>
+                    )}
+
+                    {adminActiveTab === 'masks' && (
+                      <section className="space-y-10">
+                        <h3 className="text-3xl font-black mb-8 flex items-center gap-3">
+                          <Box size={32} /> 遮罩管理
+                        </h3>
+
+                        {/* Built-in masks */}
+                        <div className="bg-white border-4 border-black p-8 rounded-3xl shadow-[8px_8px_0px_rgba(0,0,0,1)]">
+                          <h4 className="text-lg font-black uppercase mb-4">內建遮罩（唯讀）</h4>
+                          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+                            {BUILTIN_MASKS.map(m => (
+                              <div key={m.id} className="border-2 border-black rounded-2xl p-3 flex items-center gap-3 bg-[#FFEF00]/10">
+                                <div className="w-10 h-10 bg-black/10 rounded-lg flex items-center justify-center overflow-hidden shrink-0">
+                                  <svg viewBox="0 0 100 100" className="w-8 h-8">
+                                    <use href={`#${m.id}`} />
+                                  </svg>
+                                </div>
+                                <div>
+                                  <p className="font-black text-sm">{m.name}</p>
+                                  <p className="text-[10px] font-mono text-black/50">{m.id}</p>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Custom masks list */}
+                        <div className="bg-white border-4 border-black p-8 rounded-3xl shadow-[8px_8px_0px_rgba(0,0,0,1)]">
+                          <h4 className="text-lg font-black uppercase mb-6">自訂遮罩 ({customMasks.length})</h4>
+                          {customMasks.length === 0 && (
+                            <p className="text-black/40 font-bold text-center py-6">尚未新增任何自訂遮罩</p>
+                          )}
+                          <div className="space-y-4">
+                            {customMasks.map(m => (
+                              <div key={m.id} className="border-2 border-black rounded-2xl p-4 bg-white">
+                                {editingMask?.id === m.id ? (
+                                  <div className="space-y-3">
+                                    <input
+                                      type="text"
+                                      className="w-full border-2 border-black p-3 rounded-xl font-bold text-sm"
+                                      placeholder="遮罩名稱"
+                                      value={editingMask.name}
+                                      onChange={e => setEditingMask({...editingMask, name: e.target.value})}
+                                    />
+                                    <textarea
+                                      className="w-full border-2 border-black p-3 rounded-xl font-mono text-xs"
+                                      rows={3}
+                                      placeholder="SVG Path (objectBoundingBox, 座標範圍 0~1)"
+                                      value={editingMask.path}
+                                      onChange={e => setEditingMask({...editingMask, path: e.target.value})}
+                                    />
+                                    <div className="flex gap-2">
+                                      <button
+                                        onClick={handleUpdateMask}
+                                        disabled={isSavingMasks}
+                                        className="flex items-center gap-1 px-4 py-2 bg-black text-[#FFEF00] rounded-xl font-black text-sm hover:scale-[1.02] transition-transform"
+                                      >
+                                        <Save size={14} /> {isSavingMasks ? '儲存中...' : '儲存'}
+                                      </button>
+                                      <button
+                                        onClick={() => setEditingMask(null)}
+                                        className="flex items-center gap-1 px-4 py-2 bg-white border-2 border-black rounded-xl font-black text-sm hover:bg-black/5"
+                                      >
+                                        <X size={14} /> 取消
+                                      </button>
+                                    </div>
+                                  </div>
+                                ) : (
+                                  <div className="flex items-start gap-4">
+                                    <div className="flex-1">
+                                      <p className="font-black">{m.name}</p>
+                                      <p className="text-[10px] font-mono text-black/50 mt-1">ID: mask-custom-{m.id}</p>
+                                      <p className="text-[11px] font-mono text-black/40 mt-1 break-all line-clamp-2">{m.path}</p>
+                                    </div>
+                                    <div className="flex gap-2 shrink-0">
+                                      <button
+                                        onClick={() => setEditingMask(m)}
+                                        className="p-2 border-2 border-black rounded-xl hover:bg-[#FFEF00]/30 transition-colors"
+                                      >
+                                        <Edit2 size={16} />
+                                      </button>
+                                      <button
+                                        onClick={() => handleDeleteMask(m.id)}
+                                        className="p-2 border-2 border-red-500 text-red-500 rounded-xl hover:bg-red-50 transition-colors"
+                                      >
+                                        <Trash2 size={16} />
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+
+                        {/* Add new mask */}
+                        <div className="bg-white border-4 border-black p-8 rounded-3xl shadow-[8px_8px_0px_rgba(0,0,0,1)]">
+                          <h4 className="text-xl font-black uppercase mb-6">新增自訂遮罩</h4>
+                          <div className="space-y-4">
+                            <div className="space-y-1">
+                              <label className="text-xs font-black uppercase">遮罩名稱</label>
+                              <input
+                                type="text"
+                                className="w-full border-2 border-black p-3 rounded-xl font-bold"
+                                placeholder="例：星形"
+                                value={newMask.name}
+                                onChange={e => setNewMask({...newMask, name: e.target.value})}
+                              />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-xs font-black uppercase">SVG Path
+                                <span className="ml-2 text-[10px] font-bold text-black/40 normal-case">
+                                  使用 objectBoundingBox 座標（0~1），多個路徑以空格分隔
+                                </span>
+                              </label>
+                              <textarea
+                                className="w-full border-2 border-black p-3 rounded-xl font-mono text-xs"
+                                rows={4}
+                                placeholder="M0.5,0 L1,1 L0,1 Z"
+                                value={newMask.path}
+                                onChange={e => setNewMask({...newMask, path: e.target.value})}
+                              />
+                            </div>
+                            {newMask.path && (
+                              <div className="space-y-1">
+                                <label className="text-xs font-black uppercase">預覽</label>
+                                <div className="w-32 h-32 border-2 border-black rounded-xl overflow-hidden bg-[#FFEF00]/20">
+                                  <svg viewBox="0 0 100 100" className="w-full h-full">
+                                    <defs>
+                                      <clipPath id="preview-mask" clipPathUnits="objectBoundingBox">
+                                        <path d={newMask.path} />
+                                      </clipPath>
+                                    </defs>
+                                    <rect x="0" y="0" width="100" height="100" fill="#000" style={{clipPath:'url(#preview-mask)'}} />
+                                  </svg>
+                                </div>
+                              </div>
+                            )}
+                            <button
+                              onClick={handleAddMask}
+                              disabled={isSavingMasks}
+                              className={`w-full bg-black text-[#FFEF00] py-4 rounded-full font-black uppercase text-sm hover:scale-[1.02] transition-transform flex items-center justify-center gap-2 ${isSavingMasks ? 'opacity-70 cursor-not-allowed' : ''}`}
+                            >
+                              {isSavingMasks ? <Loader2 className="animate-spin" size={18} /> : <Plus size={18} />}
+                              {isSavingMasks ? '新增中...' : '新增遮罩'}
+                            </button>
+                          </div>
                         </div>
                       </section>
                     )}
