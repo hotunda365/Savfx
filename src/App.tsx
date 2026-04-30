@@ -41,7 +41,8 @@ import {
   UploadCloud,
   Loader2,
   Database,
-  ChevronDown
+  ChevronDown,
+  Pencil
 } from 'lucide-react';
 import { 
   signInWithEmailAndPassword, 
@@ -433,6 +434,7 @@ function AppContent() {
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [adminActiveTab, setAdminActiveTab] = useState('overview');
   const [adminUnitsSubTab, setAdminUnitsSubTab] = useState<'list' | 'combinations'>('list');
+  const [allCoursesSubTab, setAllCoursesSubTab] = useState<'list' | 'regular' | 'personal' | 'group'>('list');
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
@@ -1089,6 +1091,7 @@ function AppContent() {
   const [newCourse, setNewCourse] = useState({ 
     name: '', 
     type: 'Diploma', 
+    category: 'regular' as 'regular' | 'personal',
     mandatory: [] as number[], 
     minUnits: 16, 
     allowExtra: true,
@@ -1178,6 +1181,7 @@ function AppContent() {
       setNewCourse({ 
         name: '', 
         type: 'Diploma', 
+        category: 'regular' as 'regular' | 'personal',
         mandatory: [], 
         minUnits: 4, 
         allowExtra: true,
@@ -2078,7 +2082,7 @@ function AppContent() {
         <div className="max-w-7xl mx-auto px-8 sm:px-16">
           <SectionTitle subtitle={siteSettings.coursesIntroSubtitle || "專業文憑與證書課程"}>{siteSettings.coursesIntroTitle || "課程介紹"}</SectionTitle>
           <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
-            {courses.map((course, i) => (
+            {courses.filter(c => c.category === 'regular' || !c.category).map((course, i) => (
               <motion.div 
                 key={i}
                 whileHover={{ y: -10 }}
@@ -2121,7 +2125,7 @@ function AppContent() {
           
           {/* Course Selector Tabs */}
           <div className="flex flex-wrap gap-2 sm:gap-4 mb-10 sm:mb-16 justify-center">
-            {courses.map(course => (
+            {courses.filter(c => c.category === 'personal').map(course => (
               <button
                 key={course.id}
                 onClick={() => handleCourseChange(course.id)}
@@ -2820,9 +2824,7 @@ function AppContent() {
                 { id: 'overview', label: '總覽', icon: Monitor },
                 { id: 'landing-page', label: '首頁管理', icon: LayoutGrid },
                 { id: 'settings', label: '基本設定', icon: Settings },
-                { id: 'courses', label: '課程管理', icon: GraduationCap },
-                { id: 'units', label: '個人課程管理', icon: BookOpen },
-                { id: 'group-courses', label: '團體課程管理', icon: Users },
+                { id: 'all-courses', label: '課程管理', icon: GraduationCap },
                 { id: 'briefing-leads', label: '簡介會留名', icon: FileText },
                 { id: 'tutors', label: '導師管理', icon: Users },
                 { id: 'student-works', label: '學生作品', icon: Film },
@@ -2834,7 +2836,7 @@ function AppContent() {
                   key={tab.id}
                   onClick={() => {
                     setAdminActiveTab(tab.id);
-                    if (tab.id === 'units') {
+                    if (tab.id === 'all-courses') {
                       setAdminUnitNames([...unitNames]);
                     }
                   }}
@@ -3012,10 +3014,111 @@ function AppContent() {
                       </section>
                     )}
 
-                    {adminActiveTab === 'courses' && (
+                    {adminActiveTab === 'all-courses' && (
+                      <div className="space-y-6">
+                        {/* Page header */}
+                        <h3 className="text-3xl font-black flex items-center gap-3">
+                          <GraduationCap size={32} /> 課程管理
+                        </h3>
+
+                        {/* Sub-tab navigation */}
+                        <div className="flex flex-wrap gap-2">
+                          {([
+                            { id: 'list', label: '📋 課程列表' },
+                            { id: 'regular', label: '🎓 常規課程' },
+                            { id: 'personal', label: '🧩 個人課程' },
+                            { id: 'group', label: '👥 團體課程' },
+                          ] as const).map(st => (
+                            <button
+                              key={st.id}
+                              onClick={() => setAllCoursesSubTab(st.id)}
+                              className={`px-5 py-2 rounded-full font-black text-sm border-2 border-black transition-all ${
+                                allCoursesSubTab === st.id
+                                  ? 'bg-[#FFEF00] text-black shadow-[3px_3px_0px_rgba(0,0,0,1)]'
+                                  : 'bg-white text-black hover:bg-black/5'
+                              }`}
+                            >{st.label}</button>
+                          ))}
+                        </div>
+
+                        {/* LIST sub-tab: unified table */}
+                        {allCoursesSubTab === 'list' && (
+                          <div className="bg-white border-4 border-black rounded-3xl overflow-hidden shadow-[6px_6px_0px_rgba(0,0,0,1)]">
+                            <table className="w-full text-sm">
+                              <thead>
+                                <tr className="bg-black text-[#FFEF00]">
+                                  <th className="px-4 py-3 text-left font-black">課程 ID</th>
+                                  <th className="px-4 py-3 text-left font-black">名稱</th>
+                                  <th className="px-4 py-3 text-left font-black">類別</th>
+                                  <th className="px-4 py-3 text-left font-black">Type</th>
+                                  <th className="px-4 py-3 text-left font-black">操作</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {courses.map((c, idx) => (
+                                  <tr key={c.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-black/5'}>
+                                    <td className="px-4 py-3 font-mono text-xs text-black/50">{c.id}</td>
+                                    <td className="px-4 py-3 font-bold">{c.name}</td>
+                                    <td className="px-4 py-3">
+                                      <span className={`px-2 py-1 rounded-full text-[10px] font-black uppercase ${
+                                        c.category === 'personal'
+                                          ? 'bg-blue-100 text-blue-700'
+                                          : 'bg-green-100 text-green-700'
+                                      }`}>
+                                        {c.category === 'personal' ? '個人課程' : '常規課程'}
+                                      </span>
+                                    </td>
+                                    <td className="px-4 py-3 text-xs text-black/60 font-bold">{c.type}</td>
+                                    <td className="px-4 py-3">
+                                      <div className="flex gap-2">
+                                        <button
+                                          onClick={() => { setEditingCourse({...c}); setShowEditCombinationModal(true); }}
+                                          className="text-blue-600 p-1 hover:bg-blue-50 rounded-lg transition-colors"
+                                        ><Pencil size={16} /></button>
+                                        <button
+                                          onClick={() => handleDeleteCourse(c.id.toString())}
+                                          className="text-red-600 p-1 hover:bg-red-50 rounded-lg transition-colors"
+                                        ><Trash2 size={16} /></button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                ))}
+                                {groupCourses.map((gc, idx) => (
+                                  <tr key={`gc-${gc.id}`} className={(courses.length + idx) % 2 === 0 ? 'bg-white' : 'bg-black/5'}>
+                                    <td className="px-4 py-3 font-mono text-xs text-black/50">{gc.id}</td>
+                                    <td className="px-4 py-3 font-bold">{gc.title}</td>
+                                    <td className="px-4 py-3">
+                                      <span className="px-2 py-1 rounded-full text-[10px] font-black uppercase bg-yellow-100 text-yellow-700">
+                                        團體課程
+                                      </span>
+                                    </td>
+                                    <td className="px-4 py-3 text-xs text-black/60 font-bold">—</td>
+                                    <td className="px-4 py-3">
+                                      <button
+                                        onClick={() => setAllCoursesSubTab('group')}
+                                        className="text-black/40 p-1 hover:bg-black/5 rounded-lg transition-colors text-xs font-bold"
+                                      >前往編輯</button>
+                                    </td>
+                                  </tr>
+                                ))}
+                                {courses.length === 0 && groupCourses.length === 0 && (
+                                  <tr>
+                                    <td colSpan={5} className="px-4 py-12 text-center text-black/30 font-black">
+                                      尚無課程資料
+                                    </td>
+                                  </tr>
+                                )}
+                              </tbody>
+                            </table>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {adminActiveTab === 'all-courses' && allCoursesSubTab === 'regular' && (
                       <section>
                         <h3 className="text-3xl font-black mb-8 flex items-center gap-3">
-                          <GraduationCap size={32} /> 課程管理
+                          <GraduationCap size={32} /> 常規課程管理
                         </h3>
                         <div className="grid md:grid-cols-2 gap-6 mb-12">
                           {courses.length > 0 ? (
@@ -3061,6 +3164,17 @@ function AppContent() {
                                 >
                                   <option value="Diploma">文憑 (Diploma)</option>
                                   <option value="Certificate">證書 (Certificate)</option>
+                                </select>
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase ml-1">課程分類</label>
+                                <select
+                                  className="w-full border-2 border-black p-3 rounded-xl font-bold text-sm bg-white"
+                                  value={newCourse.category}
+                                  onChange={e => setNewCourse({...newCourse, category: e.target.value as 'regular' | 'personal'})}
+                                >
+                                  <option value="regular">常規課程（指定單元）</option>
+                                  <option value="personal">個人課程（可自訂單元）</option>
                                 </select>
                               </div>
                               <div className="space-y-1">
@@ -3768,7 +3882,7 @@ function AppContent() {
                       </section>
                     )}
 
-                    {adminActiveTab === 'units' && (
+                    {adminActiveTab === 'all-courses' && allCoursesSubTab === 'personal' && (
                       <section>
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-4">
                           <div className="flex items-center gap-3">
@@ -3876,6 +3990,7 @@ function AppContent() {
                                   setNewCourse({
                                     name: '',
                                     type: 'Short Course',
+                                    category: 'personal',
                                     mandatory: [],
                                     minUnits: 4,
                                     allowExtra: true,
@@ -4451,7 +4566,7 @@ function AppContent() {
                       </section>
                     )}
 
-                    {adminActiveTab === 'group-courses' && (
+                    {adminActiveTab === 'all-courses' && allCoursesSubTab === 'group' && (
                       <section>
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
                           <div className="flex items-center gap-3">
