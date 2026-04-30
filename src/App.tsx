@@ -50,8 +50,8 @@ import {
   onAuthStateChanged, 
   signOut,
   User
-} from 'firebase/auth';
-import { auth } from './firebase';
+} from './localAuth';
+import { auth } from './localAuth';
 import { FaYoutube, FaFacebook, FaInstagram } from 'react-icons/fa';
 
 enum OperationType {
@@ -3423,49 +3423,7 @@ function AppContent() {
                       </div>
                     )}
 
-                    {adminActiveTab === 'units' && false && (
-                      <section>
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
-                          <h3 className="text-3xl font-black flex items-center gap-3">
-                            <GraduationCap size={32} /> 常規課程管理
-                          </h3>
-                          <button
-                            onClick={() => { setNewCourse({ name: '', type: 'Diploma', category: 'regular', mandatory: [], minUnits: 16, allowExtra: true, title: '', subtitle: '', desc: '', startDate: '', classTime: '', tuition: '', mask: 'mask-book', img: '' }); setShowAddCombinationModal(true); }}
-                            className="bg-black text-[#FFEF00] px-6 py-3 rounded-full font-black flex items-center gap-2 hover:scale-105 transition-transform text-sm"
-                          >
-                            <Plus size={20} /> 新增常規課程
-                          </button>
-                        </div>
-                        <div className="grid md:grid-cols-2 gap-6 mb-12">
-                          {courses.filter(c => c.category === 'regular' || !c.category).length > 0 ? (
-                            courses.filter(c => c.category === 'regular' || !c.category).map(c => (
-                              <div key={c.id} className="bg-white border-4 border-black p-6 rounded-3xl flex gap-4 items-center shadow-[4px_4px_0px_rgba(0,0,0,1)]">
-                                <div className="w-12 h-12 bg-black text-[#FFEF00] rounded-xl flex items-center justify-center font-black">
-                                  {c.type === 'Diploma' ? 'D' : 'C'}
-                                </div>
-                                <div className="flex-1">
-                                  <p className="font-black text-lg">{c.name}</p>
-                                  <p className="text-xs font-bold text-black/60 uppercase tracking-widest">{c.type} • {c.mandatory?.length || 0} 必修單元</p>
-                                </div>
-                                <div className="flex gap-1">
-                                  <button onClick={() => { setEditingCourse({...c}); setShowEditCombinationModal(true); }} className="text-blue-600 p-2 hover:bg-blue-50 rounded-full transition-colors">
-                                    <Pencil size={18} />
-                                  </button>
-                                  <button onClick={() => handleDeleteCourse(c.id.toString())} className="text-red-600 p-2 hover:bg-red-50 rounded-full transition-colors">
-                                    <Trash2 size={18} />
-                                  </button>
-                                </div>
-                              </div>
-                            ))
-                          ) : (
-                            <div className="md:col-span-2 text-center py-12 bg-black/5 rounded-[2rem] border-4 border-dashed border-black/10">
-                              <GraduationCap size={48} className="mx-auto mb-4 opacity-20" />
-                              <p className="font-black text-xl text-black/40">尚未建立任何常規課程</p>
-                            </div>
-                          )}
-                        </div>
-                      </section>
-                    )}
+                    {adminActiveTab === 'units' && false && (<div />)}
 
                     {adminActiveTab === 'landing-page' && (
                       <section className="space-y-12">
@@ -4040,12 +3998,12 @@ function AppContent() {
                       </section>
                     )}
 
-                    {false && (
+                    {adminActiveTab === 'units' && (
                       <section>
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-4">
                           <div className="flex items-center gap-3">
                             <BookOpen size={32} />
-                            <h3 className="text-3xl font-black">個人課程管理</h3>
+                            <h3 className="text-3xl font-black">📚 單元管理</h3>
                           </div>
                           <button
                             onClick={() => {
