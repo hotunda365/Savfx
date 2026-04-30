@@ -42,7 +42,8 @@ import {
   Loader2,
   Database,
   ChevronDown,
-  Pencil
+  Pencil,
+  FolderOpen
 } from 'lucide-react';
 import { 
   signInWithEmailAndPassword, 
@@ -433,7 +434,11 @@ function AppContent() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [showAdminPanel, setShowAdminPanel] = useState(false);
   const [adminActiveTab, setAdminActiveTab] = useState('overview');
-  const [adminUnitsSubTab, setAdminUnitsSubTab] = useState<'list' | 'combinations'>('list');
+  const [adminUnitsSubTab, setAdminUnitsSubTab] = useState<'list' | 'groups'>('list');
+  const [adminGroups, setAdminGroups] = useState<{ name: string; description?: string }[]>([]);
+  const [editingGroup, setEditingGroup] = useState<{ name: string; description?: string } | null>(null);
+  const [newGroupName, setNewGroupName] = useState('');
+  const [newGroupDesc, setNewGroupDesc] = useState('');
   const [courseMenuExpanded, setCourseMenuExpanded] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginPassword, setLoginPassword] = useState('');
@@ -3341,6 +3346,190 @@ function AppContent() {
                             </tbody>
                           </table>
                         </div>
+
+                        {/* Course Combinations Section */}
+                        <div className="mt-12">
+                          <h3 className="text-3xl font-black mb-8 flex items-center gap-3">
+                            ⚙️ 課程組合設定
+                          </h3>
+                          <div className="grid md:grid-cols-4 gap-8">
+                            {/* Course List (Combinations) */}
+                            <div className="md:col-span-1 space-y-4">
+                              <h4 className="text-sm font-black uppercase text-black/40 ml-2">選擇課程</h4>
+                              <div className="flex flex-col gap-2 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
+                                {courses.filter(c => c.category === 'personal').length > 0 ? (
+                                  courses.filter(c => c.category === 'personal').map((course) => (
+                                    <button
+                                      key={course.id}
+                                      onClick={() => setAdminSelectedCourseId(course.id.toString())}
+                                      className={`w-full text-left px-6 py-4 rounded-2xl font-black transition-all border-4 ${
+                                        adminSelectedCourseId?.toString() === course.id.toString()
+                                        ? 'bg-black text-[#FFEF00]'
+                                        : 'bg-white text-black border-black/10 hover:border-black'
+                                      }`}
+                                    >
+                                      <div className="flex items-center gap-3">
+                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-[10px] ${
+                                          adminSelectedCourseId?.toString() === course.id.toString() ? 'bg-[#FFEF00] text-black' : 'bg-black text-[#FFEF00]'
+                                        }`}>
+                                          {course.type === 'Diploma' ? 'D' : 'S'}
+                                        </div>
+                                        <span className="truncate flex-1">{course.name}</span>
+                                      </div>
+                                    </button>
+                                  ))
+                                ) : (
+                                  <div className="text-center py-8 bg-black/5 rounded-2xl border-2 border-dashed border-black/10">
+                                    <p className="text-sm font-bold text-black/40">先建立個人課程</p>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Unit Selection for Course */}
+                            <div className="md:col-span-3">
+                              {adminSelectedCourseId !== null ? (
+                                <div className="bg-white border-[6px] border-black p-10 rounded-[3rem] shadow-[12px_12px_0px_rgba(0,0,0,1)]">
+                                  {(() => {
+                                    const selectedCourse = courses.find(c => c.id.toString() === adminSelectedCourseId.toString());
+                                    if (!selectedCourse) return null;
+                                    
+                                    return (
+                                      <>
+                                        <div className="flex items-center justify-between mb-8">
+                                          <div>
+                                            <h4 className="text-2xl font-black">
+                                              {selectedCourse.name}
+                                            </h4>
+                                            <p className="text-sm font-bold text-black/40">設定此課程包含的必修單元</p>
+                                          </div>
+                                          <div className="flex items-center gap-4">
+                                            <button 
+                                              onClick={() => {
+                                                setEditingCourse({...selectedCourse});
+                                                setShowEditCombinationModal(true);
+                                              }}
+                                              className="text-blue-500 hover:bg-blue-50 p-2 rounded-xl transition-all"
+                                            >
+                                              <Edit2 size={24} />
+                                            </button>
+                                            <button 
+                                              onClick={() => handleDeleteCourse(selectedCourse.id.toString())}
+                                              className="text-red-500 hover:bg-red-50 p-2 rounded-xl transition-all"
+                                            >
+                                              <Trash2 size={24} />
+                                            </button>
+                                          </div>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                                          {unitNames.map((unit, i) => {
+                                            const isMandatory = selectedCourse.mandatory?.includes(i);
+                                            const isGlobalMandatory = unit.isMandatory;
+                                            
+                                            // Only show selected units in the combination view
+                                            if (!isMandatory && !isGlobalMandatory) return null;
+                                            
+                                            return (
+                                              <div
+                                                key={i}
+                                                className={`flex items-center gap-4 p-4 rounded-2xl border-[3px] transition-all text-left bg-black text-[#FFEF00] border-black shadow-[4px_4px_0px_rgba(0,0,0,1)]`}
+                                              >
+                                                <div className={`w-10 h-8 rounded-lg flex items-center justify-center font-black text-xs bg-[#FFEF00] text-black`}>
+                                                  U{i+1}
+                                                </div>
+                                                <div className="flex-1">
+                                                  <div className="flex items-center justify-between">
+                                                    <p className="font-black text-sm leading-tight truncate">{unit.name}</p>
+                                                    {unit.price > 0 && <p className="text-[10px] font-black opacity-60">${unit.price}</p>}
+                                                  </div>
+                                                  {isGlobalMandatory && <p className="text-[10px] font-bold opacity-60">全域必修</p>}
+                                                </div>
+                                                <CheckCircle2 size={20} />
+                                              </div>
+                                            );
+                                          })}
+                                        </div>
+                                      </>
+                                    );
+                                  })()}
+                                </div>
+                              ) : (
+                                <div className="h-full min-h-[400px] bg-black/5 border-4 border-dashed border-black/20 rounded-[3rem] flex flex-col items-center justify-center text-black/40">
+                                  <LayoutGrid size={64} className="mb-4 opacity-20" />
+                                  <p className="font-black text-xl">請從左側選擇一個課程進行單元設定</p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Section Settings Block */}
+                        <div className="bg-white border-4 border-black p-6 rounded-3xl shadow-[6px_6px_0px_rgba(0,0,0,1)]">
+                          <h4 className="text-sm font-black uppercase tracking-widest mb-4 text-black/50">區塊設定</h4>
+                          <div className="grid md:grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                              <label className="text-xs font-black uppercase">標題</label>
+                              <input type="text" className="w-full border-4 border-black p-3 rounded-xl font-bold"
+                                value={siteSettings.personalCourseTitle}
+                                onChange={e => setSiteSettings({...siteSettings, personalCourseTitle: e.target.value})} />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-xs font-black uppercase">副標題</label>
+                              <input type="text" className="w-full border-4 border-black p-3 rounded-xl font-bold"
+                                value={siteSettings.personalCourseSubtitle}
+                                onChange={e => setSiteSettings({...siteSettings, personalCourseSubtitle: e.target.value})} />
+                            </div>
+                            <div className="space-y-1 md:col-span-2">
+                              <label className="text-xs font-black uppercase">證書課程介紹文字</label>
+                              <input type="text" className="w-full border-4 border-black p-3 rounded-xl font-bold"
+                                value={siteSettings.certCourseDesc || ''}
+                                onChange={e => setSiteSettings({...siteSettings, certCourseDesc: e.target.value})} />
+                            </div>
+                            <div className="space-y-1 md:col-span-2">
+                              <label className="text-xs font-black uppercase">文憑課程介紹文字</label>
+                              <input type="text" className="w-full border-4 border-black p-3 rounded-xl font-bold"
+                                value={siteSettings.diplomaCourseDesc || ''}
+                                onChange={e => setSiteSettings({...siteSettings, diplomaCourseDesc: e.target.value})} />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-xs font-black uppercase">收費項目 1</label>
+                              <input type="text" className="w-full border-4 border-black p-3 rounded-xl font-bold"
+                                value={siteSettings.priceItem1 || ''}
+                                onChange={e => setSiteSettings({...siteSettings, priceItem1: e.target.value})} />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-xs font-black uppercase">收費項目 2</label>
+                              <input type="text" className="w-full border-4 border-black p-3 rounded-xl font-bold"
+                                value={siteSettings.priceItem2 || ''}
+                                onChange={e => setSiteSettings({...siteSettings, priceItem2: e.target.value})} />
+                            </div>
+                            <div className="space-y-1 md:col-span-2">
+                              <label className="text-xs font-black uppercase">折扣優惠說明文字</label>
+                              <input type="text" className="w-full border-4 border-black p-3 rounded-xl font-bold"
+                                value={siteSettings.priceItemExtra || ''}
+                                onChange={e => setSiteSettings({...siteSettings, priceItemExtra: e.target.value})} />
+                            </div>
+                          </div>
+                          <button
+                            onClick={async () => {
+                              setIsSavingSettings(true);
+                              try {
+                                await apiSetDoc('settings', 'global', siteSettings);
+                                showToast('設定已儲存！');
+                              } catch (error) {
+                                handleFirestoreError(error, OperationType.WRITE, 'settings/global');
+                              } finally {
+                                setIsSavingSettings(false);
+                              }
+                            }}
+                            disabled={isSavingSettings}
+                            className="mt-4 w-full bg-black text-[#FFEF00] py-3 rounded-full font-black flex items-center justify-center gap-2 hover:scale-[1.01] transition-all"
+                          >
+                            {isSavingSettings ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
+                            儲存區塊設定
+                          </button>
+                        </div>
                       </div>
                     )}
 
@@ -4016,73 +4205,6 @@ function AppContent() {
                           </button>
                         </div>
 
-                        {/* Section Settings Block */}
-                        <div className="bg-white border-4 border-black p-6 rounded-3xl shadow-[6px_6px_0px_rgba(0,0,0,1)] mb-6">
-                          <h4 className="text-sm font-black uppercase tracking-widest mb-4 text-black/50">區塊設定</h4>
-                          <div className="grid md:grid-cols-2 gap-4">
-                            <div className="space-y-1">
-                              <label className="text-xs font-black uppercase">標題</label>
-                              <input type="text" className="w-full border-4 border-black p-3 rounded-xl font-bold"
-                                value={siteSettings.personalCourseTitle}
-                                onChange={e => setSiteSettings({...siteSettings, personalCourseTitle: e.target.value})} />
-                            </div>
-                            <div className="space-y-1">
-                              <label className="text-xs font-black uppercase">副標題</label>
-                              <input type="text" className="w-full border-4 border-black p-3 rounded-xl font-bold"
-                                value={siteSettings.personalCourseSubtitle}
-                                onChange={e => setSiteSettings({...siteSettings, personalCourseSubtitle: e.target.value})} />
-                            </div>
-                            <div className="space-y-1 md:col-span-2">
-                              <label className="text-xs font-black uppercase">證書課程介紹文字</label>
-                              <input type="text" className="w-full border-4 border-black p-3 rounded-xl font-bold"
-                                value={siteSettings.certCourseDesc || ''}
-                                onChange={e => setSiteSettings({...siteSettings, certCourseDesc: e.target.value})} />
-                            </div>
-                            <div className="space-y-1 md:col-span-2">
-                              <label className="text-xs font-black uppercase">文憑課程介紹文字</label>
-                              <input type="text" className="w-full border-4 border-black p-3 rounded-xl font-bold"
-                                value={siteSettings.diplomaCourseDesc || ''}
-                                onChange={e => setSiteSettings({...siteSettings, diplomaCourseDesc: e.target.value})} />
-                            </div>
-                            <div className="space-y-1">
-                              <label className="text-xs font-black uppercase">收費項目 1</label>
-                              <input type="text" className="w-full border-4 border-black p-3 rounded-xl font-bold"
-                                value={siteSettings.priceItem1 || ''}
-                                onChange={e => setSiteSettings({...siteSettings, priceItem1: e.target.value})} />
-                            </div>
-                            <div className="space-y-1">
-                              <label className="text-xs font-black uppercase">收費項目 2</label>
-                              <input type="text" className="w-full border-4 border-black p-3 rounded-xl font-bold"
-                                value={siteSettings.priceItem2 || ''}
-                                onChange={e => setSiteSettings({...siteSettings, priceItem2: e.target.value})} />
-                            </div>
-                            <div className="space-y-1 md:col-span-2">
-                              <label className="text-xs font-black uppercase">折扣優惠說明文字</label>
-                              <input type="text" className="w-full border-4 border-black p-3 rounded-xl font-bold"
-                                value={siteSettings.priceItemExtra || ''}
-                                onChange={e => setSiteSettings({...siteSettings, priceItemExtra: e.target.value})} />
-                            </div>
-                          </div>
-                          <button
-                            onClick={async () => {
-                              setIsSavingSettings(true);
-                              try {
-                                await apiSetDoc('settings', 'global', siteSettings);
-                                showToast('設定已儲存！');
-                              } catch (error) {
-                                handleFirestoreError(error, OperationType.WRITE, 'settings/global');
-                              } finally {
-                                setIsSavingSettings(false);
-                              }
-                            }}
-                            disabled={isSavingSettings}
-                            className="mt-4 w-full bg-black text-[#FFEF00] py-3 rounded-full font-black flex items-center justify-center gap-2 hover:scale-[1.01] transition-all"
-                          >
-                            {isSavingSettings ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
-                            儲存區塊設定
-                          </button>
-                        </div>
-
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
                           <div className="flex items-center gap-4">
                             <div className="flex bg-black/5 p-1 rounded-2xl border-2 border-black">
@@ -4093,10 +4215,10 @@ function AppContent() {
                                 單元清單
                               </button>
                               <button 
-                                onClick={() => setAdminUnitsSubTab('combinations')}
-                                className={`px-6 py-2 rounded-xl font-black transition-all text-sm ${adminUnitsSubTab === 'combinations' ? 'bg-black text-[#FFEF00]' : 'text-black/40 hover:text-black'}`}
+                                onClick={() => setAdminUnitsSubTab('groups')}
+                                className={`px-6 py-2 rounded-xl font-black transition-all text-sm ${adminUnitsSubTab === 'groups' ? 'bg-black text-[#FFEF00]' : 'text-black/40 hover:text-black'}`}
                               >
-                                個人課程組合
+                                群組管理
                               </button>
                             </div>
                             
@@ -4108,97 +4230,123 @@ function AppContent() {
                                 <Plus size={20} /> 新增單元
                               </button>
                             )}
-                            
-                            {adminUnitsSubTab === 'combinations' && (
-                              <button 
-                                onClick={() => {
-                                  setNewCourse({
-                                    name: '',
-                                    type: 'Short Course',
-                                    category: 'personal',
-                                    mandatory: [],
-                                    minUnits: 4,
-                                    allowExtra: true,
-                                    title: '',
-                                    subtitle: '',
-                                    desc: '',
-                                    startDate: '',
-                                    classTime: '',
-                                    tuition: '',
-                                    mask: 'mask-cloud',
-                                    img: 'https://picsum.photos/seed/course/800/600'
-                                  });
-                                  setShowAddCombinationModal(true);
-                                }}
-                                className="bg-black text-[#FFEF00] px-6 py-2 rounded-full font-black flex items-center gap-2 hover:scale-105 transition-transform text-sm"
-                              >
-                                <Plus size={20} /> 新增個人課程組合
-                              </button>
-                            )}
                           </div>
                         </div>
                         
-                        {adminUnitsSubTab === 'list' ? (
+                        {adminUnitsSubTab === 'list' && (
                           <div className="bg-white border-[6px] border-black p-10 rounded-[3rem] shadow-[12px_12px_0px_rgba(0,0,0,1)] relative overflow-hidden">
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6 mb-10">
-                              {adminUnitNames.map((unit, i) => (
-                                <div key={i} className="flex items-center gap-4 bg-white p-4 rounded-2xl border-[3px] border-black group hover:bg-[#FFEF00]/5 transition-all shadow-[4px_4px_0px_rgba(0,0,0,1)]">
-                                  <div className="flex items-center justify-center bg-black text-[#FFEF00] w-12 h-10 rounded-xl font-black text-sm shrink-0">
-                                    U{i+1}
+                            <div className="grid grid-cols-1 gap-6 mb-10">
+                              {(() => {
+                                const groups: { [key: string]: any[] } = {};
+                                adminUnitNames.forEach((unit, i) => {
+                                  const groupName = unit.group || '未分類';
+                                  if (!groups[groupName]) groups[groupName] = [];
+                                  groups[groupName].push({ unit, index: i });
+                                });
+                                return Object.entries(groups).map(([groupName, units]) => (
+                                <div key={groupName} className="space-y-3">
+                                  <div className="flex items-center gap-3 px-4 py-2 bg-black/5 rounded-lg border-2 border-black/20">
+                                    <span className="text-xs font-black uppercase text-black/60">群組: {groupName}</span>
                                   </div>
-                                  <div className="flex flex-col flex-1 gap-1">
-                                    <input 
-                                      type="text" 
-                                      className="bg-transparent font-black text-lg outline-none placeholder:text-black/20"
-                                      placeholder="請輸入單元名稱"
-                                      value={unit.name}
-                                      onChange={(e) => {
-                                        const newUnits = [...adminUnitNames];
-                                        newUnits[i] = { ...unit, name: e.target.value };
-                                        setAdminUnitNames(newUnits);
-                                      }}
-                                    />
-                                    <div className="flex items-center gap-2">
-                                      <span className="text-xs font-bold text-black/40">價格:</span>
-                                      <input 
-                                        type="number" 
-                                        className="bg-transparent font-bold text-sm outline-none w-24 border-b border-black/10 focus:border-black"
-                                        placeholder="價格"
-                                        value={unit.price || 0}
-                                        onChange={(e) => {
-                                          const newUnits = [...adminUnitNames];
-                                          newUnits[i] = { ...unit, price: Number(e.target.value) };
-                                          setAdminUnitNames(newUnits);
-                                        }}
-                                      />
-                                    </div>
+                                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
+                                    {units.map(({ unit, index: i }: any) => (
+                                      <div key={i} className="flex flex-col gap-4 bg-white p-4 rounded-2xl border-[3px] border-black group hover:bg-[#FFEF00]/5 transition-all shadow-[4px_4px_0px_rgba(0,0,0,1)]">
+                                        <div className="flex items-center gap-4">
+                                          <div className="flex items-center justify-center bg-black text-[#FFEF00] w-12 h-10 rounded-xl font-black text-sm shrink-0">
+                                            U{i+1}
+                                          </div>
+                                          <div className="flex-1">
+                                            <input 
+                                              type="text" 
+                                              className="bg-transparent font-black text-lg outline-none placeholder:text-black/20 w-full"
+                                              placeholder="單元名稱"
+                                              value={unit.name}
+                                              onChange={(e) => {
+                                                const newUnits = [...adminUnitNames];
+                                                newUnits[i] = { ...unit, name: e.target.value };
+                                                setAdminUnitNames(newUnits);
+                                              }}
+                                            />
+                                          </div>
+                                          <button 
+                                            onClick={() => {
+                                              showConfirm("確定刪除", `確定要刪除單元 U${i+1} 嗎？`, () => {
+                                                setAdminUnitNames(prev => prev.filter((_, idx) => idx !== i));
+                                              });
+                                            }}
+                                            className="text-red-500 opacity-0 group-hover:opacity-100 transition-all hover:scale-125 p-2"
+                                          >
+                                            <Trash2 size={20} />
+                                          </button>
+                                        </div>
+                                        
+                                        <div className="grid grid-cols-2 gap-2">
+                                          <div className="space-y-1">
+                                            <label className="text-[10px] font-black uppercase text-black/50">自訂 ID</label>
+                                            <input 
+                                              type="text" 
+                                              className="w-full border-2 border-black p-2 rounded-lg font-bold text-xs"
+                                              placeholder="例: U001"
+                                              value={unit.customId || ''}
+                                              onChange={(e) => {
+                                                const newUnits = [...adminUnitNames];
+                                                newUnits[i] = { ...unit, customId: e.target.value };
+                                                setAdminUnitNames(newUnits);
+                                              }}
+                                            />
+                                          </div>
+                                          <div className="space-y-1">
+                                            <label className="text-[10px] font-black uppercase text-black/50">群組</label>
+                                            <input 
+                                              type="text" 
+                                              className="w-full border-2 border-black p-2 rounded-lg font-bold text-xs"
+                                              placeholder="例: 基礎"
+                                              value={unit.group || ''}
+                                              onChange={(e) => {
+                                                const newUnits = [...adminUnitNames];
+                                                newUnits[i] = { ...unit, group: e.target.value };
+                                                setAdminUnitNames(newUnits);
+                                              }}
+                                            />
+                                          </div>
+                                          <div className="space-y-1">
+                                            <label className="text-[10px] font-black uppercase text-black/50">價格</label>
+                                            <input 
+                                              type="number" 
+                                              className="w-full border-2 border-black p-2 rounded-lg font-bold text-xs"
+                                              placeholder="0"
+                                              value={unit.price || 0}
+                                              onChange={(e) => {
+                                                const newUnits = [...adminUnitNames];
+                                                newUnits[i] = { ...unit, price: Number(e.target.value) };
+                                                setAdminUnitNames(newUnits);
+                                              }}
+                                            />
+                                          </div>
+                                          <div className="space-y-1">
+                                            <label className="text-[10px] font-black uppercase text-black/50">必修</label>
+                                            <button
+                                              onClick={() => {
+                                                const newUnits = [...adminUnitNames];
+                                                newUnits[i] = { ...unit, isMandatory: !unit.isMandatory };
+                                                setAdminUnitNames(newUnits);
+                                              }}
+                                              className={`w-full px-2 py-2 rounded-lg font-black text-xs transition-all border-2 ${
+                                                unit.isMandatory 
+                                                ? 'bg-black text-[#FFEF00] border-black' 
+                                                : 'bg-white text-black border-black/20 hover:border-black'
+                                              }`}
+                                            >
+                                              {unit.isMandatory ? '是' : '否'}
+                                            </button>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    ))}
                                   </div>
-                                  <button
-                                    onClick={() => {
-                                      const newUnits = [...adminUnitNames];
-                                      newUnits[i] = { ...unit, isMandatory: !unit.isMandatory };
-                                      setAdminUnitNames(newUnits);
-                                    }}
-                                    className={`px-3 py-1 rounded-lg font-black text-xs transition-all border-2 ${
-                                      unit.isMandatory 
-                                      ? 'bg-black text-[#FFEF00] border-black' 
-                                      : 'bg-white text-black border-black/20 hover:border-black'
-                                    }`}
-                                  >
-                                    {unit.isMandatory ? '必修' : '選修'}
-                                  </button>
-                                  <button 
-                                    onClick={() => {
-                                      showConfirm("確定刪除", `確定要刪除單元 U${i+1} 嗎？`, () => {
-                                        setAdminUnitNames(prev => prev.filter((_, idx) => idx !== i));
-                                      });
-                                    }}
-                                    className="text-red-500 opacity-0 group-hover:opacity-100 transition-all hover:scale-125 p-2"
-                                  >
-                                    <Trash2 size={24} />
-                                  </button>
                                 </div>
-                              ))}
+                              ));
+                              })()}
                             </div>
                             
                             <button 
@@ -4230,122 +4378,197 @@ function AppContent() {
                               {!dataLoaded.units ? '正在載入資料...' : (isSavingUnits ? '正在儲存...' : '儲存所有單元')}
                             </button>
                           </div>
-                        ) : (
-                          <div className="grid md:grid-cols-4 gap-8">
-                            {/* Course List (Combinations) */}
-                            <div className="md:col-span-1 space-y-4">
-                              <h4 className="text-sm font-black uppercase text-black/40 ml-2">選擇課程組合</h4>
-                              <div className="flex flex-col gap-2 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
-                                {courses.filter(c => c.category === 'personal').length > 0 ? (
-                                  courses.filter(c => c.category === 'personal').map((course) => (
-                                    <button
-                                      key={course.id}
-                                      onClick={() => setAdminSelectedCourseId(course.id.toString())}
-                                      className={`w-full text-left px-6 py-4 rounded-2xl font-black transition-all border-4 ${
-                                        adminSelectedCourseId?.toString() === course.id.toString()
-                                        ? 'bg-black text-[#FFEF00]'
-                                        : 'bg-white text-black border-black/10 hover:border-black'
-                                      }`}
-                                    >
-                                      <div className="flex items-center gap-3">
-                                        <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-[10px] ${
-                                          adminSelectedCourseId?.toString() === course.id.toString() ? 'bg-[#FFEF00] text-black' : 'bg-black text-[#FFEF00]'
-                                        }`}>
-                                          {course.type === 'Diploma' ? 'D' : 'S'}
-                                        </div>
-                                        <span className="truncate flex-1">{course.name}</span>
-                                      </div>
-                                    </button>
-                                  ))
-                                ) : (
-                                  <div className="text-center py-8 bg-black/5 rounded-2xl border-2 border-dashed border-black/10">
-                                    <p className="text-sm font-bold text-black/40">尚未建立個人課程組合</p>
-                                  </div>
-                                )}
+                        )}
+
+                        {/* Group Management */}
+                        {adminUnitsSubTab === 'groups' && (
+                          <div className="space-y-10">
+                            {/* Add New Group Section */}
+                            <div className="bg-gradient-to-br from-black to-black/80 text-[#FFEF00] p-10 rounded-[3rem] shadow-[12px_12px_0px_rgba(0,0,0,0.3)]">
+                              <h3 className="text-2xl font-black mb-6">➕ 建立新群組</h3>
+                              <div className="space-y-4">
+                                <div>
+                                  <label className="text-sm font-black uppercase text-[#FFEF00]/70 block mb-2">群組名稱</label>
+                                  <input 
+                                    type="text" 
+                                    className="w-full bg-[#FFEF00] text-black p-3 rounded-2xl font-black placeholder:text-black/30 border-2 border-[#FFEF00]"
+                                    placeholder="例: 基礎課程、進階課程"
+                                    value={newGroupName}
+                                    onChange={(e) => setNewGroupName(e.target.value)}
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-sm font-black uppercase text-[#FFEF00]/70 block mb-2">群組描述 (選擇性)</label>
+                                  <input 
+                                    type="text" 
+                                    className="w-full bg-[#FFEF00] text-black p-3 rounded-2xl font-black placeholder:text-black/30 border-2 border-[#FFEF00]"
+                                    placeholder="說明此群組的用途"
+                                    value={newGroupDesc}
+                                    onChange={(e) => setNewGroupDesc(e.target.value)}
+                                  />
+                                </div>
+                                <button 
+                                  onClick={() => {
+                                    if (newGroupName.trim()) {
+                                      setAdminGroups([...adminGroups, { name: newGroupName, description: newGroupDesc }]);
+                                      setNewGroupName('');
+                                      setNewGroupDesc('');
+                                      showToast('群組已建立！');
+                                    } else {
+                                      showToast('請輸入群組名稱', undefined);
+                                    }
+                                  }}
+                                  className="w-full bg-[#FFEF00] text-black py-4 rounded-2xl font-black text-lg hover:scale-105 transition-transform active:scale-95 shadow-[4px_4px_0px_rgba(0,0,0,0.5)]"
+                                >
+                                  建立群組
+                                </button>
                               </div>
                             </div>
 
-                            {/* Unit Selection for Course */}
-                            <div className="md:col-span-3">
-                              {adminSelectedCourseId !== null ? (
-                                <div className="bg-white border-[6px] border-black p-10 rounded-[3rem] shadow-[12px_12px_0px_rgba(0,0,0,1)]">
-                                  {(() => {
-                                    const selectedCourse = courses.find(c => c.id.toString() === adminSelectedCourseId.toString());
-                                    if (!selectedCourse) return null;
+                            {/* Groups List */}
+                            <div className="bg-white border-[6px] border-black p-10 rounded-[3rem] shadow-[12px_12px_0px_rgba(0,0,0,1)]">
+                              <h3 className="text-2xl font-black mb-8">📁 現有群組</h3>
+                              
+                              {adminGroups.length === 0 ? (
+                                <div className="text-center py-16 bg-black/5 rounded-2xl border-4 border-dashed border-black/20">
+                                  <FolderOpen size={64} className="mx-auto mb-4 text-black/20" />
+                                  <p className="text-lg font-black text-black/40">尚未建立任何群組</p>
+                                  <p className="text-sm font-bold text-black/30 mt-2">從左邊的表單開始建立第一個群組</p>
+                                </div>
+                              ) : (
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                  {adminGroups.map((group, groupIdx) => {
+                                    const unitsInGroup = adminUnitNames.filter((u: any) => (u.group || '未分類') === group.name).length;
+                                    const mandatoryCount = adminUnitNames.filter((u: any) => (u.group || '未分類') === group.name && u.isMandatory).length;
                                     
                                     return (
-                                      <>
-                                        <div className="flex items-center justify-between mb-8">
-                                          <div>
-                                            <h4 className="text-2xl font-black">
-                                              {selectedCourse.name}
-                                            </h4>
-                                            <p className="text-sm font-bold text-black/40">設定此課程組合包含的單元 (必修)</p>
+                                      <div key={groupIdx} className="bg-white border-[4px] border-black p-6 rounded-2xl shadow-[6px_6px_0px_rgba(0,0,0,1)] hover:shadow-[8px_8px_0px_rgba(0,0,0,1)] transition-all group">
+                                        <div className="flex items-start justify-between mb-4">
+                                          <div className="flex-1">
+                                            <h4 className="text-xl font-black text-black mb-2">{group.name}</h4>
+                                            {group.description && <p className="text-sm text-black/60 font-bold">{group.description}</p>}
                                           </div>
-                                          <div className="flex items-center gap-4">
+                                          <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-all">
                                             <button 
                                               onClick={() => {
-                                                setEditingCourse({...selectedCourse});
-                                                setShowEditCombinationModal(true);
+                                                setEditingGroup(group);
+                                                setNewGroupName(group.name);
+                                                setNewGroupDesc(group.description || '');
                                               }}
-                                              className="text-blue-500 hover:bg-blue-50 p-2 rounded-xl transition-all"
+                                              className="p-2 bg-blue-50 text-blue-500 rounded-lg hover:scale-110 transition-transform"
                                             >
-                                              <Edit2 size={24} />
+                                              <Edit2 size={18} />
                                             </button>
                                             <button 
-                                              onClick={() => handleDeleteCourse(selectedCourse.id.toString())}
-                                              className="text-red-500 hover:bg-red-50 p-2 rounded-xl transition-all"
+                                              onClick={() => {
+                                                showConfirm('刪除群組', `確定要刪除群組「${group.name}」嗎？其中的單元將被移到「未分類」。`, () => {
+                                                  // Move units from this group to "未分類"
+                                                  const updatedUnits = adminUnitNames.map((u: any) => 
+                                                    (u.group || '未分類') === group.name ? { ...u, group: '未分類' } : u
+                                                  );
+                                                  setAdminUnitNames(updatedUnits);
+                                                  setAdminGroups(adminGroups.filter((_, i) => i !== groupIdx));
+                                                  showToast('群組已刪除，單元已移至「未分類」');
+                                                });
+                                              }}
+                                              className="p-2 bg-red-50 text-red-500 rounded-lg hover:scale-110 transition-transform"
                                             >
-                                              <Trash2 size={24} />
+                                              <Trash2 size={18} />
                                             </button>
                                           </div>
                                         </div>
 
-                                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                                          {unitNames.map((unit, i) => {
-                                            const isMandatory = selectedCourse.mandatory?.includes(i);
-                                            const isGlobalMandatory = unit.isMandatory;
-                                            
-                                            // Only show selected units in the combination view
-                                            if (!isMandatory && !isGlobalMandatory) return null;
-                                            
-                                            return (
-                                              <div
-                                                key={i}
-                                                className={`flex items-center gap-4 p-4 rounded-2xl border-[3px] transition-all text-left bg-black text-[#FFEF00] border-black shadow-[4px_4px_0px_rgba(0,0,0,1)]`}
-                                              >
-                                                <div className={`w-10 h-8 rounded-lg flex items-center justify-center font-black text-xs bg-[#FFEF00] text-black`}>
-                                                  U{i+1}
-                                                </div>
-                                                <div className="flex-1">
-                                                  <div className="flex items-center justify-between">
-                                                    <p className="font-black text-sm leading-tight truncate">{unit.name}</p>
-                                                    {unit.price > 0 && <p className="text-[10px] font-black opacity-60">${unit.price}</p>}
-                                                  </div>
-                                                  {isGlobalMandatory && <p className="text-[10px] font-bold opacity-60">全域必修</p>}
-                                                </div>
-                                                <CheckCircle2 size={20} />
-                                              </div>
-                                            );
-                                          })}
+                                        <div className="grid grid-cols-2 gap-3 mb-4">
+                                          <div className="bg-black/5 rounded-lg p-3 text-center border-2 border-black/10">
+                                            <p className="text-[10px] font-black uppercase text-black/50">總單元數</p>
+                                            <p className="text-2xl font-black text-black">{unitsInGroup}</p>
+                                          </div>
+                                          <div className="bg-black/5 rounded-lg p-3 text-center border-2 border-black/10">
+                                            <p className="text-[10px] font-black uppercase text-black/50">必修單元</p>
+                                            <p className="text-2xl font-black text-black">{mandatoryCount}</p>
+                                          </div>
                                         </div>
-                                      </>
+
+                                        {/* Units in this group */}
+                                        <div className="bg-black/5 rounded-lg p-3 border-2 border-black/10">
+                                          <p className="text-xs font-black uppercase text-black/50 mb-2">包含的單元</p>
+                                          <div className="flex flex-wrap gap-2">
+                                            {adminUnitNames.filter((u: any) => (u.group || '未分類') === group.name).map((unit: any, idx: number) => (
+                                              <span key={idx} className="bg-black text-[#FFEF00] px-2 py-1 rounded-lg text-xs font-bold">
+                                                {unit.name}
+                                              </span>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      </div>
                                     );
-                                  })()}
-                                </div>
-                              ) : (
-                                <div className="h-full min-h-[400px] bg-black/5 border-4 border-dashed border-black/20 rounded-[3rem] flex flex-col items-center justify-center text-black/40">
-                                  <LayoutGrid size={64} className="mb-4 opacity-20" />
-                                  <p className="font-black text-xl">請從左側選擇一個課程組合進行管理</p>
+                                  })}
                                 </div>
                               )}
                             </div>
+
+                            {/* Assign Units to Groups */}
+                            <div className="bg-white border-[6px] border-black p-10 rounded-[3rem] shadow-[12px_12px_0px_rgba(0,0,0,1)]">
+                              <h3 className="text-2xl font-black mb-8">🏷️ 分配單元至群組</h3>
+                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {adminUnitNames.map((unit: any, idx: number) => {
+                                  const currentGroup = unit.group || '未分類';
+                                  
+                                  return (
+                                    <div key={idx} className="bg-white border-[3px] border-black p-4 rounded-2xl shadow-[4px_4px_0px_rgba(0,0,0,1)]">
+                                      <div className="flex items-center gap-2 mb-3">
+                                        <div className="bg-black text-[#FFEF00] w-8 h-6 rounded-lg flex items-center justify-center font-black text-xs shrink-0">
+                                          U{idx+1}
+                                        </div>
+                                        <p className="font-black text-sm truncate flex-1">{unit.name}</p>
+                                      </div>
+                                      <select 
+                                        value={currentGroup}
+                                        onChange={(e) => {
+                                          const newUnits = [...adminUnitNames];
+                                          newUnits[idx] = { ...unit, group: e.target.value };
+                                          setAdminUnitNames(newUnits);
+                                        }}
+                                        className="w-full border-2 border-black p-2 rounded-lg font-bold text-sm bg-white hover:bg-[#FFEF00]/10 focus:bg-[#FFEF00]/20 transition-all"
+                                      >
+                                        <option value="未分類">未分類</option>
+                                        {adminGroups.map((group, gIdx) => (
+                                          <option key={gIdx} value={group.name}>
+                                            {group.name}
+                                          </option>
+                                        ))}
+                                      </select>
+                                      {unit.isMandatory && <p className="text-[10px] font-bold text-black/40 mt-2">• 全域必修</p>}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+
+                            {/* Save Groups */}
+                            <button 
+                              onClick={async () => {
+                                try {
+                                  setIsSavingUnits(true);
+                                  await apiBulkSet('units', adminUnitNames.map((u: any) => ({ id: u.id.toString(), ...u })));
+                                  setUnitNames([...adminUnitNames]);
+                                  showToast("群組分配已儲存！");
+                                } catch (error) {
+                                  handleFirestoreError(error, OperationType.WRITE, 'units');
+                                } finally {
+                                  setIsSavingUnits(false);
+                                }
+                              }}
+                              disabled={isSavingUnits}
+                              className={`w-full bg-black text-[#FFEF00] py-6 rounded-full font-black flex items-center justify-center gap-3 hover:scale-[1.01] active:scale-[0.99] transition-all text-xl shadow-[0_10px_20px_rgba(0,0,0,0.2)] ${isSavingUnits ? 'opacity-70 cursor-not-allowed' : ''}`}
+                            >
+                              {isSavingUnits ? <Loader2 className="animate-spin" size={28} /> : <Save size={28} />}
+                              {isSavingUnits ? '正在儲存...' : '儲存群組分配'}
+                            </button>
                           </div>
                         )}
 
-                        {/* Edit Combination Modal */}
-
-                        {/* Add Combination Modal — unified for all 3 types */}
+                        {/* Modals */}
                         <AnimatePresence>
                           {showAddCombinationModal && (
                             <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
