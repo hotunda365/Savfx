@@ -2896,6 +2896,16 @@ function AppContent() {
               {courseMenuExpanded && (
                 <div className="space-y-1 pl-4 border-l-2 border-white/20">
                   <button
+                    onClick={() => { setAdminActiveTab('all-courses'); setCourseMenuExpanded(true); }}
+                    className={`flex items-center gap-3 px-4 py-2 rounded-lg font-bold transition-all w-full text-sm ${
+                      adminActiveTab === 'all-courses'
+                      ? 'bg-[#FFEF00] text-black'
+                      : 'hover:bg-white/10 text-white/70 hover:text-white'
+                    }`}
+                  >
+                    📋 課程列表
+                  </button>
+                  <button
                     onClick={() => { setAdminActiveTab('regular-courses'); setCourseMenuExpanded(true); }}
                     className={`flex items-center gap-3 px-4 py-2 rounded-lg font-bold transition-all w-full text-sm ${
                       adminActiveTab === 'regular-courses'
@@ -3099,6 +3109,105 @@ function AppContent() {
                           )}
                         </div>
                       </section>
+                    )}
+
+                    {adminActiveTab === 'all-courses' && (
+                      <div className="space-y-6">
+                        {/* Page header + Add button */}
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                          <h3 className="text-3xl font-black flex items-center gap-3">
+                            📋 課程列表
+                          </h3>
+                          <button
+                            onClick={() => { setNewCourse({ name: '', type: 'Diploma', category: 'regular', mandatory: [], minUnits: 16, allowExtra: true, title: '', subtitle: '', desc: '', startDate: '', classTime: '', tuition: '', mask: 'mask-book', img: '' }); setShowAddCombinationModal(true); }}
+                            className="bg-black text-[#FFEF00] px-6 py-3 rounded-full font-black flex items-center gap-2 hover:scale-105 transition-transform text-sm"
+                          >
+                            <Plus size={20} /> 新增課程
+                          </button>
+                        </div>
+
+                        {/* Unified courses table */}
+                        <div className="bg-white border-4 border-black rounded-3xl overflow-hidden shadow-[6px_6px_0px_rgba(0,0,0,1)]">
+                          <table className="w-full text-sm">
+                              <thead>
+                                <tr className="bg-black text-[#FFEF00]">
+                                  <th className="px-4 py-3 text-left font-black">課程 ID</th>
+                                  <th className="px-4 py-3 text-left font-black">名稱</th>
+                                  <th className="px-4 py-3 text-left font-black">課程類型</th>
+                                  <th className="px-4 py-3 text-left font-black">Type</th>
+                                  <th className="px-4 py-3 text-left font-black">操作</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {/* Regular and personal courses */}
+                                {courses.map((c, idx) => (
+                                  <tr key={c.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-black/5'}>
+                                    <td className="px-4 py-3 font-mono text-xs text-black/50">{c.id}</td>
+                                    <td className="px-4 py-3 font-bold">{c.name}</td>
+                                    <td className="px-4 py-3">
+                                      <span className={`px-2 py-1 rounded-full text-[10px] font-black uppercase ${
+                                        c.category === 'personal'
+                                          ? 'bg-blue-100 text-blue-700'
+                                          : 'bg-green-100 text-green-700'
+                                      }`}>
+                                        {c.category === 'personal' ? '🧩 個人課程' : '🎓 常規課程'}
+                                      </span>
+                                    </td>
+                                    <td className="px-4 py-3 text-xs text-black/60 font-bold">{c.type}</td>
+                                    <td className="px-4 py-3">
+                                      <div className="flex gap-2">
+                                        <button
+                                          onClick={() => { setEditingCourse({...c}); setShowEditCombinationModal(true); }}
+                                          className="text-blue-600 p-1 hover:bg-blue-50 rounded-lg transition-colors"
+                                        ><Pencil size={16} /></button>
+                                        <button
+                                          onClick={() => handleDeleteCourse(c.id.toString())}
+                                          className="text-red-600 p-1 hover:bg-red-50 rounded-lg transition-colors"
+                                        ><Trash2 size={16} /></button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                ))}
+                                {/* Group courses */}
+                                {groupCourses.map((gc, idx) => (
+                                  <tr key={gc.id} className={(courses.length + idx) % 2 === 0 ? 'bg-white' : 'bg-black/5'}>
+                                    <td className="px-4 py-3 font-mono text-xs text-black/50">{gc.id}</td>
+                                    <td className="px-4 py-3 font-bold">{gc.title}</td>
+                                    <td className="px-4 py-3">
+                                      <span className="px-2 py-1 rounded-full text-[10px] font-black uppercase bg-yellow-100 text-yellow-700">
+                                        👥 團體課程
+                                      </span>
+                                    </td>
+                                    <td className="px-4 py-3 text-xs text-black/60 font-bold">-</td>
+                                    <td className="px-4 py-3">
+                                      <div className="flex gap-2">
+                                        <button
+                                          onClick={() => { setEditingCourse({...gc, category: 'group', type: ''}); setShowEditCombinationModal(true); }}
+                                          className="text-blue-600 p-1 hover:bg-blue-50 rounded-lg transition-colors"
+                                        ><Pencil size={16} /></button>
+                                        <button
+                                          onClick={() => showConfirm('確定要刪除此課程嗎?', '刪除後將無法復原。', async () => {
+                                            const result = await apiDeleteDoc('groupCourses', gc.id);
+                                            if (result.status === 200) {
+                                              showToast('課程已刪除', 'success');
+                                              setGroupCourses(groupCourses.filter(x => x.id !== gc.id));
+                                            } else {
+                                              showToast('刪除失敗', 'error');
+                                            }
+                                          })}
+                                          className="text-red-600 p-1 hover:bg-red-50 rounded-lg transition-colors"
+                                        ><Trash2 size={16} /></button>
+                                      </div>
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                            {(courses.length === 0 && groupCourses.length === 0) && (
+                              <div className="p-8 text-center text-black/50 font-bold">尚無課程</div>
+                            )}
+                        </div>
+                      </div>
                     )}
 
                     {adminActiveTab === 'regular-courses' && (
