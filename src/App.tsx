@@ -2142,9 +2142,14 @@ function AppContent() {
                 <h3 className="text-2xl sm:text-4xl md:text-5xl font-black leading-tight tracking-tighter">{currentCourse.name}</h3>
                 
                 <div className="space-y-3 sm:space-y-4">
-                  {currentCourse.desc && (
+                  {siteSettings.certCourseDesc && (
                     <p className="text-base sm:text-xl font-bold leading-relaxed opacity-90">
-                      {currentCourse.desc}
+                      {siteSettings.certCourseDesc}
+                    </p>
+                  )}
+                  {siteSettings.diplomaCourseDesc && (
+                    <p className="text-base sm:text-xl font-bold leading-relaxed opacity-90">
+                      {siteSettings.diplomaCourseDesc}
                     </p>
                   )}
                   
