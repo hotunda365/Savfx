@@ -495,7 +495,12 @@ function AppContent() {
       studentWorksYoutubeUrl: '',
       briefingTitle: '課程簡介會',
       briefingSubtitle: '留下您的聯絡資料，我們將把 YouTube 簡介會影片傳送給您。',
-      partnersTitle: '曾合作機構'
+      partnersTitle: '曾合作機構',
+      certCourseDesc: '本證書課程包含 4 個核心 AI 單元，旨在快速提升您的 AI 視覺應用能力。',
+      diplomaCourseDesc: '本一年制文憑課程包含核心必修單元，並允許學生根據興趣自由加選其他單元。',
+      priceItem1: '單元 1-4：$1,600 / 每個',
+      priceItem2: '其他單元：$3,000 / 每個',
+      priceItemExtra: '超過 16 個單元後，額外單元享 8 折優惠！'
     };
   });
 
@@ -2130,23 +2135,23 @@ function AppContent() {
                 <div className="space-y-6">
                   <p className="text-base sm:text-xl font-bold leading-relaxed opacity-90">
                     {selectedCourse === 1 
-                      ? "本證書課程包含 4 個核心 AI 單元，旨在快速提升您的 AI 視覺應用能力。" 
-                      : "本一年制文憑課程包含核心必修單元，並允許學生根據興趣自由加選其他單元。"}
+                      ? (siteSettings.certCourseDesc || '本證書課程包含 4 個核心 AI 單元，旨在快速提升您的 AI 視覺應用能力。')
+                      : (siteSettings.diplomaCourseDesc || '本一年制文憑課程包含核心必修單元，並允許學生根據興趣自由加選其他單元。')}
                   </p>
                   
                   <ul className="space-y-3">
                     <li className="flex items-center gap-3 text-sm sm:text-lg font-black">
                       <div className="w-2 h-2 bg-[#FFEF00] rounded-full" />
-                      單元 1-4：$1,600 / 每個
+                      {siteSettings.priceItem1 || '單元 1-4：$1,600 / 每個'}
                     </li>
                     <li className="flex items-center gap-3 text-sm sm:text-lg font-black">
                       <div className="w-2 h-2 bg-[#FFEF00] rounded-full" />
-                      其他單元：$3,000 / 每個
+                      {siteSettings.priceItem2 || '其他單元：$3,000 / 每個'}
                     </li>
                     {currentCourse.allowExtra && (
                       <li className="flex items-center gap-3 text-sm sm:text-lg font-black">
                         <div className="w-2 h-2 bg-[#FFEF00] rounded-full" />
-                        超過 16 個單元後，額外單元享 8 折優惠！
+                        {siteSettings.priceItemExtra || '超過 16 個單元後，額外單元享 8 折優惠！'}
                       </li>
                     )}
                   </ul>
@@ -3474,24 +3479,6 @@ function AppContent() {
                               />
                             </div>
                             <div className="space-y-2">
-                              <label className="text-xs font-black uppercase">個人課程 - 標題</label>
-                              <input 
-                                type="text" 
-                                className="w-full border-4 border-black p-4 rounded-xl font-bold"
-                                value={siteSettings.personalCourseTitle}
-                                onChange={e => setSiteSettings({...siteSettings, personalCourseTitle: e.target.value})}
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <label className="text-xs font-black uppercase">個人課程 - 副標題</label>
-                              <input 
-                                type="text" 
-                                className="w-full border-4 border-black p-4 rounded-xl font-bold"
-                                value={siteSettings.personalCourseSubtitle}
-                                onChange={e => setSiteSettings({...siteSettings, personalCourseSubtitle: e.target.value})}
-                              />
-                            </div>
-                            <div className="space-y-2">
                               <label className="text-xs font-black uppercase">團體課程 - 標題</label>
                               <input 
                                 type="text" 
@@ -3770,12 +3757,81 @@ function AppContent() {
 
                     {adminActiveTab === 'units' && (
                       <section>
-                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-4">
                           <div className="flex items-center gap-3">
                             <BookOpen size={32} />
                             <h3 className="text-3xl font-black">個人課程管理</h3>
                           </div>
-                          
+                        </div>
+
+                        {/* Section Settings Block */}
+                        <div className="bg-white border-4 border-black p-6 rounded-3xl shadow-[6px_6px_0px_rgba(0,0,0,1)] mb-6">
+                          <h4 className="text-sm font-black uppercase tracking-widest mb-4 text-black/50">區塊設定</h4>
+                          <div className="grid md:grid-cols-2 gap-4">
+                            <div className="space-y-1">
+                              <label className="text-xs font-black uppercase">標題</label>
+                              <input type="text" className="w-full border-4 border-black p-3 rounded-xl font-bold"
+                                value={siteSettings.personalCourseTitle}
+                                onChange={e => setSiteSettings({...siteSettings, personalCourseTitle: e.target.value})} />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-xs font-black uppercase">副標題</label>
+                              <input type="text" className="w-full border-4 border-black p-3 rounded-xl font-bold"
+                                value={siteSettings.personalCourseSubtitle}
+                                onChange={e => setSiteSettings({...siteSettings, personalCourseSubtitle: e.target.value})} />
+                            </div>
+                            <div className="space-y-1 md:col-span-2">
+                              <label className="text-xs font-black uppercase">證書課程介紹文字</label>
+                              <input type="text" className="w-full border-4 border-black p-3 rounded-xl font-bold"
+                                value={siteSettings.certCourseDesc || ''}
+                                onChange={e => setSiteSettings({...siteSettings, certCourseDesc: e.target.value})} />
+                            </div>
+                            <div className="space-y-1 md:col-span-2">
+                              <label className="text-xs font-black uppercase">文憑課程介紹文字</label>
+                              <input type="text" className="w-full border-4 border-black p-3 rounded-xl font-bold"
+                                value={siteSettings.diplomaCourseDesc || ''}
+                                onChange={e => setSiteSettings({...siteSettings, diplomaCourseDesc: e.target.value})} />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-xs font-black uppercase">收費項目 1</label>
+                              <input type="text" className="w-full border-4 border-black p-3 rounded-xl font-bold"
+                                value={siteSettings.priceItem1 || ''}
+                                onChange={e => setSiteSettings({...siteSettings, priceItem1: e.target.value})} />
+                            </div>
+                            <div className="space-y-1">
+                              <label className="text-xs font-black uppercase">收費項目 2</label>
+                              <input type="text" className="w-full border-4 border-black p-3 rounded-xl font-bold"
+                                value={siteSettings.priceItem2 || ''}
+                                onChange={e => setSiteSettings({...siteSettings, priceItem2: e.target.value})} />
+                            </div>
+                            <div className="space-y-1 md:col-span-2">
+                              <label className="text-xs font-black uppercase">折扣優惠說明文字</label>
+                              <input type="text" className="w-full border-4 border-black p-3 rounded-xl font-bold"
+                                value={siteSettings.priceItemExtra || ''}
+                                onChange={e => setSiteSettings({...siteSettings, priceItemExtra: e.target.value})} />
+                            </div>
+                          </div>
+                          <button
+                            onClick={async () => {
+                              setIsSavingSettings(true);
+                              try {
+                                await apiSetDoc('settings', 'global', siteSettings);
+                                showToast('設定已儲存！');
+                              } catch (error) {
+                                handleFirestoreError(error, OperationType.WRITE, 'settings/global');
+                              } finally {
+                                setIsSavingSettings(false);
+                              }
+                            }}
+                            disabled={isSavingSettings}
+                            className="mt-4 w-full bg-black text-[#FFEF00] py-3 rounded-full font-black flex items-center justify-center gap-2 hover:scale-[1.01] transition-all"
+                          >
+                            {isSavingSettings ? <Loader2 className="animate-spin" size={18} /> : <Save size={18} />}
+                            儲存區塊設定
+                          </button>
+                        </div>
+
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
                           <div className="flex items-center gap-4">
                             <div className="flex bg-black/5 p-1 rounded-2xl border-2 border-black">
                               <button 
