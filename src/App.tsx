@@ -1533,7 +1533,11 @@ function AppContent() {
     return a.id.toString().localeCompare(b.id.toString());
   });
 
-  const currentCourse = courses.find(c => c.id === selectedCourse) || courses[1] || { mandatory: [], allowExtra: false, name: '', minUnits: 0 };
+  const currentCourse = courses.find(c => c.id === selectedCourse) || courses[1] || { mandatory: [], allowExtra: false, name: '', minUnits: 0, type: '' };
+  const currentCourseType = String(currentCourse?.type || '').toLowerCase();
+  const currentCourseName = String(currentCourse?.name || '');
+  const isCertificateCourse =
+    !currentCourseName.includes('文憑') && !currentCourseType.includes('diploma');
 
   const getHeroGalleryItems = (): HeroGalleryItem[] => {
     if (Array.isArray(siteSettings.heroGallery) && siteSettings.heroGallery.length > 0) {
@@ -2129,12 +2133,12 @@ function AppContent() {
 
           <div className="bg-black text-[#FFEF00] p-4 sm:p-10 md:p-16 border-[6px] sm:border-[10px] border-white shadow-[10px_10px_0px_rgba(0,0,0,1)] sm:shadow-[20px_20px_0px_rgba(0,0,0,1)] rounded-[2rem] sm:rounded-[4rem] relative">
             <div className="grid lg:grid-cols-2 gap-8 sm:gap-16 items-start">
-              <div className="space-y-7 sm:space-y-10">
+              <div className="space-y-4 sm:space-y-6">
                 <h3 className="text-2xl sm:text-4xl md:text-5xl font-black leading-tight tracking-tighter">{currentCourse.name}</h3>
                 
-                <div className="space-y-6">
+                <div className="space-y-3 sm:space-y-4">
                   <p className="text-base sm:text-xl font-bold leading-relaxed opacity-90">
-                    {selectedCourse === 1 
+                    {isCertificateCourse
                       ? (siteSettings.certCourseDesc || '本證書課程包含 4 個核心 AI 單元，旨在快速提升您的 AI 視覺應用能力。')
                       : (siteSettings.diplomaCourseDesc || '本一年制文憑課程包含核心必修單元，並允許學生根據興趣自由加選其他單元。')}
                   </p>
