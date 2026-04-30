@@ -2139,7 +2139,6 @@ function AppContent() {
           <div className="bg-black text-[#FFEF00] p-4 sm:p-10 md:p-16 border-[6px] sm:border-[10px] border-white shadow-[10px_10px_0px_rgba(0,0,0,1)] sm:shadow-[20px_20px_0px_rgba(0,0,0,1)] rounded-[2rem] sm:rounded-[4rem] relative">
             <div className="grid lg:grid-cols-2 gap-8 sm:gap-16 items-start">
               <div className="space-y-4 sm:space-y-6">
-                <h3 className="text-2xl sm:text-4xl md:text-5xl font-black leading-tight tracking-tighter">{currentCourse.name}</h3>
                 
                 <div className="space-y-3 sm:space-y-4">
                   {siteSettings.certCourseDesc && (
