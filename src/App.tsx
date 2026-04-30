@@ -2142,12 +2142,12 @@ function AppContent() {
                 
                 <div className="space-y-3 sm:space-y-4">
                   {siteSettings.certCourseDesc && (
-                    <p className="text-base sm:text-xl font-bold leading-relaxed opacity-90">
+                    <p className="text-2xl sm:text-4xl md:text-5xl font-black leading-tight tracking-tighter">
                       {siteSettings.certCourseDesc}
                     </p>
                   )}
                   {siteSettings.diplomaCourseDesc && (
-                    <p className="text-base sm:text-xl font-bold leading-relaxed opacity-90">
+                    <p className="text-xl sm:text-2xl md:text-3xl font-black leading-snug opacity-80">
                       {siteSettings.diplomaCourseDesc}
                     </p>
                   )}
