@@ -907,7 +907,12 @@ function AppContent() {
           heroSubtitleSizeDesktop: Number(data?.heroSubtitleSizeDesktop) || 32,
           heroSubtitleColor: normalizeHexColor(data?.heroSubtitleColor, '#000000'),
           heroGallery: mappedHeroGallery,
-          heroImages: mappedHeroGallery.map((item: HeroGalleryItem) => item.url)
+          heroImages: mappedHeroGallery.map((item: HeroGalleryItem) => item.url),
+          certCourseDesc: data?.certCourseDesc ?? '本證書課程包含 4 個核心 AI 單元，旨在快速提升您的 AI 視覺應用能力。',
+          diplomaCourseDesc: data?.diplomaCourseDesc ?? '本一年制文憑課程包含核心必修單元，並允許學生根據興趣自由加選其他單元。',
+          priceItem1: data?.priceItem1 ?? '單元 1-4：$1,600 / 每個',
+          priceItem2: data?.priceItem2 ?? '其他單元：$3,000 / 每個',
+          priceItemExtra: data?.priceItemExtra ?? '超過 16 個單元後，額外單元享 8 折優惠！'
         };
 
         setSiteSettings(normalizedSettings);
