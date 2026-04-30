@@ -3117,12 +3117,14 @@ function AppContent() {
 
                     {adminActiveTab === 'all-courses' && allCoursesSubTab === 'regular' && (
                       <section>
-                        <h3 className="text-3xl font-black mb-8 flex items-center gap-3">
-                          <GraduationCap size={32} /> 常規課程管理
-                        </h3>
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+                          <h3 className="text-3xl font-black flex items-center gap-3">
+                            <GraduationCap size={32} /> 常規課程管理
+                          </h3>
+                        </div>
                         <div className="grid md:grid-cols-2 gap-6 mb-12">
-                          {courses.length > 0 ? (
-                            courses.map(c => (
+                          {courses.filter(c => c.category === 'regular' || !c.category).length > 0 ? (
+                            courses.filter(c => c.category === 'regular' || !c.category).map(c => (
                               <div key={c.id} className="bg-white border-4 border-black p-6 rounded-3xl flex gap-4 items-center shadow-[4px_4px_0px_rgba(0,0,0,1)]">
                                 <div className="w-12 h-12 bg-black text-[#FFEF00] rounded-xl flex items-center justify-center font-black">
                                   {c.type === 'Diploma' ? 'D' : 'C'}
@@ -3131,15 +3133,20 @@ function AppContent() {
                                   <p className="font-black text-lg">{c.name}</p>
                                   <p className="text-xs font-bold text-black/60 uppercase tracking-widest">{c.type} • {c.mandatory?.length || 0} 必修單元</p>
                                 </div>
-                                <button onClick={() => handleDeleteCourse(c.id.toString())} className="text-red-600 p-2 hover:bg-red-50 rounded-full transition-colors">
-                                  <Trash2 size={20} />
-                                </button>
+                                <div className="flex gap-1">
+                                  <button onClick={() => { setEditingCourse({...c}); setShowEditCombinationModal(true); }} className="text-blue-600 p-2 hover:bg-blue-50 rounded-full transition-colors">
+                                    <Pencil size={18} />
+                                  </button>
+                                  <button onClick={() => handleDeleteCourse(c.id.toString())} className="text-red-600 p-2 hover:bg-red-50 rounded-full transition-colors">
+                                    <Trash2 size={18} />
+                                  </button>
+                                </div>
                               </div>
                             ))
                           ) : (
                             <div className="md:col-span-2 text-center py-12 bg-black/5 rounded-[2rem] border-4 border-dashed border-black/10">
                               <GraduationCap size={48} className="mx-auto mb-4 opacity-20" />
-                              <p className="font-black text-xl text-black/40">尚未建立任何課程</p>
+                              <p className="font-black text-xl text-black/40">尚未建立任何常規課程</p>
                             </div>
                           )}
                         </div>
@@ -3889,6 +3896,15 @@ function AppContent() {
                             <BookOpen size={32} />
                             <h3 className="text-3xl font-black">個人課程管理</h3>
                           </div>
+                          <button
+                            onClick={() => {
+                              setNewCourse({ name: '', type: 'Short Course', category: 'personal', mandatory: [], minUnits: 4, allowExtra: true, title: '', subtitle: '', desc: '', startDate: '', classTime: '', tuition: '', mask: 'mask-cloud', img: '' });
+                              setShowAddCombinationModal(true);
+                            }}
+                            className="bg-black text-[#FFEF00] px-6 py-3 rounded-full font-black flex items-center gap-2 hover:scale-105 transition-transform text-sm"
+                          >
+                            <Plus size={20} /> 新增個人課程
+                          </button>
                         </div>
 
                         {/* Section Settings Block */}
@@ -4111,8 +4127,8 @@ function AppContent() {
                             <div className="md:col-span-1 space-y-4">
                               <h4 className="text-sm font-black uppercase text-black/40 ml-2">選擇課程組合</h4>
                               <div className="flex flex-col gap-2 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar">
-                                {courses.length > 0 ? (
-                                  courses.map((course) => (
+                                {courses.filter(c => c.category === 'personal').length > 0 ? (
+                                  courses.filter(c => c.category === 'personal').map((course) => (
                                     <button
                                       key={course.id}
                                       onClick={() => setAdminSelectedCourseId(course.id.toString())}
@@ -4134,7 +4150,7 @@ function AppContent() {
                                   ))
                                 ) : (
                                   <div className="text-center py-8 bg-black/5 rounded-2xl border-2 border-dashed border-black/10">
-                                    <p className="text-sm font-bold text-black/40">尚未建立課程組合</p>
+                                    <p className="text-sm font-bold text-black/40">尚未建立個人課程組合</p>
                                   </div>
                                 )}
                               </div>
@@ -4219,191 +4235,6 @@ function AppContent() {
                         )}
 
                         {/* Edit Combination Modal */}
-                        <AnimatePresence>
-                          {showEditCombinationModal && editingCourse && (
-                            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                              <motion.div 
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                onClick={() => setShowEditCombinationModal(false)}
-                                className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-                              />
-                              <motion.div 
-                                initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                                animate={{ opacity: 1, scale: 1, y: 0 }}
-                                exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                                className="relative bg-white border-[6px] border-black p-8 rounded-[3rem] w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-[12px_12px_0px_rgba(0,0,0,1)]"
-                              >
-                                <button 
-                                  onClick={() => setShowEditCombinationModal(false)}
-                                  className="absolute top-6 right-6 p-2 hover:bg-black/5 rounded-full"
-                                >
-                                  <X size={24} />
-                                </button>
-                                
-                                <h3 className="text-3xl font-black mb-6 uppercase">編輯個人課程組合</h3>
-                                
-                                <form onSubmit={handleUpdateCourse} className="space-y-6">
-                                  <div className="grid md:grid-cols-2 gap-6">
-                                    <div className="space-y-2">
-                                      <label className="text-xs font-black uppercase ml-1">組合名稱</label>
-                                      <input 
-                                        type="text" required placeholder="例如: AI 基礎課程"
-                                        className="w-full border-4 border-black p-4 rounded-xl font-bold"
-                                        value={editingCourse.name} onChange={e => setEditingCourse({...editingCourse, name: e.target.value})}
-                                      />
-                                    </div>
-                                    <div className="space-y-2">
-                                      <label className="text-xs font-black uppercase ml-1">類型</label>
-                                      <select 
-                                        className="w-full border-4 border-black p-4 rounded-xl font-bold bg-white"
-                                        value={editingCourse.type} onChange={e => setEditingCourse({...editingCourse, type: e.target.value as any})}
-                                      >
-                                        <option value="Diploma">文憑 (Diploma)</option>
-                                        <option value="Short Course">短期課程 (Short Course)</option>
-                                      </select>
-                                    </div>
-                                  </div>
-                                  
-                                  <div className="space-y-3">
-                                    <label className="text-xs font-black uppercase ml-1 flex justify-between items-center">
-                                      <span>選擇包含單元 (必修)</span>
-                                      <span className="text-black/40">{editingCourse.mandatory.length} 個已選擇</span>
-                                    </label>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[200px] overflow-y-auto p-2 border-2 border-black/10 rounded-xl custom-scrollbar">
-                                      {unitNames.map((unit, i) => (
-                                        <label key={i} className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all cursor-pointer ${
-                                          editingCourse.mandatory.includes(i) || unit.isMandatory
-                                          ? 'bg-black text-[#FFEF00] border-black' 
-                                          : 'bg-white text-black border-black/10 hover:border-black'
-                                        } ${unit.isMandatory ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                                          <input 
-                                            type="checkbox" 
-                                            className="hidden"
-                                            disabled={unit.isMandatory}
-                                            checked={editingCourse.mandatory.includes(i) || unit.isMandatory} 
-                                            onChange={e => {
-                                              const newMandatory = e.target.checked 
-                                                ? [...editingCourse.mandatory, i] 
-                                                : editingCourse.mandatory.filter((id: number) => id !== i);
-                                              setEditingCourse({...editingCourse, mandatory: newMandatory});
-                                            }}
-                                          />
-                                          <div className={`w-8 h-6 rounded flex items-center justify-center font-black text-[10px] ${
-                                            editingCourse.mandatory.includes(i) || unit.isMandatory ? 'bg-[#FFEF00] text-black' : 'bg-black text-[#FFEF00]'
-                                          }`}>
-                                            U{i+1}
-                                          </div>
-                                          <div className="flex flex-col flex-1 min-w-0">
-                                            <span className="text-xs font-bold truncate">{unit.name}</span>
-                                            {unit.price > 0 && <span className="text-[10px] font-black opacity-40">${unit.price}</span>}
-                                          </div>
-                                          {(editingCourse.mandatory.includes(i) || unit.isMandatory) && <CheckCircle2 size={16} />}
-                                        </label>
-                                      ))}
-                                    </div>
-                                  </div>
-
-                                  <div className="grid md:grid-cols-2 gap-6">
-                                    <div className="space-y-2">
-                                      <label className="text-xs font-black uppercase ml-1">首頁顯示標題</label>
-                                      <input 
-                                        type="text" required placeholder="首頁標題"
-                                        className="w-full border-4 border-black p-4 rounded-xl font-bold"
-                                        value={editingCourse.title} onChange={e => setEditingCourse({...editingCourse, title: e.target.value})}
-                                      />
-                                    </div>
-                                    <div className="space-y-2">
-                                      <label className="text-xs font-black uppercase ml-1">首頁顯示副標題</label>
-                                      <input 
-                                        type="text" placeholder="首頁副標題"
-                                        className="w-full border-4 border-black p-4 rounded-xl font-bold"
-                                        value={editingCourse.subtitle} onChange={e => setEditingCourse({...editingCourse, subtitle: e.target.value})}
-                                      />
-                                    </div>
-                                  </div>
-
-                                  <div className="grid md:grid-cols-3 gap-6">
-                                    <div className="space-y-2">
-                                      <label className="text-xs font-black uppercase ml-1">開課日期</label>
-                                      <input 
-                                        type="date"
-                                        className="w-full border-4 border-black p-4 rounded-xl font-bold"
-                                        value={editingCourse.startDate || ''}
-                                        onChange={e => setEditingCourse({...editingCourse, startDate: e.target.value})}
-                                      />
-                                    </div>
-                                    <div className="space-y-2">
-                                      <label className="text-xs font-black uppercase ml-1">上課時間</label>
-                                      <input 
-                                        type="text" placeholder="例如: 逢六 14:00-17:00"
-                                        className="w-full border-4 border-black p-4 rounded-xl font-bold"
-                                        value={editingCourse.classTime || ''}
-                                        onChange={e => setEditingCourse({...editingCourse, classTime: e.target.value})}
-                                      />
-                                    </div>
-                                    <div className="space-y-2">
-                                      <label className="text-xs font-black uppercase ml-1">課程學費</label>
-                                      <input 
-                                        type="text" placeholder="例如: HK$12,800"
-                                        className="w-full border-4 border-black p-4 rounded-xl font-bold"
-                                        value={editingCourse.tuition || ''}
-                                        onChange={e => setEditingCourse({...editingCourse, tuition: e.target.value})}
-                                      />
-                                    </div>
-                                  </div>
-
-                                  <div className="space-y-2">
-                                    <label className="text-xs font-black uppercase ml-1">課程簡介</label>
-                                    <textarea 
-                                      required placeholder="課程簡介..."
-                                      className="w-full border-4 border-black p-4 rounded-xl font-bold"
-                                      rows={3}
-                                      value={editingCourse.desc} onChange={e => setEditingCourse({...editingCourse, desc: e.target.value})}
-                                    />
-                                  </div>
-
-                                  <div className="grid md:grid-cols-2 gap-6">
-                                    <div className="space-y-2">
-                                      <FileUploader 
-                                        label="課程圖片"
-                                        currentImage={editingCourse.img}
-                                        onUpload={(url) => setEditingCourse({...editingCourse, img: url})}
-                                      />
-                                      {editingCourse.img && (
-                                        <input 
-                                          type="url" placeholder="圖片 URL（已自動設置）" 
-                                          className="w-full border-4 border-gray-300 p-4 rounded-xl font-bold mt-2 bg-gray-50"
-                                          value={editingCourse.img} onChange={e => setEditingCourse({...editingCourse, img: e.target.value})}
-                                          disabled
-                                        />
-                                      )}
-                                    </div>
-                                    <div className="space-y-2">
-                                      <label className="text-xs font-black uppercase ml-1">遮罩類型</label>
-                                      <select 
-                                        className="w-full border-4 border-black p-4 rounded-xl font-bold bg-white"
-                                        value={editingCourse.mask} onChange={e => setEditingCourse({...editingCourse, mask: e.target.value})}
-                                      >
-                                        {renderMaskOptions()}
-                                      </select>
-                                    </div>
-                                  </div>
-                                  
-                                  <button 
-                                    type="submit" 
-                                    disabled={isSavingCourses}
-                                    className={`w-full bg-black text-[#FFEF00] py-6 rounded-full font-black uppercase text-xl hover:scale-[1.02] transition-transform shadow-[0_10px_20px_rgba(0,0,0,0.2)] ${isSavingCourses ? 'opacity-70 cursor-not-allowed' : ''}`}
-                                  >
-                                    {isSavingCourses ? <Loader2 className="animate-spin inline-block mr-2" size={24} /> : null}
-                                    {isSavingCourses ? '正在儲存...' : '儲存修改'}
-                                  </button>
-                                </form>
-                              </motion.div>
-                            </div>
-                          )}
-                        </AnimatePresence>
 
                         {/* Add Combination Modal */}
                         <AnimatePresence>
@@ -4735,6 +4566,180 @@ function AppContent() {
                           </div>
                         </div>
                       </section>
+                    )}
+
+                    {/* Global Edit Course Modal (all-courses tab) */}
+                    {adminActiveTab === 'all-courses' && (
+                      <AnimatePresence>
+                        {showEditCombinationModal && editingCourse && (
+                          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                            <motion.div 
+                              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                              onClick={() => setShowEditCombinationModal(false)}
+                              className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+                            />
+                            <motion.div 
+                              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                              animate={{ opacity: 1, scale: 1, y: 0 }}
+                              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                              className="relative bg-white border-[6px] border-black p-8 rounded-[3rem] w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-[12px_12px_0px_rgba(0,0,0,1)]"
+                            >
+                              <button onClick={() => setShowEditCombinationModal(false)} className="absolute top-6 right-6 p-2 hover:bg-black/5 rounded-full">
+                                <X size={24} />
+                              </button>
+                              <h3 className="text-3xl font-black mb-6 uppercase">
+                                {editingCourse.category === 'personal' ? '編輯個人課程' : '編輯常規課程'}
+                              </h3>
+                              <form onSubmit={handleUpdateCourse} className="space-y-6">
+                                <div className="grid md:grid-cols-2 gap-6">
+                                  <div className="space-y-2">
+                                    <label className="text-xs font-black uppercase ml-1">課程名稱</label>
+                                    <input type="text" required placeholder="課程名稱"
+                                      className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                      value={editingCourse.name} onChange={e => setEditingCourse({...editingCourse, name: e.target.value})}
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <label className="text-xs font-black uppercase ml-1">課程分類</label>
+                                    <select className="w-full border-4 border-black p-4 rounded-xl font-bold bg-white"
+                                      value={editingCourse.category || 'regular'}
+                                      onChange={e => setEditingCourse({...editingCourse, category: e.target.value})}
+                                    >
+                                      <option value="regular">常規課程（指定單元）</option>
+                                      <option value="personal">個人課程（可自訂單元）</option>
+                                    </select>
+                                  </div>
+                                  <div className="space-y-2">
+                                    <label className="text-xs font-black uppercase ml-1">學制類型</label>
+                                    <select className="w-full border-4 border-black p-4 rounded-xl font-bold bg-white"
+                                      value={editingCourse.type} onChange={e => setEditingCourse({...editingCourse, type: e.target.value as any})}
+                                    >
+                                      <option value="Diploma">文憑 (Diploma)</option>
+                                      <option value="Certificate">證書 (Certificate)</option>
+                                      <option value="Short Course">短期課程 (Short Course)</option>
+                                    </select>
+                                  </div>
+                                  <div className="space-y-2">
+                                    <label className="text-xs font-black uppercase ml-1">最低單元要求</label>
+                                    <input type="number"
+                                      className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                      value={editingCourse.minUnits || 4}
+                                      onChange={e => setEditingCourse({...editingCourse, minUnits: parseInt(e.target.value)})}
+                                    />
+                                  </div>
+                                </div>
+                                <div className="space-y-3">
+                                  <label className="text-xs font-black uppercase ml-1 flex justify-between items-center">
+                                    <span>必修單元</span>
+                                    <span className="text-black/40">{(editingCourse.mandatory || []).length} 個已選擇</span>
+                                  </label>
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[200px] overflow-y-auto p-2 border-2 border-black/10 rounded-xl custom-scrollbar">
+                                    {unitNames.map((unit, i) => (
+                                      <label key={i} className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all cursor-pointer ${
+                                        (editingCourse.mandatory || []).includes(i) || unit.isMandatory
+                                        ? 'bg-black text-[#FFEF00] border-black' 
+                                        : 'bg-white text-black border-black/10 hover:border-black'
+                                      } ${unit.isMandatory ? 'opacity-50 cursor-not-allowed' : ''}`}>
+                                        <input type="checkbox" className="hidden" disabled={unit.isMandatory}
+                                          checked={(editingCourse.mandatory || []).includes(i) || unit.isMandatory} 
+                                          onChange={e => {
+                                            const newMandatory = e.target.checked 
+                                              ? [...(editingCourse.mandatory || []), i] 
+                                              : (editingCourse.mandatory || []).filter((id: number) => id !== i);
+                                            setEditingCourse({...editingCourse, mandatory: newMandatory});
+                                          }}
+                                        />
+                                        <div className={`w-8 h-6 rounded flex items-center justify-center font-black text-[10px] ${
+                                          (editingCourse.mandatory || []).includes(i) || unit.isMandatory ? 'bg-[#FFEF00] text-black' : 'bg-black text-[#FFEF00]'
+                                        }`}>U{i+1}</div>
+                                        <div className="flex flex-col flex-1 min-w-0">
+                                          <span className="text-xs font-bold truncate">{unit.name}</span>
+                                          {unit.price > 0 && <span className="text-[10px] font-black opacity-40">${unit.price}</span>}
+                                        </div>
+                                        {((editingCourse.mandatory || []).includes(i) || unit.isMandatory) && <CheckCircle2 size={16} />}
+                                      </label>
+                                    ))}
+                                  </div>
+                                </div>
+                                <div className="grid md:grid-cols-2 gap-6">
+                                  <div className="space-y-2">
+                                    <label className="text-xs font-black uppercase ml-1">首頁顯示標題</label>
+                                    <input type="text" required placeholder="首頁標題"
+                                      className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                      value={editingCourse.title} onChange={e => setEditingCourse({...editingCourse, title: e.target.value})}
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <label className="text-xs font-black uppercase ml-1">首頁顯示副標題</label>
+                                    <input type="text" placeholder="首頁副標題"
+                                      className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                      value={editingCourse.subtitle} onChange={e => setEditingCourse({...editingCourse, subtitle: e.target.value})}
+                                    />
+                                  </div>
+                                </div>
+                                <div className="grid md:grid-cols-3 gap-6">
+                                  <div className="space-y-2">
+                                    <label className="text-xs font-black uppercase ml-1">開課日期</label>
+                                    <input type="date" className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                      value={editingCourse.startDate || ''}
+                                      onChange={e => setEditingCourse({...editingCourse, startDate: e.target.value})}
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <label className="text-xs font-black uppercase ml-1">上課時間</label>
+                                    <input type="text" placeholder="例如: 逢六 14:00-17:00"
+                                      className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                      value={editingCourse.classTime || ''}
+                                      onChange={e => setEditingCourse({...editingCourse, classTime: e.target.value})}
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <label className="text-xs font-black uppercase ml-1">課程學費</label>
+                                    <input type="text" placeholder="例如: HK$12,800"
+                                      className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                      value={editingCourse.tuition || ''}
+                                      onChange={e => setEditingCourse({...editingCourse, tuition: e.target.value})}
+                                    />
+                                  </div>
+                                </div>
+                                <div className="space-y-2">
+                                  <label className="text-xs font-black uppercase ml-1">課程簡介</label>
+                                  <textarea required placeholder="課程簡介..."
+                                    className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                    rows={3}
+                                    value={editingCourse.desc} onChange={e => setEditingCourse({...editingCourse, desc: e.target.value})}
+                                  />
+                                </div>
+                                <div className="grid md:grid-cols-2 gap-6">
+                                  <div className="space-y-2">
+                                    <FileUploader label="課程圖片" currentImage={editingCourse.img}
+                                      onUpload={(url) => setEditingCourse({...editingCourse, img: url})}
+                                    />
+                                    {editingCourse.img && (
+                                      <input type="url" placeholder="圖片 URL" disabled
+                                        className="w-full border-4 border-gray-300 p-4 rounded-xl font-bold mt-2 bg-gray-50"
+                                        value={editingCourse.img} onChange={e => setEditingCourse({...editingCourse, img: e.target.value})}
+                                      />
+                                    )}
+                                  </div>
+                                  <div className="space-y-2">
+                                    <label className="text-xs font-black uppercase ml-1">遮罩類型</label>
+                                    <select className="w-full border-4 border-black p-4 rounded-xl font-bold bg-white"
+                                      value={editingCourse.mask} onChange={e => setEditingCourse({...editingCourse, mask: e.target.value})}
+                                    >{renderMaskOptions()}</select>
+                                  </div>
+                                </div>
+                                <button type="submit" disabled={isSavingCourses}
+                                  className={`w-full bg-black text-[#FFEF00] py-6 rounded-full font-black uppercase text-xl hover:scale-[1.02] transition-transform shadow-[0_10px_20px_rgba(0,0,0,0.2)] ${isSavingCourses ? 'opacity-70 cursor-not-allowed' : ''}`}
+                                >
+                                  {isSavingCourses ? <Loader2 className="animate-spin inline-block mr-2" size={24} /> : null}
+                                  {isSavingCourses ? '正在儲存...' : '儲存修改'}
+                                </button>
+                              </form>
+                            </motion.div>
+                          </div>
+                        )}
+                      </AnimatePresence>
                     )}
 
                     {adminActiveTab === 'tutors' && (
