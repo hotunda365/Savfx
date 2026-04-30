@@ -2142,11 +2142,11 @@ function AppContent() {
                 <h3 className="text-2xl sm:text-4xl md:text-5xl font-black leading-tight tracking-tighter">{currentCourse.name}</h3>
                 
                 <div className="space-y-3 sm:space-y-4">
-                  <p className="text-base sm:text-xl font-bold leading-relaxed opacity-90">
-                    {isCertificateCourse
-                      ? (siteSettings.certCourseDesc || '本證書課程包含 4 個核心 AI 單元，旨在快速提升您的 AI 視覺應用能力。')
-                      : (siteSettings.diplomaCourseDesc || '本一年制文憑課程包含核心必修單元，並允許學生根據興趣自由加選其他單元。')}
-                  </p>
+                  {currentCourse.desc && (
+                    <p className="text-base sm:text-xl font-bold leading-relaxed opacity-90">
+                      {currentCourse.desc}
+                    </p>
+                  )}
                   
                   <ul className="space-y-3">
                     <li className="flex items-center gap-3 text-sm sm:text-lg font-black">
