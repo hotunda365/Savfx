@@ -1,9 +1,12 @@
-import 'dotenv/config';
+import dotenv from "dotenv";
 import express from "express";
 import { createServer as createViteServer } from "vite";
 import path from "path";
 import multer from "multer";
 import { Pool } from "pg";
+
+dotenv.config({ path: ".env.local" });
+dotenv.config();
 
 const pool = new Pool({
   connectionString: process.env.POSTGRES_CONNECTION_STRING || process.env.DATABASE_URL,

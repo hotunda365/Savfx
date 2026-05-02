@@ -438,6 +438,10 @@ function AppContent() {
   const [adminGroups, setAdminGroups] = useState<{ name: string; description?: string }[]>([]);
   const [editingGroup, setEditingGroup] = useState<{ name: string; description?: string } | null>(null);
   const [editingUnitIndex, setEditingUnitIndex] = useState<number | null>(null);
+  const [groupAddSelection, setGroupAddSelection] = useState<{ [groupName: string]: string }>({});
+  const [unitSearchQuery, setUnitSearchQuery] = useState('');
+  const [unitFilterGroup, setUnitFilterGroup] = useState('all');
+  const [unitFilterMandatory, setUnitFilterMandatory] = useState<'all' | 'mandatory' | 'optional'>('all');
   const [newGroupName, setNewGroupName] = useState('');
   const [newGroupDesc, setNewGroupDesc] = useState('');
   const [courseMenuExpanded, setCourseMenuExpanded] = useState(false);
@@ -4190,20 +4194,11 @@ function AppContent() {
 
                     {adminActiveTab === 'units' && (
                       <section>
-                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-4">
+                        <div className="flex items-center gap-3 mb-4">
                           <div className="flex items-center gap-3">
                             <BookOpen size={32} />
                             <h3 className="text-3xl font-black">📚 單元管理</h3>
                           </div>
-                          <button
-                            onClick={() => {
-                              setNewCourse({ name: '', type: 'Short Course', category: 'personal', mandatory: [], minUnits: 4, allowExtra: true, title: '', subtitle: '', desc: '', startDate: '', classTime: '', tuition: '', mask: 'mask-cloud', img: '' });
-                              setShowAddCombinationModal(true);
-                            }}
-                            className="bg-black text-[#FFEF00] px-6 py-3 rounded-full font-black flex items-center gap-2 hover:scale-105 transition-transform text-sm"
-                          >
-                            <Plus size={20} /> 新增個人課程
-                          </button>
                         </div>
 
                         <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8">
@@ -4225,7 +4220,7 @@ function AppContent() {
                             
                             {adminUnitsSubTab === 'list' && (
                               <button 
-                                onClick={() => setAdminUnitNames([...adminUnitNames, { name: "新單元", isMandatory: false, price: 0 }])}
+                                onClick={() => setAdminUnitNames([{ name: "新單元", isMandatory: false, price: 0 }, ...adminUnitNames])}
                                 className="bg-black text-[#FFEF00] px-6 py-2 rounded-full font-black flex items-center gap-2 hover:scale-105 transition-transform text-sm"
                               >
                                 <Plus size={20} /> 新增單元
@@ -4236,23 +4231,89 @@ function AppContent() {
                         
                         {adminUnitsSubTab === 'list' && (
                           <div className="bg-white border-[6px] border-black p-6 rounded-[3rem] shadow-[12px_12px_0px_rgba(0,0,0,1)] relative">
-                            <div className="space-y-8">
-                              {(() => {
-                                const groups: { [key: string]: any[] } = {};
-                                adminUnitNames.forEach((unit, i) => {
-                                  const groupName = unit.group || '未分類';
-                                  if (!groups[groupName]) groups[groupName] = [];
-                                  groups[groupName].push({ unit, index: i });
+                            {(() => {
+                              const normalizedQuery = unitSearchQuery.trim().toLowerCase();
+                              const groupOptions = Array.from(new Set(adminUnitNames.map((u: any) => u.group || '未分類')));
+                              const filteredEntries = adminUnitNames
+                                .map((unit: any, index: number) => ({ unit, index }))
+                                .filter(({ unit }) => {
+                                  const unitGroup = unit.group || '未分類';
+                                  const matchesQuery = !normalizedQuery || [unit.name, unit.customId, unitGroup].filter(Boolean).some((value: any) => value.toString().toLowerCase().includes(normalizedQuery));
+                                  const matchesGroup = unitFilterGroup === 'all' || unitGroup === unitFilterGroup;
+                                  const matchesMandatory = unitFilterMandatory === 'all'
+                                    || (unitFilterMandatory === 'mandatory' && !!unit.isMandatory)
+                                    || (unitFilterMandatory === 'optional' && !unit.isMandatory);
+                                  return matchesQuery && matchesGroup && matchesMandatory;
                                 });
-                                return Object.entries(groups).map(([groupName, units]) => (
-                                  <div key={groupName} className="space-y-4">
-                                    <div className="flex items-center gap-3 px-5 py-3 bg-black text-[#FFEF00] rounded-2xl border-4 border-black font-black text-base">
-                                      <span className="text-lg">📁</span>
-                                      <span>{groupName}</span>
-                                      <span className="text-xs opacity-70">{units.length} 個單元</span>
+
+                              return (
+                                <>
+                                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+                                    <div className="rounded-2xl border-2 border-black bg-black text-[#FFEF00] px-4 py-3">
+                                      <div className="text-[11px] uppercase font-black opacity-70">總單元</div>
+                                      <div className="text-2xl font-black leading-none mt-1">{adminUnitNames.length}</div>
                                     </div>
+                                    <div className="rounded-2xl border-2 border-black bg-white px-4 py-3">
+                                      <div className="text-[11px] uppercase font-black text-black/60">必修單元</div>
+                                      <div className="text-2xl font-black leading-none mt-1">{adminUnitNames.filter((u: any) => u.isMandatory).length}</div>
+                                    </div>
+                                    <div className="rounded-2xl border-2 border-black bg-white px-4 py-3">
+                                      <div className="text-[11px] uppercase font-black text-black/60">目前顯示</div>
+                                      <div className="text-2xl font-black leading-none mt-1">{filteredEntries.length}</div>
+                                    </div>
+                                  </div>
+
+                                  <div className="border-2 border-black rounded-2xl p-3 bg-black/5 mb-6">
+                                    <div className="grid grid-cols-1 md:grid-cols-[2fr_1fr_1fr_auto] gap-2">
+                                      <input
+                                        type="text"
+                                        value={unitSearchQuery}
+                                        onChange={(e) => setUnitSearchQuery(e.target.value)}
+                                        placeholder="搜尋單元名稱 / ID / 群組"
+                                        className="w-full border-2 border-black p-3 rounded-xl font-bold text-sm bg-white"
+                                      />
+                                      <select
+                                        value={unitFilterGroup}
+                                        onChange={(e) => setUnitFilterGroup(e.target.value)}
+                                        className="w-full border-2 border-black p-3 rounded-xl font-bold text-sm bg-white"
+                                      >
+                                        <option value="all">所有群組</option>
+                                        {groupOptions.map((g) => (
+                                          <option key={g} value={g}>{g}</option>
+                                        ))}
+                                      </select>
+                                      <select
+                                        value={unitFilterMandatory}
+                                        onChange={(e) => setUnitFilterMandatory(e.target.value as 'all' | 'mandatory' | 'optional')}
+                                        className="w-full border-2 border-black p-3 rounded-xl font-bold text-sm bg-white"
+                                      >
+                                        <option value="all">全部類型</option>
+                                        <option value="mandatory">只看必修</option>
+                                        <option value="optional">只看選修</option>
+                                      </select>
+                                      <button
+                                        onClick={() => {
+                                          setUnitSearchQuery('');
+                                          setUnitFilterGroup('all');
+                                          setUnitFilterMandatory('all');
+                                        }}
+                                        className="px-4 py-3 rounded-xl border-2 border-black bg-white font-black text-sm hover:bg-black hover:text-[#FFEF00] transition-colors"
+                                      >
+                                        清除篩選
+                                      </button>
+                                    </div>
+                                  </div>
+
+                                  <div className="space-y-8">
                                     <div className="space-y-3">
-                                      {units.map(({ unit, index: i }: any) => {
+                                      {filteredEntries.length === 0 && (
+                                        <div className="text-center py-12 bg-black/5 rounded-2xl border-4 border-dashed border-black/20">
+                                          <p className="text-lg font-black text-black/40">找不到符合條件的單元</p>
+                                          <p className="text-sm font-bold text-black/30 mt-2">請調整搜尋字詞或篩選條件</p>
+                                        </div>
+                                      )}
+
+                                      {filteredEntries.map(({ unit, index: i }: any) => {
                                         const isEditing = editingUnitIndex === i;
                                         return (
                                           <div key={i} className="bg-white border-[4px] border-black rounded-[2rem] px-5 py-4 shadow-[8px_8px_0px_rgba(0,0,0,1)]">
@@ -4277,9 +4338,9 @@ function AppContent() {
                                                   <div className="flex items-center gap-2 shrink-0">
                                                     <button
                                                       onClick={() => setEditingUnitIndex(isEditing ? null : i)}
-                                                      className="w-11 h-11 rounded-2xl border-2 border-blue-500 text-blue-500 hover:bg-blue-50 transition-all flex items-center justify-center"
+                                                      className="h-11 px-4 rounded-2xl border-2 border-blue-500 text-blue-500 hover:bg-blue-50 transition-all flex items-center justify-center gap-2 font-black text-xs"
                                                     >
-                                                      <Edit2 size={18} />
+                                                      <Edit2 size={16} /> {isEditing ? '收合' : '編輯'}
                                                     </button>
                                                     <button
                                                       onClick={() => {
@@ -4288,9 +4349,9 @@ function AppContent() {
                                                           setEditingUnitIndex(prev => (prev === i ? null : prev));
                                                         });
                                                       }}
-                                                      className="w-11 h-11 rounded-2xl border-2 border-red-500 text-red-500 hover:bg-red-50 transition-all flex items-center justify-center"
+                                                      className="h-11 px-4 rounded-2xl border-2 border-red-500 text-red-500 hover:bg-red-50 transition-all flex items-center justify-center gap-2 font-black text-xs"
                                                     >
-                                                      <Trash2 size={18} />
+                                                      <Trash2 size={16} /> 刪除
                                                     </button>
                                                   </div>
                                                 </div>
@@ -4363,9 +4424,9 @@ function AppContent() {
                                       })}
                                     </div>
                                   </div>
-                                ));
-                              })()}
-                            </div>
+                                </>
+                              );
+                            })()}
                             <div className="mt-8">
                               <button 
                                 onClick={async () => {
@@ -4459,6 +4520,12 @@ function AppContent() {
                                   {adminGroups.map((group, groupIdx) => {
                                     const unitsInGroup = adminUnitNames.filter((u: any) => (u.group || '未分類') === group.name).length;
                                     const mandatoryCount = adminUnitNames.filter((u: any) => (u.group || '未分類') === group.name && u.isMandatory).length;
+                                    const unitsInGroupList = adminUnitNames
+                                      .map((u: any, idx: number) => ({ unit: u, index: idx }))
+                                      .filter(({ unit }) => (unit.group || '未分類') === group.name);
+                                    const addableUnits = adminUnitNames
+                                      .map((u: any, idx: number) => ({ unit: u, index: idx }))
+                                      .filter(({ unit }) => (unit.group || '未分類') !== group.name);
                                     const isEditingGroup = editingGroup?.name === group.name;
                                     
                                     return (
@@ -4521,6 +4588,66 @@ function AppContent() {
                                                 </button>
                                               </div>
                                             </div>
+                                          </div>
+                                        </div>
+
+                                        <div className="mt-4 pt-4 border-t-2 border-black/10 space-y-3">
+                                          <div className="text-sm font-black text-black/80">群組內單元（可直接移除）</div>
+                                          <div className="flex flex-wrap gap-2">
+                                            {unitsInGroupList.length === 0 ? (
+                                              <span className="text-xs font-bold text-black/40">此群組暫時沒有單元</span>
+                                            ) : (
+                                              unitsInGroupList.map(({ unit, index }) => (
+                                                <button
+                                                  key={`group-unit-${groupIdx}-${index}`}
+                                                  onClick={() => {
+                                                    setAdminUnitNames(prev => prev.map((u: any, idx: number) => idx === index ? { ...u, group: '未分類' } : u));
+                                                    showToast(`已從「${group.name}」移除單元：${unit.name || `U${index + 1}`}`);
+                                                  }}
+                                                  className="px-3 py-1.5 rounded-full border-2 border-black bg-black text-[#FFEF00] text-xs font-black hover:scale-105 transition-transform"
+                                                  title="從此群組移除"
+                                                >
+                                                  {(unit.customId || `U${index + 1}`)} · {unit.name || '未命名'} ✕
+                                                </button>
+                                              ))
+                                            )}
+                                          </div>
+
+                                          <div className="flex flex-col md:flex-row gap-2 md:items-center">
+                                            <select
+                                              value={groupAddSelection[group.name] || ''}
+                                              onChange={(e) => setGroupAddSelection(prev => ({ ...prev, [group.name]: e.target.value }))}
+                                              className="flex-1 border-2 border-black p-3 rounded-2xl font-bold text-sm bg-white"
+                                            >
+                                              <option value="">選擇要加入此群組的單元</option>
+                                              {addableUnits.map(({ unit, index }) => (
+                                                <option key={`addable-${groupIdx}-${index}`} value={index.toString()}>
+                                                  {(unit.customId || `U${index + 1}`)} · {unit.name || '未命名'}（目前: {unit.group || '未分類'}）
+                                                </option>
+                                              ))}
+                                            </select>
+                                            <button
+                                              onClick={() => {
+                                                const selectedIndexRaw = groupAddSelection[group.name];
+                                                if (!selectedIndexRaw) {
+                                                  showToast('請先選擇要加入的單元');
+                                                  return;
+                                                }
+                                                const selectedIndex = Number(selectedIndexRaw);
+                                                const pickedUnit = adminUnitNames[selectedIndex];
+                                                if (!pickedUnit) {
+                                                  showToast('找不到所選單元', 'error');
+                                                  return;
+                                                }
+
+                                                setAdminUnitNames(prev => prev.map((u: any, idx: number) => idx === selectedIndex ? { ...u, group: group.name } : u));
+                                                setGroupAddSelection(prev => ({ ...prev, [group.name]: '' }));
+                                                showToast(`已加入「${group.name}」：${pickedUnit.name || `U${selectedIndex + 1}`}`);
+                                              }}
+                                              className="px-5 py-3 rounded-2xl font-black text-sm bg-black text-[#FFEF00] border-2 border-black hover:scale-105 transition-transform"
+                                            >
+                                              加入單元
+                                            </button>
                                           </div>
                                         </div>
 
