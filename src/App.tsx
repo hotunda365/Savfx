@@ -4492,9 +4492,9 @@ function AppContent() {
                                         {/* Units in this group */}
                                         <div className="bg-black/5 rounded-lg p-3 border-2 border-black/10">
                                           <p className="text-xs font-black uppercase text-black/50 mb-2">包含的單元</p>
-                                          <div className="flex flex-wrap gap-2">
+                                          <div className="flex flex-col gap-2">
                                             {adminUnitNames.filter((u: any) => (u.group || '未分類') === group.name).map((unit: any, idx: number) => (
-                                              <span key={idx} className="bg-black text-[#FFEF00] px-2 py-1 rounded-lg text-xs font-bold">
+                                              <span key={idx} className="bg-black text-[#FFEF00] px-2 py-1 rounded-lg text-xs font-bold w-fit">
                                                 {unit.name}
                                               </span>
                                             ))}
