@@ -3374,7 +3374,15 @@ function AppContent() {
                           <div className="grid md:grid-cols-4 gap-8">
                             {/* Course List — all courses */}
                             <div className="md:col-span-1 space-y-4">
-                              <h4 className="text-sm font-black uppercase text-black/40 ml-2">選擇課程</h4>
+                              <div className="flex items-center justify-between ml-2 mr-1">
+                                <h4 className="text-sm font-black uppercase text-black/40">選擇課程</h4>
+                                <button
+                                  onClick={() => { setNewCourse({ name: '', type: 'Diploma', category: 'personal', mandatory: [], minUnits: 4, allowExtra: true, title: '', subtitle: '', desc: '', startDate: '', classTime: '', tuition: '', mask: 'mask-cloud', img: '' }); setShowAddCombinationModal(true); }}
+                                  className="flex items-center gap-1 bg-black text-[#FFEF00] px-3 py-1.5 rounded-xl font-black text-xs hover:scale-105 transition-transform"
+                                >
+                                  <Plus size={14} /> 新增課程
+                                </button>
+                              </div>
                               <div className="flex flex-col gap-2 max-h-[700px] overflow-y-auto pr-2 custom-scrollbar">
                                 {courses.length > 0 ? (
                                   courses.map((course) => {
