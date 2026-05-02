@@ -4234,122 +4234,132 @@ function AppContent() {
                         </div>
                         
                         {adminUnitsSubTab === 'list' && (
-                          <div className="bg-white border-[6px] border-black p-10 rounded-[3rem] shadow-[12px_12px_0px_rgba(0,0,0,1)] relative overflow-hidden">
-                            <div className="grid grid-cols-1 gap-6 mb-10">
-                              {(() => {
-                                const groups: { [key: string]: any[] } = {};
-                                adminUnitNames.forEach((unit, i) => {
-                                  const groupName = unit.group || '未分類';
-                                  if (!groups[groupName]) groups[groupName] = [];
-                                  groups[groupName].push({ unit, index: i });
-                                });
-                                return Object.entries(groups).map(([groupName, units]) => (
-                                <div key={groupName} className="space-y-3">
-                                  <div className="flex items-center gap-3 px-4 py-2 bg-black/5 rounded-lg border-2 border-black/20">
-                                    <span className="text-xs font-black uppercase text-black/60">群組: {groupName}</span>
+                          <div className="bg-white border-[6px] border-black p-6 rounded-[3rem] shadow-[12px_12px_0px_rgba(0,0,0,1)] relative overflow-auto">
+                            {(() => {
+                              const groups: { [key: string]: any[] } = {};
+                              adminUnitNames.forEach((unit, i) => {
+                                const groupName = unit.group || '未分類';
+                                if (!groups[groupName]) groups[groupName] = [];
+                                groups[groupName].push({ unit, index: i });
+                              });
+                              return Object.entries(groups).map(([groupName, units]) => (
+                                <div key={groupName} className="mb-8">
+                                  {/* Group Header */}
+                                  <div className="flex items-center gap-3 px-4 py-3 bg-black text-[#FFEF00] rounded-t-2xl border-4 border-black font-black text-lg">
+                                    📁 {groupName}
                                   </div>
-                                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-6">
-                                    {units.map(({ unit, index: i }: any) => (
-                                      <div key={i} className="flex flex-col gap-4 bg-white p-4 rounded-2xl border-[3px] border-black group hover:bg-[#FFEF00]/5 transition-all shadow-[4px_4px_0px_rgba(0,0,0,1)]">
-                                        <div className="flex items-center gap-4">
-                                          <div className="flex items-center justify-center bg-black text-[#FFEF00] w-12 h-10 rounded-xl font-black text-sm shrink-0">
-                                            U{i+1}
-                                          </div>
-                                          <div className="flex-1">
-                                            <input 
-                                              type="text" 
-                                              className="bg-transparent font-black text-lg outline-none placeholder:text-black/20 w-full"
-                                              placeholder="單元名稱"
-                                              value={unit.name}
-                                              onChange={(e) => {
-                                                const newUnits = [...adminUnitNames];
-                                                newUnits[i] = { ...unit, name: e.target.value };
-                                                setAdminUnitNames(newUnits);
-                                              }}
-                                            />
-                                          </div>
-                                          <button 
-                                            onClick={() => {
-                                              showConfirm("確定刪除", `確定要刪除單元 U${i+1} 嗎？`, () => {
-                                                setAdminUnitNames(prev => prev.filter((_, idx) => idx !== i));
-                                              });
-                                            }}
-                                            className="text-red-500 opacity-0 group-hover:opacity-100 transition-all hover:scale-125 p-2"
-                                          >
-                                            <Trash2 size={20} />
-                                          </button>
-                                        </div>
-                                        
-                                        <div className="grid grid-cols-2 gap-2">
-                                          <div className="space-y-1">
-                                            <label className="text-[10px] font-black uppercase text-black/50">自訂 ID</label>
-                                            <input 
-                                              type="text" 
-                                              className="w-full border-2 border-black p-2 rounded-lg font-bold text-xs"
-                                              placeholder="例: U001"
-                                              value={unit.customId || ''}
-                                              onChange={(e) => {
-                                                const newUnits = [...adminUnitNames];
-                                                newUnits[i] = { ...unit, customId: e.target.value };
-                                                setAdminUnitNames(newUnits);
-                                              }}
-                                            />
-                                          </div>
-                                          <div className="space-y-1">
-                                            <label className="text-[10px] font-black uppercase text-black/50">群組</label>
-                                            <input 
-                                              type="text" 
-                                              className="w-full border-2 border-black p-2 rounded-lg font-bold text-xs"
-                                              placeholder="例: 基礎"
-                                              value={unit.group || ''}
-                                              onChange={(e) => {
-                                                const newUnits = [...adminUnitNames];
-                                                newUnits[i] = { ...unit, group: e.target.value };
-                                                setAdminUnitNames(newUnits);
-                                              }}
-                                            />
-                                          </div>
-                                          <div className="space-y-1">
-                                            <label className="text-[10px] font-black uppercase text-black/50">價格</label>
-                                            <input 
-                                              type="number" 
-                                              className="w-full border-2 border-black p-2 rounded-lg font-bold text-xs"
-                                              placeholder="0"
-                                              value={unit.price || 0}
-                                              onChange={(e) => {
-                                                const newUnits = [...adminUnitNames];
-                                                newUnits[i] = { ...unit, price: Number(e.target.value) };
-                                                setAdminUnitNames(newUnits);
-                                              }}
-                                            />
-                                          </div>
-                                          <div className="space-y-1">
-                                            <label className="text-[10px] font-black uppercase text-black/50">必修</label>
-                                            <button
-                                              onClick={() => {
-                                                const newUnits = [...adminUnitNames];
-                                                newUnits[i] = { ...unit, isMandatory: !unit.isMandatory };
-                                                setAdminUnitNames(newUnits);
-                                              }}
-                                              className={`w-full px-2 py-2 rounded-lg font-black text-xs transition-all border-2 ${
-                                                unit.isMandatory 
-                                                ? 'bg-black text-[#FFEF00] border-black' 
-                                                : 'bg-white text-black border-black/20 hover:border-black'
-                                              }`}
-                                            >
-                                              {unit.isMandatory ? '是' : '否'}
-                                            </button>
-                                          </div>
-                                        </div>
-                                      </div>
-                                    ))}
+                                  
+                                  {/* Table */}
+                                  <div className="overflow-x-auto border-l-4 border-r-4 border-b-4 border-black rounded-b-2xl">
+                                    <table className="w-full border-collapse">
+                                      <thead>
+                                        <tr className="bg-black/10 border-b-2 border-black">
+                                          <th className="border-r-2 border-black px-4 py-3 text-left font-black text-sm w-12">U</th>
+                                          <th className="border-r-2 border-black px-4 py-3 text-left font-black text-sm flex-1">名稱</th>
+                                          <th className="border-r-2 border-black px-4 py-3 text-left font-black text-sm w-20">自訂ID</th>
+                                          <th className="border-r-2 border-black px-4 py-3 text-left font-black text-sm w-24">群組</th>
+                                          <th className="border-r-2 border-black px-4 py-3 text-center font-black text-sm w-16">價格</th>
+                                          <th className="border-r-2 border-black px-4 py-3 text-center font-black text-sm w-12">必修</th>
+                                          <th className="px-4 py-3 text-center font-black text-sm w-12">刪</th>
+                                        </tr>
+                                      </thead>
+                                      <tbody>
+                                        {units.map(({ unit, index: i }: any) => (
+                                          <tr key={i} className="border-b-2 border-black hover:bg-[#FFEF00]/10 transition-all">
+                                            <td className="border-r-2 border-black px-4 py-3 font-black text-sm bg-black text-[#FFEF00] text-center">
+                                              U{i+1}
+                                            </td>
+                                            <td className="border-r-2 border-black px-4 py-3">
+                                              <input 
+                                                type="text" 
+                                                className="w-full bg-transparent font-bold text-sm outline-none border-b-2 border-black/20 focus:border-black pb-1"
+                                                placeholder="單元名稱"
+                                                value={unit.name}
+                                                onChange={(e) => {
+                                                  const newUnits = [...adminUnitNames];
+                                                  newUnits[i] = { ...unit, name: e.target.value };
+                                                  setAdminUnitNames(newUnits);
+                                                }}
+                                              />
+                                            </td>
+                                            <td className="border-r-2 border-black px-4 py-3">
+                                              <input 
+                                                type="text" 
+                                                className="w-full bg-transparent font-bold text-xs outline-none border-b-2 border-black/20 focus:border-black pb-1"
+                                                placeholder="U001"
+                                                value={unit.customId || ''}
+                                                onChange={(e) => {
+                                                  const newUnits = [...adminUnitNames];
+                                                  newUnits[i] = { ...unit, customId: e.target.value };
+                                                  setAdminUnitNames(newUnits);
+                                                }}
+                                              />
+                                            </td>
+                                            <td className="border-r-2 border-black px-4 py-3">
+                                              <input 
+                                                type="text" 
+                                                className="w-full bg-transparent font-bold text-xs outline-none border-b-2 border-black/20 focus:border-black pb-1"
+                                                placeholder="未分類"
+                                                value={unit.group || ''}
+                                                onChange={(e) => {
+                                                  const newUnits = [...adminUnitNames];
+                                                  newUnits[i] = { ...unit, group: e.target.value };
+                                                  setAdminUnitNames(newUnits);
+                                                }}
+                                              />
+                                            </td>
+                                            <td className="border-r-2 border-black px-4 py-3 text-center">
+                                              <input 
+                                                type="number" 
+                                                className="w-full bg-transparent font-bold text-sm outline-none border-b-2 border-black/20 focus:border-black pb-1 text-center"
+                                                placeholder="0"
+                                                value={unit.price || 0}
+                                                onChange={(e) => {
+                                                  const newUnits = [...adminUnitNames];
+                                                  newUnits[i] = { ...unit, price: Number(e.target.value) };
+                                                  setAdminUnitNames(newUnits);
+                                                }}
+                                              />
+                                            </td>
+                                            <td className="border-r-2 border-black px-4 py-3 text-center">
+                                              <button
+                                                onClick={() => {
+                                                  const newUnits = [...adminUnitNames];
+                                                  newUnits[i] = { ...unit, isMandatory: !unit.isMandatory };
+                                                  setAdminUnitNames(newUnits);
+                                                }}
+                                                className={`w-full px-2 py-1 rounded-lg font-black text-xs transition-all border border-black ${
+                                                  unit.isMandatory 
+                                                  ? 'bg-black text-[#FFEF00]' 
+                                                  : 'bg-white text-black border-black/20 hover:border-black'
+                                                }`}
+                                              >
+                                                {unit.isMandatory ? '✓' : '✗'}
+                                              </button>
+                                            </td>
+                                            <td className="px-4 py-3 text-center">
+                                              <button 
+                                                onClick={() => {
+                                                  showConfirm("確定刪除", `確定要刪除單元 U${i+1} 嗎？`, () => {
+                                                    setAdminUnitNames(prev => prev.filter((_, idx) => idx !== i));
+                                                  });
+                                                }}
+                                                className="text-red-500 hover:scale-125 transition-transform p-1"
+                                              >
+                                                <Trash2 size={18} />
+                                              </button>
+                                            </td>
+                                          </tr>
+                                        ))}
+                                      </tbody>
+                                    </table>
                                   </div>
                                 </div>
                               ));
-                              })()}
-                            </div>
-                            
-                            <button 
+                            })()}
+
+                            <div className="mt-8">
+                              <button 
                               onClick={async () => {
                                 setIsSavingUnits(true);
                                 try {
@@ -4377,6 +4387,7 @@ function AppContent() {
                               {isSavingUnits ? <Loader2 className="animate-spin" size={28} /> : <Save size={28} />}
                               {!dataLoaded.units ? '正在載入資料...' : (isSavingUnits ? '正在儲存...' : '儲存所有單元')}
                             </button>
+                            </div>
                           </div>
                         )}
 
