@@ -4801,207 +4801,208 @@ function AppContent() {
                           </div>
                         )}
 
-                        {/* Modals */}
-                        <AnimatePresence>
-                          {showAddCombinationModal && (
-                            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                              <motion.div 
-                                initial={{ opacity: 0 }}
-                                animate={{ opacity: 1 }}
-                                exit={{ opacity: 0 }}
-                                onClick={() => setShowAddCombinationModal(false)}
-                                className="absolute inset-0 bg-black/80 backdrop-blur-sm"
-                              />
-                              <motion.div 
-                                initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                                animate={{ opacity: 1, scale: 1, y: 0 }}
-                                exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                                className="relative bg-white border-[6px] border-black p-8 rounded-[3rem] w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-[12px_12px_0px_rgba(0,0,0,1)]"
-                              >
-                                <button 
-                                  onClick={() => setShowAddCombinationModal(false)}
-                                  className="absolute top-6 right-6 p-2 hover:bg-black/5 rounded-full"
-                                >
-                                  <X size={24} />
-                                </button>
-                                
-                                <h3 className="text-3xl font-black mb-6 uppercase">
-                                  {newCourse.category === 'group' ? '新增團體課程' : newCourse.category === 'personal' ? '新增個人課程' : '新增常規課程'}
-                                </h3>
-                                
-                                <form onSubmit={handleAddCourse} className="space-y-6">
-                                  {/* Category selector */}
-                                  <div className="space-y-2">
-                                    <label className="text-xs font-black uppercase ml-1">課程類別</label>
-                                    <div className="flex gap-2 flex-wrap">
-                                      {(['regular', 'personal', 'group'] as const).map(cat => (
-                                        <button key={cat} type="button"
-                                          onClick={() => setNewCourse({...newCourse, category: cat})}
-                                          className={`px-5 py-2 rounded-full font-black text-sm border-2 border-black transition-all ${newCourse.category === cat ? 'bg-[#FFEF00] text-black shadow-[2px_2px_0px_rgba(0,0,0,1)]' : 'bg-white text-black hover:bg-black/5'}`}
-                                        >{cat === 'regular' ? '🎓 常規課程' : cat === 'personal' ? '🧩 個人課程' : '👥 團體課程'}</button>
-                                      ))}
-                                    </div>
-                                  </div>
-
-                                  {/* Name field */}
-                                  <div className="space-y-2">
-                                    <label className="text-xs font-black uppercase ml-1">{newCourse.category === 'group' ? '課程名稱' : '課程名稱（內部）'}</label>
-                                    <input 
-                                      type="text" required placeholder="例如: AI 基礎課程"
-                                      className="w-full border-4 border-black p-4 rounded-xl font-bold"
-                                      value={newCourse.name} onChange={e => setNewCourse({...newCourse, name: e.target.value, ...(newCourse.category === 'group' ? { title: e.target.value } : {})})}
-                                    />
-                                  </div>
-
-                                  {/* Type — regular/personal only */}
-                                  {newCourse.category !== 'group' && (
-                                  <div className="space-y-2">
-                                    <label className="text-xs font-black uppercase ml-1">學制類型</label>
-                                    <select 
-                                      className="w-full border-4 border-black p-4 rounded-xl font-bold bg-white"
-                                      value={newCourse.type} onChange={e => setNewCourse({...newCourse, type: e.target.value as any})}
-                                    >
-                                      <option value="Diploma">文憑 (Diploma)</option>
-                                      <option value="Certificate">證書 (Certificate)</option>
-                                      <option value="Short Course">短期課程 (Short Course)</option>
-                                    </select>
-                                  </div>
-                                  )}
-
-                                  {/* Mandatory units — regular/personal only */}
-                                  {newCourse.category !== 'group' && (
-                                  <div className="space-y-3">
-                                    <label className="text-xs font-black uppercase ml-1 flex justify-between items-center">
-                                      <span>選擇包含單元 (必修)</span>
-                                      <span className="text-black/40">{newCourse.mandatory.length} 個已選擇</span>
-                                    </label>
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[200px] overflow-y-auto p-2 border-2 border-black/10 rounded-xl custom-scrollbar">
-                                      {unitNames.map((unit, i) => (
-                                        <label key={i} className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all cursor-pointer ${
-                                          newCourse.mandatory.includes(i) 
-                                          ? 'bg-black text-[#FFEF00] border-black' 
-                                          : 'bg-white text-black border-black/10 hover:border-black'
-                                        }`}>
-                                          <input 
-                                            type="checkbox" 
-                                            className="hidden"
-                                            checked={newCourse.mandatory.includes(i)} 
-                                            onChange={e => {
-                                              const newMandatory = e.target.checked 
-                                                ? [...newCourse.mandatory, i] 
-                                                : newCourse.mandatory.filter(id => id !== i);
-                                              setNewCourse({...newCourse, mandatory: newMandatory});
-                                            }}
-                                          />
-                                          <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
-                                            newCourse.mandatory.includes(i) ? 'bg-[#FFEF00] border-[#FFEF00]' : 'border-black/20'
-                                          }`}>
-                                            {newCourse.mandatory.includes(i) && <CheckCircle2 size={14} className="text-black" />}
-                                          </div>
-                                          <div className="flex flex-col min-w-0">
-                                            <span className="text-sm font-black truncate">{unit.name}</span>
-                                            {unit.price > 0 && <span className="text-[10px] font-black opacity-40">${unit.price}</span>}
-                                          </div>
-                                        </label>
-                                      ))}
-                                    </div>
-                                  </div>
-                                  )}
-
-                                  {/* Title/subtitle — regular/personal only */}
-                                  {newCourse.category !== 'group' && (
-                                  <div className="grid md:grid-cols-2 gap-6">
-                                    <div className="space-y-2">
-                                      <label className="text-xs font-black uppercase ml-1">首頁標題</label>
-                                      <input 
-                                        type="text" required placeholder="首頁顯示標題"
-                                        className="w-full border-4 border-black p-4 rounded-xl font-bold"
-                                        value={newCourse.title} onChange={e => setNewCourse({...newCourse, title: e.target.value})}
-                                      />
-                                    </div>
-                                    <div className="space-y-2">
-                                      <label className="text-xs font-black uppercase ml-1">首頁副標題</label>
-                                      <input 
-                                        type="text" placeholder="首頁顯示副標題"
-                                        className="w-full border-4 border-black p-4 rounded-xl font-bold"
-                                        value={newCourse.subtitle} onChange={e => setNewCourse({...newCourse, subtitle: e.target.value})}
-                                      />
-                                    </div>
-                                  </div>
-                                  )}
-
-                                  {/* Dates — regular/personal only */}
-                                  {newCourse.category !== 'group' && (
-                                  <div className="grid md:grid-cols-3 gap-6">
-                                    <div className="space-y-2">
-                                      <label className="text-xs font-black uppercase ml-1">開課日期</label>
-                                      <input 
-                                        type="date"
-                                        className="w-full border-4 border-black p-4 rounded-xl font-bold"
-                                        value={newCourse.startDate}
-                                        onChange={e => setNewCourse({...newCourse, startDate: e.target.value})}
-                                      />
-                                    </div>
-                                    <div className="space-y-2">
-                                      <label className="text-xs font-black uppercase ml-1">上課時間</label>
-                                      <input 
-                                        type="text" placeholder="例如: 逢六 14:00-17:00"
-                                        className="w-full border-4 border-black p-4 rounded-xl font-bold"
-                                        value={newCourse.classTime}
-                                        onChange={e => setNewCourse({...newCourse, classTime: e.target.value})}
-                                      />
-                                    </div>
-                                    <div className="space-y-2">
-                                      <label className="text-xs font-black uppercase ml-1">課程學費</label>
-                                      <input 
-                                        type="text" placeholder="例如: HK$12,800"
-                                        className="w-full border-4 border-black p-4 rounded-xl font-bold"
-                                        value={newCourse.tuition}
-                                        onChange={e => setNewCourse({...newCourse, tuition: e.target.value})}
-                                      />
-                                    </div>
-                                  </div>
-                                  )}
-
-                                  {/* Description */}
-                                  <div className="space-y-2">
-                                    <label className="text-xs font-black uppercase ml-1">課程簡介</label>
-                                    <textarea 
-                                      required placeholder="簡短介紹此課程..."
-                                      className="w-full border-4 border-black p-4 rounded-xl font-bold"
-                                      rows={2}
-                                      value={newCourse.desc} onChange={e => setNewCourse({...newCourse, desc: e.target.value})}
-                                    />
-                                  </div>
-
-                                  {/* Image + Mask */}
-                                  <div className="grid md:grid-cols-2 gap-6">
-                                    <FileUploader label="課程圖片" currentImage={newCourse.img}
-                                      onUpload={(url) => setNewCourse({...newCourse, img: url})}
-                                    />
-                                    <div className="space-y-2">
-                                      <label className="text-xs font-black uppercase ml-1">遮罩類型</label>
-                                      <select className="w-full border-4 border-black p-4 rounded-xl font-bold bg-white"
-                                        value={newCourse.mask} onChange={e => setNewCourse({...newCourse, mask: e.target.value})}
-                                      >{renderMaskOptions()}</select>
-                                    </div>
-                                  </div>
-                                  
-                                  <button 
-                                    type="submit"
-                                    disabled={isSavingCourses || isSavingGroupCourses}
-                                    className={`w-full bg-black text-[#FFEF00] py-6 rounded-full font-black text-xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_10px_20px_rgba(0,0,0,0.2)] ${(isSavingCourses || isSavingGroupCourses) ? 'opacity-70 cursor-not-allowed' : ''}`}
-                                  >
-                                    {(isSavingCourses || isSavingGroupCourses) ? <Loader2 className="animate-spin inline-block mr-2" size={24} /> : null}
-                                    {(isSavingCourses || isSavingGroupCourses) ? '正在建立...' : '建立課程'}
-                                  </button>
-                                </form>
-                              </motion.div>
-                            </div>
-                          )}
-                        </AnimatePresence>
                       </section>
                     )}
+
+                    {/* Global Add Course Modal */}
+                    <AnimatePresence>
+                      {showAddCombinationModal && (
+                        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                        <motion.div 
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          exit={{ opacity: 0 }}
+                          onClick={() => setShowAddCombinationModal(false)}
+                          className="absolute inset-0 bg-black/80 backdrop-blur-sm"
+                        />
+                        <motion.div 
+                          initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                          animate={{ opacity: 1, scale: 1, y: 0 }}
+                          exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                          className="relative bg-white border-[6px] border-black p-8 rounded-[3rem] w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-[12px_12px_0px_rgba(0,0,0,1)]"
+                        >
+                          <button 
+                            onClick={() => setShowAddCombinationModal(false)}
+                            className="absolute top-6 right-6 p-2 hover:bg-black/5 rounded-full"
+                          >
+                            <X size={24} />
+                          </button>
+                                
+                          <h3 className="text-3xl font-black mb-6 uppercase">
+                            {newCourse.category === 'group' ? '新增團體課程' : newCourse.category === 'personal' ? '新增個人課程' : '新增常規課程'}
+                          </h3>
+                          
+                          <form onSubmit={handleAddCourse} className="space-y-6">
+                            {/* Category selector */}
+                            <div className="space-y-2">
+                              <label className="text-xs font-black uppercase ml-1">課程類別</label>
+                              <div className="flex gap-2 flex-wrap">
+                                {(['regular', 'personal', 'group'] as const).map(cat => (
+                                  <button key={cat} type="button"
+                                    onClick={() => setNewCourse({...newCourse, category: cat})}
+                                    className={`px-5 py-2 rounded-full font-black text-sm border-2 border-black transition-all ${newCourse.category === cat ? 'bg-[#FFEF00] text-black shadow-[2px_2px_0px_rgba(0,0,0,1)]' : 'bg-white text-black hover:bg-black/5'}`}
+                                  >{cat === 'regular' ? '🎓 常規課程' : cat === 'personal' ? '🧩 個人課程' : '👥 團體課程'}</button>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Name field */}
+                            <div className="space-y-2">
+                              <label className="text-xs font-black uppercase ml-1">{newCourse.category === 'group' ? '課程名稱' : '課程名稱（內部）'}</label>
+                              <input 
+                                type="text" required placeholder="例如: AI 基礎課程"
+                                className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                value={newCourse.name} onChange={e => setNewCourse({...newCourse, name: e.target.value, ...(newCourse.category === 'group' ? { title: e.target.value } : {})})}
+                              />
+                            </div>
+
+                            {/* Type — regular/personal only */}
+                            {newCourse.category !== 'group' && (
+                            <div className="space-y-2">
+                              <label className="text-xs font-black uppercase ml-1">學制類型</label>
+                              <select 
+                                className="w-full border-4 border-black p-4 rounded-xl font-bold bg-white"
+                                value={newCourse.type} onChange={e => setNewCourse({...newCourse, type: e.target.value as any})}
+                              >
+                                <option value="Diploma">文憑 (Diploma)</option>
+                                <option value="Certificate">證書 (Certificate)</option>
+                                <option value="Short Course">短期課程 (Short Course)</option>
+                              </select>
+                            </div>
+                            )}
+
+                            {/* Mandatory units — regular/personal only */}
+                            {newCourse.category !== 'group' && (
+                            <div className="space-y-3">
+                              <label className="text-xs font-black uppercase ml-1 flex justify-between items-center">
+                                <span>選擇包含單元 (必修)</span>
+                                <span className="text-black/40">{newCourse.mandatory.length} 個已選擇</span>
+                              </label>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[200px] overflow-y-auto p-2 border-2 border-black/10 rounded-xl custom-scrollbar">
+                                {unitNames.map((unit, i) => (
+                                  <label key={i} className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all cursor-pointer ${
+                                    newCourse.mandatory.includes(i) 
+                                    ? 'bg-black text-[#FFEF00] border-black' 
+                                    : 'bg-white text-black border-black/10 hover:border-black'
+                                  }`}>
+                                    <input 
+                                      type="checkbox" 
+                                      className="hidden"
+                                      checked={newCourse.mandatory.includes(i)} 
+                                      onChange={e => {
+                                        const newMandatory = e.target.checked 
+                                          ? [...newCourse.mandatory, i] 
+                                          : newCourse.mandatory.filter(id => id !== i);
+                                        setNewCourse({...newCourse, mandatory: newMandatory});
+                                      }}
+                                    />
+                                    <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                                      newCourse.mandatory.includes(i) ? 'bg-[#FFEF00] border-[#FFEF00]' : 'border-black/20'
+                                    }`}>
+                                      {newCourse.mandatory.includes(i) && <CheckCircle2 size={14} className="text-black" />}
+                                    </div>
+                                    <div className="flex flex-col min-w-0">
+                                      <span className="text-sm font-black truncate">{unit.name}</span>
+                                      {unit.price > 0 && <span className="text-[10px] font-black opacity-40">${unit.price}</span>}
+                                    </div>
+                                  </label>
+                                ))}
+                              </div>
+                            </div>
+                            )}
+
+                            {/* Title/subtitle — regular/personal only */}
+                            {newCourse.category !== 'group' && (
+                            <div className="grid md:grid-cols-2 gap-6">
+                              <div className="space-y-2">
+                                <label className="text-xs font-black uppercase ml-1">首頁標題</label>
+                                <input 
+                                  type="text" required placeholder="首頁顯示標題"
+                                  className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                  value={newCourse.title} onChange={e => setNewCourse({...newCourse, title: e.target.value})}
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <label className="text-xs font-black uppercase ml-1">首頁副標題</label>
+                                <input 
+                                  type="text" placeholder="首頁顯示副標題"
+                                  className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                  value={newCourse.subtitle} onChange={e => setNewCourse({...newCourse, subtitle: e.target.value})}
+                                />
+                              </div>
+                            </div>
+                            )}
+
+                            {/* Dates — regular/personal only */}
+                            {newCourse.category !== 'group' && (
+                            <div className="grid md:grid-cols-3 gap-6">
+                              <div className="space-y-2">
+                                <label className="text-xs font-black uppercase ml-1">開課日期</label>
+                                <input 
+                                  type="date"
+                                  className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                  value={newCourse.startDate}
+                                  onChange={e => setNewCourse({...newCourse, startDate: e.target.value})}
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <label className="text-xs font-black uppercase ml-1">上課時間</label>
+                                <input 
+                                  type="text" placeholder="例如: 逢六 14:00-17:00"
+                                  className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                  value={newCourse.classTime}
+                                  onChange={e => setNewCourse({...newCourse, classTime: e.target.value})}
+                                />
+                              </div>
+                              <div className="space-y-2">
+                                <label className="text-xs font-black uppercase ml-1">課程學費</label>
+                                <input 
+                                  type="text" placeholder="例如: HK$12,800"
+                                  className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                  value={newCourse.tuition}
+                                  onChange={e => setNewCourse({...newCourse, tuition: e.target.value})}
+                                />
+                              </div>
+                            </div>
+                            )}
+
+                            {/* Description */}
+                            <div className="space-y-2">
+                              <label className="text-xs font-black uppercase ml-1">課程簡介</label>
+                              <textarea 
+                                required placeholder="簡短介紹此課程..."
+                                className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                rows={2}
+                                value={newCourse.desc} onChange={e => setNewCourse({...newCourse, desc: e.target.value})}
+                              />
+                            </div>
+
+                            {/* Image + Mask */}
+                            <div className="grid md:grid-cols-2 gap-6">
+                              <FileUploader label="課程圖片" currentImage={newCourse.img}
+                                onUpload={(url) => setNewCourse({...newCourse, img: url})}
+                              />
+                              <div className="space-y-2">
+                                <label className="text-xs font-black uppercase ml-1">遮罩類型</label>
+                                <select className="w-full border-4 border-black p-4 rounded-xl font-bold bg-white"
+                                  value={newCourse.mask} onChange={e => setNewCourse({...newCourse, mask: e.target.value})}
+                                >{renderMaskOptions()}</select>
+                              </div>
+                            </div>
+                            
+                            <button 
+                              type="submit"
+                              disabled={isSavingCourses || isSavingGroupCourses}
+                              className={`w-full bg-black text-[#FFEF00] py-6 rounded-full font-black text-xl hover:scale-[1.02] active:scale-[0.98] transition-all shadow-[0_10px_20px_rgba(0,0,0,0.2)] ${(isSavingCourses || isSavingGroupCourses) ? 'opacity-70 cursor-not-allowed' : ''}`}
+                            >
+                              {(isSavingCourses || isSavingGroupCourses) ? <Loader2 className="animate-spin inline-block mr-2" size={24} /> : null}
+                              {(isSavingCourses || isSavingGroupCourses) ? '正在建立...' : '建立課程'}
+                            </button>
+                          </form>
+                        </motion.div>
+                      </div>
+                      )}
+                    </AnimatePresence>
 
                     {false && (
                       <section>
@@ -5072,9 +5073,8 @@ function AppContent() {
                           </div>
                       </section>
                     )}
-                    {/* Global Edit Course Modal (all-courses tab) */}
-                    {adminActiveTab === 'all-courses' && (
-                      <AnimatePresence>
+                    {/* Global Edit Course Modal */}
+                    <AnimatePresence>
                         {showEditCombinationModal && editingCourse && (
                           <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
                             <motion.div 
@@ -5265,7 +5265,6 @@ function AppContent() {
                           </div>
                         )}
                       </AnimatePresence>
-                    )}
 
                     {adminActiveTab === 'tutors' && (
                       <section>
