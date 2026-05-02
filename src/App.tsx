@@ -1117,6 +1117,7 @@ function AppContent() {
     type: 'Diploma', 
     category: 'regular' as 'regular' | 'personal' | 'group',
     mandatory: [] as number[], 
+    mandatoryGroups: [] as string[],
     minUnits: 16, 
     allowExtra: true,
     title: '',
@@ -1199,7 +1200,7 @@ function AppContent() {
         const result = await apiAddDoc('groupCourses', groupData);
         setGroupCourses(prev => [...prev, { id: result.id, ...groupData }]);
         setShowAddCombinationModal(false);
-        setNewCourse({ name: '', type: 'Diploma', category: 'regular', mandatory: [], minUnits: 4, allowExtra: true, title: '', subtitle: '', desc: '', startDate: '', classTime: '', tuition: '', mask: 'mask-book', img: '' });
+        setNewCourse({ name: '', type: 'Diploma', category: 'regular', mandatory: [], mandatoryGroups: [], minUnits: 4, allowExtra: true, title: '', subtitle: '', desc: '', startDate: '', classTime: '', tuition: '', mask: 'mask-book', img: '' });
         showToast("已新增團體課程");
       } catch (error) {
         handleFirestoreError(error, OperationType.CREATE, 'groupCourses');
@@ -1224,6 +1225,7 @@ function AppContent() {
         type: 'Diploma', 
         category: 'regular' as 'regular' | 'personal' | 'group',
         mandatory: [], 
+        mandatoryGroups: [],
         minUnits: 4, 
         allowExtra: true,
         title: '',
@@ -1314,12 +1316,51 @@ function AppContent() {
     const course = courses.find(c => c.id.toString() === courseId.toString());
     if (!course) return;
     
-    const newMandatory = selectAll ? unitNames.map((_, i) => i) : [];
+    const newMandatory = selectAll ? adminUnitNames.map((_, i) => i) : [];
     
     const { id, ...courseData } = course;
     try {
       await apiSetDoc('courses', courseId.toString(), { ...courseData, mandatory: newMandatory });
       setCourses(prev => prev.map(c => c.id.toString() === courseId.toString() ? { ...c, mandatory: newMandatory } : c));
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `courses/${courseId}`);
+    }
+  };
+
+  const getAdminGroupsForCourseSelection = () => {
+    const groupsFromUnits = Array.from(
+      new Map(
+        adminUnitNames
+          .filter((u: any) => u.group && u.group !== '未分類')
+          .map((u: any) => [u.group, { name: u.group, description: u.groupDescription, customId: u.groupCustomId }])
+      ).values()
+    ) as { name: string; description?: string; customId?: string }[];
+
+    return groupsFromUnits.length > 0 ? groupsFromUnits : adminGroups;
+  };
+
+  const getUnitPrice = (unit: any): number => {
+    const value = Number(unit?.price);
+    return Number.isFinite(value) ? value : 0;
+  };
+
+  const getGroupPrice = (groupName: string, units: any[] = adminUnitNames): number => {
+    return units
+      .filter((u: any) => (u.group || '未分類') === groupName)
+      .reduce((sum: number, unit: any) => sum + getUnitPrice(unit), 0);
+  };
+
+  const setAllCourseMandatoryGroups = async (courseId: string, selectAll: boolean) => {
+    const course = courses.find(c => c.id.toString() === courseId.toString());
+    if (!course) return;
+
+    const allGroupNames = getAdminGroupsForCourseSelection().map(g => g.name);
+    const newMandatoryGroups = selectAll ? allGroupNames : [];
+
+    const { id, ...courseData } = course;
+    try {
+      await apiSetDoc('courses', courseId.toString(), { ...courseData, mandatoryGroups: newMandatoryGroups });
+      setCourses(prev => prev.map(c => c.id.toString() === courseId.toString() ? { ...c, mandatoryGroups: newMandatoryGroups } : c));
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `courses/${courseId}`);
     }
@@ -1727,9 +1768,18 @@ function AppContent() {
       
       total += unitPrice;
     });
+
+    const courseGroupNames: string[] = currentCourse?.mandatoryGroups || [];
+    const groupTotal = courseGroupNames.reduce((sum: number, groupName: string) => {
+      return sum + getGroupPrice(groupName, unitNames);
+    }, 0);
+    total += groupTotal;
     
     return total;
   };
+
+  const currentCourseGroupTotalPrice = ((currentCourse?.mandatoryGroups || []) as string[])
+    .reduce((sum: number, groupName: string) => sum + getGroupPrice(groupName, unitNames), 0);
 
   const totalPrice = calculateTotalPrice();
 
@@ -2243,6 +2293,11 @@ function AppContent() {
 
                 <div className="space-y-4">
                   <div className="text-sm font-black uppercase tracking-widest opacity-70">預計總學費</div>
+                  {(currentCourse?.mandatoryGroups || []).length > 0 && (
+                    <div className="text-xs font-black text-white/70">
+                      已包含群組總價: ${currentCourseGroupTotalPrice.toLocaleString()}
+                    </div>
+                  )}
                   <div className="flex flex-wrap items-center gap-4 sm:gap-6">
                     <div className="text-5xl sm:text-7xl font-black text-white tracking-tighter">${totalPrice.toLocaleString()}</div>
                     {selectedUnits.filter(idx => idx < unitNames.length).length > 16 && currentCourse.allowExtra && (
@@ -3143,7 +3198,7 @@ function AppContent() {
                             📋 課程列表
                           </h3>
                           <button
-                            onClick={() => { setNewCourse({ name: '', type: 'Diploma', category: 'regular', mandatory: [], minUnits: 16, allowExtra: true, title: '', subtitle: '', desc: '', startDate: '', classTime: '', tuition: '', mask: 'mask-book', img: '' }); setShowAddCombinationModal(true); }}
+                            onClick={() => { setNewCourse({ name: '', type: 'Diploma', category: 'regular', mandatory: [], mandatoryGroups: [], minUnits: 16, allowExtra: true, title: '', subtitle: '', desc: '', startDate: '', classTime: '', tuition: '', mask: 'mask-book', img: '' }); setShowAddCombinationModal(true); }}
                             className="bg-black text-[#FFEF00] px-6 py-3 rounded-full font-black flex items-center gap-2 hover:scale-105 transition-transform text-sm"
                           >
                             <Plus size={20} /> 新增課程
@@ -3242,7 +3297,7 @@ function AppContent() {
                             <GraduationCap size={32} /> 常規課程
                           </h3>
                           <button
-                            onClick={() => { setNewCourse({ name: '', type: 'Diploma', category: 'regular', mandatory: [], minUnits: 16, allowExtra: true, title: '', subtitle: '', desc: '', startDate: '', classTime: '', tuition: '', mask: 'mask-book', img: '' }); setShowAddCombinationModal(true); }}
+                            onClick={() => { setNewCourse({ name: '', type: 'Diploma', category: 'regular', mandatory: [], mandatoryGroups: [], minUnits: 16, allowExtra: true, title: '', subtitle: '', desc: '', startDate: '', classTime: '', tuition: '', mask: 'mask-book', img: '' }); setShowAddCombinationModal(true); }}
                             className="bg-black text-[#FFEF00] px-6 py-3 rounded-full font-black flex items-center gap-2 hover:scale-105 transition-transform text-sm"
                           >
                             <Plus size={20} /> 新增常規課程
@@ -3311,7 +3366,7 @@ function AppContent() {
                             🧩 個人課程
                           </h3>
                           <button
-                            onClick={() => { setNewCourse({ name: '', type: 'Diploma', category: 'personal', mandatory: [], minUnits: 4, allowExtra: true, title: '', subtitle: '', desc: '', startDate: '', classTime: '', tuition: '', mask: 'mask-cloud', img: '' }); setShowAddCombinationModal(true); }}
+                            onClick={() => { setNewCourse({ name: '', type: 'Diploma', category: 'personal', mandatory: [], mandatoryGroups: [], minUnits: 4, allowExtra: true, title: '', subtitle: '', desc: '', startDate: '', classTime: '', tuition: '', mask: 'mask-cloud', img: '' }); setShowAddCombinationModal(true); }}
                             className="bg-black text-[#FFEF00] px-6 py-3 rounded-full font-black flex items-center gap-2 hover:scale-105 transition-transform text-sm"
                           >
                             <Plus size={20} /> 新增個人課程
@@ -3377,7 +3432,7 @@ function AppContent() {
                               <div className="flex items-center justify-between ml-2 mr-1">
                                 <h4 className="text-sm font-black uppercase text-black/40">選擇課程</h4>
                                 <button
-                                  onClick={() => { setNewCourse({ name: '', type: 'Diploma', category: 'personal', mandatory: [], minUnits: 4, allowExtra: true, title: '', subtitle: '', desc: '', startDate: '', classTime: '', tuition: '', mask: 'mask-cloud', img: '' }); setShowAddCombinationModal(true); }}
+                                  onClick={() => { setNewCourse({ name: '', type: 'Diploma', category: 'personal', mandatory: [], mandatoryGroups: [], minUnits: 4, allowExtra: true, title: '', subtitle: '', desc: '', startDate: '', classTime: '', tuition: '', mask: 'mask-cloud', img: '' }); setShowAddCombinationModal(true); }}
                                   className="flex items-center gap-1 bg-black text-[#FFEF00] px-3 py-1.5 rounded-xl font-black text-xs hover:scale-105 transition-transform"
                                 >
                                   <Plus size={14} /> 新增課程
@@ -3422,22 +3477,42 @@ function AppContent() {
 
                                     const mandatory: number[] = selectedCourse.mandatory || [];
                                     const mandatoryGroups: string[] = selectedCourse.mandatoryGroups || [];
+                                    const unitsForAdmin = adminUnitNames;
+                                    const groupsFromUnits = Array.from(
+                                      new Map(
+                                        unitsForAdmin
+                                          .filter((u: any) => u.group && u.group !== '未分類')
+                                          .map((u: any) => [u.group, {
+                                            name: u.group,
+                                            description: u.groupDescription,
+                                            customId: u.groupCustomId
+                                          }])
+                                      ).values()
+                                    ) as { name: string; description?: string; customId?: string }[];
+                                    const groupsForAdmin = groupsFromUnits.length > 0 ? groupsFromUnits : adminGroups;
+                                    const groupPriceMap = new Map<string, number>(
+                                      groupsForAdmin.map(g => [g.name, getGroupPrice(g.name, unitsForAdmin)])
+                                    );
 
                                     // Units already in the course
-                                    const assignedUnits = unitNames
+                                    const assignedUnits = unitsForAdmin
                                       .map((u, i) => ({ unit: u, index: i }))
-                                      .filter(({ index }) => mandatory.includes(index) || unitNames[index]?.isMandatory);
+                                      .filter(({ index }) => mandatory.includes(index) || unitsForAdmin[index]?.isMandatory);
 
                                     // Groups already in the course
-                                    const assignedGroups = adminGroups.filter(g => mandatoryGroups.includes(g.name));
+                                    const assignedGroups = groupsForAdmin.filter(g => mandatoryGroups.includes(g.name));
 
                                     // Addable units (not yet assigned)
-                                    const addableUnits = unitNames
+                                    const addableUnits = unitsForAdmin
                                       .map((u, i) => ({ unit: u, index: i }))
                                       .filter(({ index, unit }) => !mandatory.includes(index) && !unit.isMandatory);
 
                                     // Addable groups (not yet assigned)
-                                    const addableGroups = adminGroups.filter(g => !mandatoryGroups.includes(g.name));
+                                    const addableGroups = groupsForAdmin.filter(g => !mandatoryGroups.includes(g.name));
+
+                                    const assignedUnitsPrice = assignedUnits.reduce((sum, { unit }) => sum + getUnitPrice(unit), 0);
+                                    const assignedGroupsPrice = assignedGroups.reduce((sum, group) => sum + (groupPriceMap.get(group.name) || 0), 0);
+                                    const classTotalPrice = assignedUnitsPrice + assignedGroupsPrice;
 
                                     return (
                                       <>
@@ -3451,6 +3526,12 @@ function AppContent() {
                                             <button onClick={() => { setEditingCourse({...selectedCourse}); setShowEditCombinationModal(true); }} className="text-blue-500 hover:bg-blue-50 p-2 rounded-xl transition-all"><Edit2 size={22} /></button>
                                             <button onClick={() => handleDeleteCourse(selectedCourse.id.toString())} className="text-red-500 hover:bg-red-50 p-2 rounded-xl transition-all"><Trash2 size={22} /></button>
                                           </div>
+                                        </div>
+
+                                        <div className="flex flex-wrap gap-2">
+                                          <span className="px-3 py-1.5 rounded-full text-xs font-black border-2 border-black/20 bg-white">單元總價: ${assignedUnitsPrice.toLocaleString()}</span>
+                                          <span className="px-3 py-1.5 rounded-full text-xs font-black border-2 border-blue-600 bg-blue-50 text-blue-700">群組總價: ${assignedGroupsPrice.toLocaleString()}</span>
+                                          <span className="px-3 py-1.5 rounded-full text-xs font-black border-2 border-black bg-black text-[#FFEF00]">課程合計: ${classTotalPrice.toLocaleString()}</span>
                                         </div>
 
                                         {/* Assigned Units */}
@@ -3492,7 +3573,7 @@ function AppContent() {
                                                 className="px-3 py-1.5 rounded-full text-xs font-black border-2 bg-blue-600 text-white border-blue-600 hover:scale-105 transition-transform"
                                                 title="點擊移除"
                                               >
-                                                📁 {group.name}{group.customId ? ` (${group.customId})` : ''} ✕
+                                                📁 {group.name}{group.customId ? ` (${group.customId})` : ''} · ${((groupPriceMap.get(group.name) || 0)).toLocaleString()} ✕
                                               </button>
                                             ))}
                                           </div>
@@ -3505,6 +3586,15 @@ function AppContent() {
                                               <div className="flex items-center justify-between px-4 py-2 bg-black/5 border-b-2 border-black/10">
                                                 <span className="text-xs font-black uppercase text-black/60">加入單元</span>
                                                 <div className="flex gap-2">
+                                                  <label className="text-xs font-black text-black/70 inline-flex items-center gap-1.5 cursor-pointer">
+                                                    <input
+                                                      type="checkbox"
+                                                      checked={addableUnits.length === 0}
+                                                      onChange={() => setAllCourseMandatory(selectedCourse.id.toString(), true)}
+                                                      className="w-3.5 h-3.5 accent-black"
+                                                    />
+                                                    全選加入
+                                                  </label>
                                                   <button onClick={() => setAllCourseMandatory(selectedCourse.id.toString(), true)} className="text-xs font-black text-blue-600 hover:underline">全選</button>
                                                   <span className="text-black/30">|</span>
                                                   <button onClick={() => setAllCourseMandatory(selectedCourse.id.toString(), false)} className="text-xs font-black text-black/40 hover:underline">清除全部</button>
@@ -3531,8 +3621,17 @@ function AppContent() {
                                           {/* Add Groups (checkbox) */}
                                           {addableGroups.length > 0 && (
                                             <div className="border-2 border-black/20 rounded-2xl overflow-hidden">
-                                              <div className="px-4 py-2 bg-black/5 border-b-2 border-black/10">
+                                              <div className="flex items-center justify-between px-4 py-2 bg-black/5 border-b-2 border-black/10">
                                                 <span className="text-xs font-black uppercase text-black/60">加入群組</span>
+                                                <label className="text-xs font-black text-black/70 inline-flex items-center gap-1.5 cursor-pointer">
+                                                  <input
+                                                    type="checkbox"
+                                                    checked={addableGroups.length === 0}
+                                                    onChange={() => setAllCourseMandatoryGroups(selectedCourse.id.toString(), true)}
+                                                    className="w-3.5 h-3.5 accent-black"
+                                                  />
+                                                  全選加入
+                                                </label>
                                               </div>
                                               <div className="max-h-52 overflow-y-auto divide-y divide-black/5">
                                                 {addableGroups.map((group) => (
@@ -3550,7 +3649,8 @@ function AppContent() {
                                                       className="w-4 h-4 accent-black shrink-0"
                                                     />
                                                     <span className="text-sm font-bold truncate">📁 {group.name}</span>
-                                                    {group.customId && <span className="ml-auto text-xs font-bold text-black/40 shrink-0">{group.customId}</span>}
+                                                    <span className="ml-auto text-xs font-bold text-black/50 shrink-0">${((groupPriceMap.get(group.name) || 0)).toLocaleString()}</span>
+                                                    {group.customId && <span className="text-xs font-bold text-black/40 shrink-0">{group.customId}</span>}
                                                   </label>
                                                 ))}
                                               </div>
@@ -3648,7 +3748,7 @@ function AppContent() {
                             👥 團體課程
                           </h3>
                           <button
-                            onClick={() => { setNewCourse({ name: '', type: 'Diploma', category: 'group', mandatory: [], minUnits: 0, allowExtra: false, title: '', subtitle: '', desc: '', startDate: '', classTime: '', tuition: '', mask: 'mask-cloud', img: '' }); setShowAddCombinationModal(true); }}
+                            onClick={() => { setNewCourse({ name: '', type: 'Diploma', category: 'group', mandatory: [], mandatoryGroups: [], minUnits: 0, allowExtra: false, title: '', subtitle: '', desc: '', startDate: '', classTime: '', tuition: '', mask: 'mask-cloud', img: '' }); setShowAddCombinationModal(true); }}
                             className="bg-black text-[#FFEF00] px-6 py-3 rounded-full font-black flex items-center gap-2 hover:scale-105 transition-transform text-sm"
                           >
                             <Plus size={20} /> 新增團體課程
@@ -4638,6 +4738,7 @@ function AppContent() {
                                     const unitsInGroupList = adminUnitNames
                                       .map((u: any, idx: number) => ({ unit: u, index: idx }))
                                       .filter(({ unit }) => (unit.group || '未分類') === group.name);
+                                    const groupPrice = unitsInGroupList.reduce((sum: number, { unit }) => sum + getUnitPrice(unit), 0);
                                     const addableUnits = adminUnitNames
                                       .map((u: any, idx: number) => ({ unit: u, index: idx }))
                                       .filter(({ unit }) => (unit.group || '未分類') !== group.name);
@@ -4659,6 +4760,7 @@ function AppContent() {
                                                 <div className="flex flex-wrap gap-2 mt-2 text-xs font-bold text-black/60">
                                                   <span className="px-3 py-1 rounded-full bg-black/5 border-2 border-black/10">總單元: {unitsInGroup}</span>
                                                   <span className="px-3 py-1 rounded-full bg-black/5 border-2 border-black/10">必修: {mandatoryCount}</span>
+                                                  <span className="px-3 py-1 rounded-full bg-black text-[#FFEF00] border-2 border-black">群組總價: ${groupPrice.toLocaleString()}</span>
                                                   <span className="px-3 py-1 rounded-full bg-black/5 border-2 border-black/10">
                                                     {unitsInGroup > 0 ? adminUnitNames.filter((u: any) => (u.group || '未分類') === group.name).slice(0, 3).map((unit: any) => unit.name).join(' / ') : '未分配單元'}
                                                   </span>
@@ -4724,7 +4826,7 @@ function AppContent() {
                                                   className="px-3 py-1.5 rounded-full border-2 border-black bg-black text-[#FFEF00] text-xs font-black hover:scale-105 transition-transform"
                                                   title="從此群組移除"
                                                 >
-                                                  {(unit.customId || `U${index + 1}`)} · {unit.name || '未命名'} ✕
+                                                  {(unit.customId || `U${index + 1}`)} · {unit.name || '未命名'} ({`$${getUnitPrice(unit).toLocaleString()}`}) ✕
                                                 </button>
                                               ))
                                             )}
@@ -4767,7 +4869,8 @@ function AppContent() {
                                                       />
                                                       <span className="text-xs font-black text-blue-600 shrink-0">{unit.customId || `U${index + 1}`}</span>
                                                       <span className="text-sm font-bold truncate">{unit.name || '未命名'}</span>
-                                                      <span className="ml-auto text-xs font-bold text-black/40 shrink-0">{unit.group || '未分類'}</span>
+                                                      <span className="ml-auto text-xs font-black text-black/60 shrink-0">${getUnitPrice(unit).toLocaleString()}</span>
+                                                      <span className="text-xs font-bold text-black/40 shrink-0">{unit.group || '未分類'}</span>
                                                     </label>
                                                   );
                                                 })}
@@ -4875,11 +4978,11 @@ function AppContent() {
                             {newCourse.category !== 'group' && (
                             <div className="space-y-3">
                               <label className="text-xs font-black uppercase ml-1 flex justify-between items-center">
-                                <span>選擇包含單元 (必修)</span>
+                                <span>選擇包含單元 (必填)</span>
                                 <span className="text-black/40">{newCourse.mandatory.length} 個已選擇</span>
                               </label>
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[200px] overflow-y-auto p-2 border-2 border-black/10 rounded-xl custom-scrollbar">
-                                {unitNames.map((unit, i) => (
+                                {adminUnitNames.map((unit, i) => (
                                   <label key={i} className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all cursor-pointer ${
                                     newCourse.mandatory.includes(i) 
                                     ? 'bg-black text-[#FFEF00] border-black' 
@@ -4904,6 +5007,48 @@ function AppContent() {
                                     <div className="flex flex-col min-w-0">
                                       <span className="text-sm font-black truncate">{unit.name}</span>
                                       {unit.price > 0 && <span className="text-[10px] font-black opacity-40">${unit.price}</span>}
+                                    </div>
+                                  </label>
+                                ))}
+                              </div>
+                            </div>
+                            )}
+
+                            {/* Groups — regular/personal only */}
+                            {newCourse.category !== 'group' && (
+                            <div className="space-y-3">
+                              <label className="text-xs font-black uppercase ml-1 flex justify-between items-center">
+                                <span>選擇包含群組 (可選)</span>
+                                <span className="text-black/40">{(newCourse.mandatoryGroups || []).length} 個已選擇</span>
+                              </label>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[160px] overflow-y-auto p-2 border-2 border-black/10 rounded-xl custom-scrollbar">
+                                {getAdminGroupsForCourseSelection().map((group) => (
+                                  <label key={`new-course-group-${group.name}`} className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all cursor-pointer ${
+                                    (newCourse.mandatoryGroups || []).includes(group.name)
+                                    ? 'bg-blue-600 text-white border-blue-600'
+                                    : 'bg-white text-black border-black/10 hover:border-black'
+                                  }`}>
+                                    <input
+                                      type="checkbox"
+                                      className="hidden"
+                                      checked={(newCourse.mandatoryGroups || []).includes(group.name)}
+                                      onChange={e => {
+                                        const selected = newCourse.mandatoryGroups || [];
+                                        const nextGroups = e.target.checked
+                                          ? [...selected, group.name]
+                                          : selected.filter(g => g !== group.name);
+                                        setNewCourse({ ...newCourse, mandatoryGroups: nextGroups });
+                                      }}
+                                    />
+                                    <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                                      (newCourse.mandatoryGroups || []).includes(group.name) ? 'bg-white border-white' : 'border-black/20'
+                                    }`}>
+                                      {(newCourse.mandatoryGroups || []).includes(group.name) && <CheckCircle2 size={14} className="text-blue-600" />}
+                                    </div>
+                                    <div className="flex flex-col min-w-0">
+                                      <span className="text-sm font-black truncate">📁 {group.name}</span>
+                                      <span className="text-[10px] font-black opacity-60">群組價: ${getGroupPrice(group.name, adminUnitNames).toLocaleString()}</span>
+                                      {group.customId && <span className="text-[10px] font-black opacity-60">{group.customId}</span>}
                                     </div>
                                   </label>
                                 ))}
@@ -5013,7 +5158,7 @@ function AppContent() {
                           </div>
                           <button 
                             onClick={() => {
-                              setNewCourse({ name: '', type: 'Diploma', category: 'group', mandatory: [], minUnits: 0, allowExtra: false, title: '', subtitle: '', desc: '', startDate: '', classTime: '', tuition: '', mask: 'mask-cloud', img: '' });
+                              setNewCourse({ name: '', type: 'Diploma', category: 'group', mandatory: [], mandatoryGroups: [], minUnits: 0, allowExtra: false, title: '', subtitle: '', desc: '', startDate: '', classTime: '', tuition: '', mask: 'mask-cloud', img: '' });
                               setShowAddCombinationModal(true);
                             }}
                             className="bg-black text-[#FFEF00] px-6 py-3 rounded-full font-black flex items-center gap-2 hover:scale-105 transition-transform"
@@ -5151,7 +5296,7 @@ function AppContent() {
                                     <span className="text-black/40">{(editingCourse.mandatory || []).length} 個已選擇</span>
                                   </label>
                                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[200px] overflow-y-auto p-2 border-2 border-black/10 rounded-xl custom-scrollbar">
-                                    {unitNames.map((unit, i) => (
+                                    {adminUnitNames.map((unit, i) => (
                                       <label key={i} className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all cursor-pointer ${
                                         (editingCourse.mandatory || []).includes(i) || unit.isMandatory
                                         ? 'bg-black text-[#FFEF00] border-black' 
