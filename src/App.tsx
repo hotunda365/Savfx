@@ -2388,11 +2388,11 @@ function AppContent() {
                                 : 'bg-[#2A2A2A] border-white/10 hover:border-white/30 text-white/80 hover:text-white'
                             } ${isMandatory ? 'cursor-default' : 'cursor-pointer'}`}
                           >
-                            <span className="block break-words leading-tight text-[12px] sm:text-[15px]">{unit.name}</span>
+                            <span className="block break-words leading-tight text-[13px] sm:text-[17px]">{unit.name}</span>
                             <div className="flex items-center gap-1 sm:gap-2 mt-1">
-                              <span className={`text-[9px] sm:text-[10px] ${isHighlighted ? 'text-black/65' : 'text-white/45'}`}>(U{i+1})</span>
+                              <span className={`text-[10px] sm:text-[12px] ${isHighlighted ? 'text-black/70' : 'text-white/55'}`}>(U{i+1})</span>
                               {unit.price > 0 && (
-                                <span className={`text-[9px] sm:text-[10px] font-black px-1 sm:px-1.5 rounded-md ${
+                                <span className={`text-[10px] sm:text-[12px] font-black px-1.5 sm:px-2 py-0.5 rounded-md ${
                                   isHighlighted
                                     ? 'text-black bg-black/10'
                                     : 'text-[#FFEF00] bg-white/15 border border-white/20'
