@@ -2249,7 +2249,7 @@ function AppContent() {
           </div>
 
           <div className="bg-black text-[#FFEF00] p-4 sm:p-10 md:p-16 border-[6px] sm:border-[10px] border-white shadow-[10px_10px_0px_rgba(0,0,0,1)] sm:shadow-[20px_20px_0px_rgba(0,0,0,1)] rounded-[2rem] sm:rounded-[4rem] relative">
-            <div className="grid lg:grid-cols-2 gap-8 sm:gap-16 items-start">
+            <div className="grid lg:grid-cols-[0.88fr_1.12fr] gap-8 sm:gap-16 items-start">
               <div className="space-y-4 sm:space-y-6">
                 
                 <div className="space-y-3 sm:space-y-4">
@@ -2361,8 +2361,8 @@ function AppContent() {
                 </div>
               </div>
               
-              <div className="relative">
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4 h-[380px] sm:h-[420px] overflow-y-auto p-3 sm:p-6 bg-[#1A1A1A] custom-scrollbar rounded-[2rem] sm:rounded-[3rem] border-4 border-white/10 shadow-inner">
+              <div className="relative lg:-mr-6 xl:-mr-8">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-4 h-[540px] sm:h-[640px] lg:h-[700px] overflow-y-auto p-3 sm:p-6 bg-[#1A1A1A] custom-scrollbar rounded-[2rem] sm:rounded-[3rem] border-4 border-white/10 shadow-inner w-full">
                   {unitNames.length === 0 ? (
                     <div className="flex flex-col items-center justify-center text-center p-12 w-full col-span-full min-h-[400px]">
                       <BookOpen size={64} className="mb-6 opacity-20 text-white" />
@@ -2388,12 +2388,16 @@ function AppContent() {
                                 : 'bg-[#2A2A2A] border-white/10 hover:border-white/30 text-white/80 hover:text-white'
                             } ${isMandatory ? 'cursor-default' : 'cursor-pointer'}`}
                           >
-                            <span className="block break-words leading-tight">{unit.name}</span>
+                            <span className="block break-words leading-tight text-[12px] sm:text-[15px]">{unit.name}</span>
                             <div className="flex items-center gap-1 sm:gap-2 mt-1">
-                              <span className="text-[9px] sm:text-[10px] opacity-40">(U{i+1})</span>
+                              <span className={`text-[9px] sm:text-[10px] ${isHighlighted ? 'text-black/65' : 'text-white/45'}`}>(U{i+1})</span>
                               {unit.price > 0 && (
-                                <span className="text-[9px] sm:text-[10px] font-black text-black/60 bg-black/5 px-1 sm:px-1.5 rounded-md">
-                                  ${unit.price}
+                                <span className={`text-[9px] sm:text-[10px] font-black px-1 sm:px-1.5 rounded-md ${
+                                  isHighlighted
+                                    ? 'text-black bg-black/10'
+                                    : 'text-[#FFEF00] bg-white/15 border border-white/20'
+                                }`}>
+                                  ${Number(unit.price || 0).toLocaleString()}
                                 </span>
                               )}
                             </div>
@@ -4515,52 +4519,55 @@ function AppContent() {
                                         </div>
                                       )}
 
+                                      {filteredEntries.length > 0 && (
+                                        <div className="hidden md:grid grid-cols-[160px_1.5fr_1fr_120px_130px] bg-black text-[#FFEF00] rounded-t-[1.5rem] border-[4px] border-black px-4 py-3 text-sm font-black tracking-wide">
+                                          <div>單元 ID</div>
+                                          <div>名稱</div>
+                                          <div>群組</div>
+                                          <div>價格</div>
+                                          <div className="text-center">操作</div>
+                                        </div>
+                                      )}
+
                                       {filteredEntries.map(({ unit, index: i }: any) => {
                                         const isEditing = editingUnitIndex === i;
                                         return (
-                                          <div key={i} className="bg-white border-[4px] border-black rounded-[2rem] px-5 py-4 shadow-[8px_8px_0px_rgba(0,0,0,1)]">
-                                            <div className="flex items-center gap-4">
-                                              <div className="w-20 h-20 rounded-[1.25rem] border-[3px] border-black bg-black text-[#FFEF00] flex flex-col items-center justify-center shrink-0">
-                                                <span className="text-[10px] font-black uppercase opacity-70">單元</span>
-                                                <span className="text-xl font-black">U{i+1}</span>
+                                          <div
+                                            key={i}
+                                            className={`border-x-[4px] border-black ${i === 0 ? 'md:rounded-none border-t-0' : 'border-t-0'} ${i === filteredEntries.length - 1 ? 'border-b-[4px] rounded-b-[1.5rem]' : 'border-b-2'} ${i % 2 === 0 ? 'bg-[#ececec]' : 'bg-white'}`}
+                                          >
+                                            <div className="grid grid-cols-1 md:grid-cols-[160px_1.5fr_1fr_120px_130px] items-center gap-3 px-4 py-3">
+                                              <div className="text-sm font-black text-black/70">{unit.customId || `U${i + 1}`}</div>
+                                              <div className="min-w-0">
+                                                <h4 className="text-base md:text-lg font-black leading-tight truncate">{unit.name || '新單元'}</h4>
+                                                <div className="mt-1 text-xs font-bold text-black/60">{unit.isMandatory ? '必修單元' : '選修單元'}</div>
                                               </div>
-                                              <div className="min-w-0 flex-1">
-                                                <div className="flex items-start justify-between gap-4">
-                                                  <div className="min-w-0">
-                                                    <p className="text-[11px] font-black uppercase text-blue-600 mb-1">{unit.customId || '未設定 ID'}</p>
-                                                    <h4 className="text-2xl font-black leading-tight truncate">{unit.name || '新單元'}</h4>
-                                                    <div className="flex flex-wrap gap-2 mt-2 text-xs font-bold text-black/60">
-                                                      <span className="px-3 py-1 rounded-full bg-black/5 border-2 border-black/10">群組: {unit.group || '未分類'}</span>
-                                                      <span className="px-3 py-1 rounded-full bg-black/5 border-2 border-black/10">價格: ${unit.price || 0}</span>
-                                                      <span className={`px-3 py-1 rounded-full border-2 ${unit.isMandatory ? 'bg-black text-[#FFEF00] border-black' : 'bg-white border-black/10'}`}>
-                                                        {unit.isMandatory ? '必修單元' : '選修單元'}
-                                                      </span>
-                                                    </div>
-                                                  </div>
-                                                  <div className="flex items-center gap-2 shrink-0">
-                                                    <button
-                                                      onClick={() => setEditingUnitIndex(isEditing ? null : i)}
-                                                      className="h-11 px-4 rounded-2xl border-2 border-blue-500 text-blue-500 hover:bg-blue-50 transition-all flex items-center justify-center gap-2 font-black text-xs"
-                                                    >
-                                                      <Edit2 size={16} /> {isEditing ? '收合' : '編輯'}
-                                                    </button>
-                                                    <button
-                                                      onClick={() => {
-                                                        showConfirm("確定刪除", `確定要刪除單元 U${i+1} 嗎？`, () => {
-                                                          setAdminUnitNames(prev => prev.filter((_, idx) => idx !== i));
-                                                          setEditingUnitIndex(prev => (prev === i ? null : prev));
-                                                        });
-                                                      }}
-                                                      className="h-11 px-4 rounded-2xl border-2 border-red-500 text-red-500 hover:bg-red-50 transition-all flex items-center justify-center gap-2 font-black text-xs"
-                                                    >
-                                                      <Trash2 size={16} /> 刪除
-                                                    </button>
-                                                  </div>
-                                                </div>
+                                              <div className="text-sm font-bold text-black/70 truncate">{unit.group || '未分類'}</div>
+                                              <div className="text-sm font-black">${(unit.price || 0).toLocaleString()}</div>
+                                              <div className="flex items-center justify-start md:justify-center gap-2">
+                                                <button
+                                                  onClick={() => setEditingUnitIndex(isEditing ? null : i)}
+                                                  className="w-9 h-9 rounded-lg border-2 border-blue-500 text-blue-500 hover:bg-blue-50 transition-all flex items-center justify-center"
+                                                  title={isEditing ? '收合' : '編輯'}
+                                                >
+                                                  <Edit2 size={16} />
+                                                </button>
+                                                <button
+                                                  onClick={() => {
+                                                    showConfirm("確定刪除", `確定要刪除單元 U${i+1} 嗎？`, () => {
+                                                      setAdminUnitNames(prev => prev.filter((_, idx) => idx !== i));
+                                                      setEditingUnitIndex(prev => (prev === i ? null : prev));
+                                                    });
+                                                  }}
+                                                  className="w-9 h-9 rounded-lg border-2 border-red-500 text-red-500 hover:bg-red-50 transition-all flex items-center justify-center"
+                                                  title="刪除"
+                                                >
+                                                  <Trash2 size={16} />
+                                                </button>
                                               </div>
                                             </div>
                                             {isEditing && (
-                                              <div className="mt-4 pt-4 border-t-2 border-black/10 grid grid-cols-1 md:grid-cols-4 gap-3">
+                                              <div className="px-4 pb-4 pt-3 border-t-2 border-black/15 bg-white grid grid-cols-1 md:grid-cols-4 gap-3">
                                                 <input 
                                                   type="text" 
                                                   className="w-full border-2 border-black p-3 rounded-2xl font-bold text-sm"
@@ -4666,25 +4673,25 @@ function AppContent() {
                         {adminUnitsSubTab === 'groups' && (
                           <div className="space-y-10">
                             {/* Add New Group Section */}
-                            <div className="bg-gradient-to-br from-black to-black/80 text-[#FFEF00] p-10 rounded-[3rem] shadow-[12px_12px_0px_rgba(0,0,0,0.3)]">
+                            <div className="bg-white border-[6px] border-black p-8 rounded-[2.2rem] shadow-[10px_10px_0px_rgba(0,0,0,1)]">
                               <h3 className="text-2xl font-black mb-6">➕ 建立新群組</h3>
                               <div className="space-y-4">
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                   <div>
-                                    <label className="text-sm font-black uppercase text-[#FFEF00]/70 block mb-2">群組名稱 *</label>
+                                    <label className="text-sm font-black uppercase text-black/70 block mb-2">群組名稱 *</label>
                                     <input 
                                       type="text" 
-                                      className="w-full bg-[#FFEF00] text-black p-3 rounded-2xl font-black placeholder:text-black/30 border-2 border-[#FFEF00]"
+                                      className="w-full bg-white text-black p-3 rounded-2xl font-black placeholder:text-black/30 border-2 border-black"
                                       placeholder="例: 基礎課程、進階課程"
                                       value={newGroupName}
                                       onChange={(e) => setNewGroupName(e.target.value)}
                                     />
                                   </div>
                                   <div>
-                                    <label className="text-sm font-black uppercase text-[#FFEF00]/70 block mb-2">自訂 ID (選擇性)</label>
+                                    <label className="text-sm font-black uppercase text-black/70 block mb-2">自訂 ID (選擇性)</label>
                                     <input 
                                       type="text" 
-                                      className="w-full bg-[#FFEF00] text-black p-3 rounded-2xl font-black placeholder:text-black/30 border-2 border-[#FFEF00]"
+                                      className="w-full bg-white text-black p-3 rounded-2xl font-black placeholder:text-black/30 border-2 border-black"
                                       placeholder="例: GRP-001、BASIC"
                                       value={newGroupId}
                                       onChange={(e) => setNewGroupId(e.target.value)}
@@ -4692,10 +4699,10 @@ function AppContent() {
                                   </div>
                                 </div>
                                 <div>
-                                  <label className="text-sm font-black uppercase text-[#FFEF00]/70 block mb-2">群組描述 (選擇性)</label>
+                                  <label className="text-sm font-black uppercase text-black/70 block mb-2">群組描述 (選擇性)</label>
                                   <input 
                                     type="text" 
-                                    className="w-full bg-[#FFEF00] text-black p-3 rounded-2xl font-black placeholder:text-black/30 border-2 border-[#FFEF00]"
+                                    className="w-full bg-white text-black p-3 rounded-2xl font-black placeholder:text-black/30 border-2 border-black"
                                     placeholder="說明此群組的用途"
                                     value={newGroupDesc}
                                     onChange={(e) => setNewGroupDesc(e.target.value)}
@@ -4713,7 +4720,7 @@ function AppContent() {
                                       showToast('請輸入群組名稱', undefined);
                                     }
                                   }}
-                                  className="w-full bg-[#FFEF00] text-black py-4 rounded-2xl font-black text-lg hover:scale-105 transition-transform active:scale-95 shadow-[4px_4px_0px_rgba(0,0,0,0.5)]"
+                                  className="w-full bg-black text-[#FFEF00] py-4 rounded-2xl font-black text-lg hover:scale-[1.01] transition-transform active:scale-95"
                                 >
                                   建立群組
                                 </button>
@@ -4721,7 +4728,7 @@ function AppContent() {
                             </div>
 
                             {/* Groups List */}
-                            <div className="bg-white border-[6px] border-black p-10 rounded-[3rem] shadow-[12px_12px_0px_rgba(0,0,0,1)]">
+                            <div className="bg-white border-[6px] border-black p-6 rounded-[2.2rem] shadow-[12px_12px_0px_rgba(0,0,0,1)]">
                               <h3 className="text-2xl font-black mb-8">📁 現有群組</h3>
                               
                               {adminGroups.length === 0 ? (
@@ -4731,7 +4738,15 @@ function AppContent() {
                                   <p className="text-sm font-bold text-black/30 mt-2">從左邊的表單開始建立第一個群組</p>
                                 </div>
                               ) : (
-                                <div className="space-y-4">
+                                <div className="space-y-0">
+                                  <div className="hidden md:grid grid-cols-[140px_1.4fr_120px_120px_160px_120px] bg-black text-[#FFEF00] rounded-t-[1.2rem] border-[4px] border-black px-4 py-3 text-sm font-black tracking-wide">
+                                    <div>群組 ID</div>
+                                    <div>名稱</div>
+                                    <div>單元數</div>
+                                    <div>必修數</div>
+                                    <div>群組總價</div>
+                                    <div className="text-center">操作</div>
+                                  </div>
                                   {adminGroups.map((group, groupIdx) => {
                                     const unitsInGroup = adminUnitNames.filter((u: any) => (u.group || '未分類') === group.name).length;
                                     const mandatoryCount = adminUnitNames.filter((u: any) => (u.group || '未分類') === group.name && u.isMandatory).length;
@@ -4745,28 +4760,20 @@ function AppContent() {
                                     const isEditingGroup = editingGroup?.name === group.name;
                                     
                                     return (
-                                      <div key={groupIdx} className="bg-white border-[4px] border-black rounded-[2rem] px-5 py-4 shadow-[8px_8px_0px_rgba(0,0,0,1)]">
-                                        <div className="flex items-center gap-4">
-                                          <div className="w-20 h-20 rounded-[1.25rem] border-[3px] border-black bg-black text-[#FFEF00] flex flex-col items-center justify-center shrink-0">
-                                            <span className="text-[10px] font-black uppercase opacity-70">群組</span>
-                                            <span className="text-lg font-black">G{groupIdx + 1}</span>
+                                      <div
+                                        key={groupIdx}
+                                        className={`border-x-[4px] border-black ${groupIdx === 0 ? 'border-t-0' : 'border-t-0'} ${groupIdx === adminGroups.length - 1 ? 'border-b-[4px] rounded-b-[1.2rem]' : 'border-b-2'} ${groupIdx % 2 === 0 ? 'bg-[#ececec]' : 'bg-white'}`}
+                                      >
+                                        <div className="grid grid-cols-1 md:grid-cols-[140px_1.4fr_120px_120px_160px_120px] gap-3 items-center px-4 py-3">
+                                          <div className="text-sm font-black text-black/70">{group.customId || `G${groupIdx + 1}`}</div>
+                                          <div className="min-w-0">
+                                            <h4 className="text-base md:text-lg font-black leading-tight truncate">{group.name}</h4>
+                                            {group.description && <p className="text-xs text-black/60 font-bold truncate">{group.description}</p>}
                                           </div>
-                                          <div className="min-w-0 flex-1">
-                                            <div className="flex items-start justify-between gap-4">
-                                              <div className="min-w-0">
-                                                <p className="text-[11px] font-black uppercase text-blue-600 mb-1">GROUP{group.customId ? ` · ${group.customId}` : ''}</p>
-                                                <h4 className="text-2xl font-black leading-tight truncate">{group.name}</h4>
-                                                {group.description && <p className="text-sm text-black/60 font-bold mt-1 truncate">{group.description}</p>}
-                                                <div className="flex flex-wrap gap-2 mt-2 text-xs font-bold text-black/60">
-                                                  <span className="px-3 py-1 rounded-full bg-black/5 border-2 border-black/10">總單元: {unitsInGroup}</span>
-                                                  <span className="px-3 py-1 rounded-full bg-black/5 border-2 border-black/10">必修: {mandatoryCount}</span>
-                                                  <span className="px-3 py-1 rounded-full bg-black text-[#FFEF00] border-2 border-black">群組總價: ${groupPrice.toLocaleString()}</span>
-                                                  <span className="px-3 py-1 rounded-full bg-black/5 border-2 border-black/10">
-                                                    {unitsInGroup > 0 ? adminUnitNames.filter((u: any) => (u.group || '未分類') === group.name).slice(0, 3).map((unit: any) => unit.name).join(' / ') : '未分配單元'}
-                                                  </span>
-                                                </div>
-                                              </div>
-                                              <div className="flex items-center gap-2 shrink-0">
+                                          <div className="text-sm font-black">{unitsInGroup}</div>
+                                          <div className="text-sm font-black">{mandatoryCount}</div>
+                                          <div className="text-sm font-black">${groupPrice.toLocaleString()}</div>
+                                          <div className="flex items-center justify-start md:justify-center gap-2">
                                                 <button 
                                                   onClick={() => {
                                                     if (isEditingGroup) {
@@ -4781,9 +4788,10 @@ function AppContent() {
                                                       setNewGroupId(group.customId || '');
                                                     }
                                                   }}
-                                                  className="w-11 h-11 rounded-2xl border-2 border-blue-500 text-blue-500 hover:bg-blue-50 transition-all flex items-center justify-center"
+                                                  className="w-9 h-9 rounded-lg border-2 border-blue-500 text-blue-500 hover:bg-blue-50 transition-all flex items-center justify-center"
+                                                  title={isEditingGroup ? '收合' : '編輯'}
                                                 >
-                                                  <Edit2 size={18} />
+                                                  <Edit2 size={16} />
                                                 </button>
                                                 <button 
                                                   onClick={() => {
@@ -4801,98 +4809,164 @@ function AppContent() {
                                                       showToast('群組已刪除，單元已移至「未分類」');
                                                     });
                                                   }}
-                                                  className="w-11 h-11 rounded-2xl border-2 border-red-500 text-red-500 hover:bg-red-50 transition-all flex items-center justify-center"
+                                                  className="w-9 h-9 rounded-lg border-2 border-red-500 text-red-500 hover:bg-red-50 transition-all flex items-center justify-center"
+                                                  title="刪除"
                                                 >
-                                                  <Trash2 size={18} />
+                                                  <Trash2 size={16} />
+                                                </button>
+                                              </div>
+                                        </div>
+
+                                        {isEditingGroup ? (
+                                          <div className="px-4 pb-4 pt-3 border-t-2 border-black/10 bg-white space-y-3">
+                                            <div className="border-2 border-black/15 rounded-2xl p-3 bg-black/[0.03] space-y-3">
+                                              <div className="text-xs font-black text-black/60 uppercase">編輯群組資訊</div>
+                                              <div className="grid grid-cols-1 md:grid-cols-[1.4fr_1fr_auto] gap-3 items-end">
+                                                <div>
+                                                  <label className="block text-[11px] font-black text-black/60 mb-1 uppercase">群組名稱</label>
+                                                  <input
+                                                    type="text"
+                                                    value={newGroupName}
+                                                    onChange={(e) => setNewGroupName(e.target.value)}
+                                                    className="w-full border-2 border-black rounded-xl px-3 py-2 font-bold text-sm bg-white"
+                                                    placeholder="輸入群組名稱"
+                                                  />
+                                                </div>
+                                                <div>
+                                                  <label className="block text-[11px] font-black text-black/60 mb-1 uppercase">自訂 ID</label>
+                                                  <input
+                                                    type="text"
+                                                    value={newGroupId}
+                                                    onChange={(e) => setNewGroupId(e.target.value)}
+                                                    className="w-full border-2 border-black rounded-xl px-3 py-2 font-bold text-sm bg-white"
+                                                    placeholder="例如 G1、BASIC"
+                                                  />
+                                                </div>
+                                                <button
+                                                  onClick={() => {
+                                                    const trimmedName = newGroupName.trim();
+                                                    if (!trimmedName) {
+                                                      showToast('請輸入群組名稱');
+                                                      return;
+                                                    }
+                                                    const duplicate = adminGroups.some((g, idx) => idx !== groupIdx && g.name === trimmedName);
+                                                    if (duplicate) {
+                                                      showToast('群組名稱重複，請改用其他名稱');
+                                                      return;
+                                                    }
+
+                                                    const oldName = group.name;
+                                                    const nextId = newGroupId.trim() || undefined;
+
+                                                    setAdminGroups(prev => prev.map((g, idx) => idx === groupIdx ? { ...g, name: trimmedName, customId: nextId } : g));
+                                                    setAdminUnitNames(prev => prev.map((u: any) => (u.group || '未分類') === oldName ? { ...u, group: trimmedName } : u));
+
+                                                    if (oldName !== trimmedName) {
+                                                      setGroupAddSelection(prev => {
+                                                        const current = prev[oldName] || [];
+                                                        const next = { ...prev, [trimmedName]: current };
+                                                        delete next[oldName];
+                                                        return next;
+                                                      });
+                                                    }
+
+                                                    setEditingGroup({ ...group, name: trimmedName, customId: nextId });
+                                                    showToast('群組名稱與 ID 已更新');
+                                                  }}
+                                                  className="h-[42px] px-4 rounded-xl border-2 border-black bg-black text-[#FFEF00] font-black text-sm hover:scale-[1.02] transition-transform"
+                                                >
+                                                  儲存變更
                                                 </button>
                                               </div>
                                             </div>
-                                          </div>
-                                        </div>
 
-                                        <div className="mt-4 pt-4 border-t-2 border-black/10 space-y-3">
-                                          <div className="text-sm font-black text-black/80">群組內單元（可直接移除）</div>
-                                          <div className="flex flex-wrap gap-2">
-                                            {unitsInGroupList.length === 0 ? (
-                                              <span className="text-xs font-bold text-black/40">此群組暫時沒有單元</span>
-                                            ) : (
-                                              unitsInGroupList.map(({ unit, index }) => (
-                                                <button
-                                                  key={`group-unit-${groupIdx}-${index}`}
-                                                  onClick={() => {
-                                                    setAdminUnitNames(prev => prev.map((u: any, idx: number) => idx === index ? { ...u, group: '未分類' } : u));
-                                                    showToast(`已從「${group.name}」移除單元：${unit.name || `U${index + 1}`}`);
-                                                  }}
-                                                  className="px-3 py-1.5 rounded-full border-2 border-black bg-black text-[#FFEF00] text-xs font-black hover:scale-105 transition-transform"
-                                                  title="從此群組移除"
-                                                >
-                                                  {(unit.customId || `U${index + 1}`)} · {unit.name || '未命名'} ({`$${getUnitPrice(unit).toLocaleString()}`}) ✕
-                                                </button>
-                                              ))
-                                            )}
-                                          </div>
+                                            <div className="text-sm font-black text-black/80">群組內單元（可直接移除）</div>
+                                            <div className="flex flex-wrap gap-2">
+                                              {unitsInGroupList.length === 0 ? (
+                                                <span className="text-xs font-bold text-black/40">此群組暫時沒有單元</span>
+                                              ) : (
+                                                unitsInGroupList.map(({ unit, index }) => (
+                                                  <button
+                                                    key={`group-unit-${groupIdx}-${index}`}
+                                                    onClick={() => {
+                                                      setAdminUnitNames(prev => prev.map((u: any, idx: number) => idx === index ? { ...u, group: '未分類' } : u));
+                                                      showToast(`已從「${group.name}」移除單元：${unit.name || `U${index + 1}`}`);
+                                                    }}
+                                                    className="px-3 py-1.5 rounded-full border-2 border-black bg-black text-[#FFEF00] text-xs font-black hover:scale-105 transition-transform"
+                                                    title="從此群組移除"
+                                                  >
+                                                    {(unit.customId || `U${index + 1}`)} · {unit.name || '未命名'} ({`$${getUnitPrice(unit).toLocaleString()}`}) ✕
+                                                  </button>
+                                                ))
+                                              )}
+                                            </div>
 
-                                          {addableUnits.length > 0 && (
-                                            <div className="border-2 border-black/20 rounded-2xl overflow-hidden">
-                                              <div className="flex items-center justify-between px-4 py-2 bg-black/5 border-b-2 border-black/10">
-                                                <span className="text-xs font-black text-black/60 uppercase">勾選單元加入此群組</span>
-                                                <div className="flex gap-2">
+                                            {addableUnits.length > 0 && (
+                                              <div className="border-2 border-black/20 rounded-2xl overflow-hidden">
+                                                <div className="flex items-center justify-between px-4 py-2 bg-black/5 border-b-2 border-black/10">
+                                                  <span className="text-xs font-black text-black/60 uppercase">勾選單元加入此群組</span>
+                                                  <div className="flex gap-2">
+                                                    <button
+                                                      onClick={() => setGroupAddSelection(prev => ({ ...prev, [group.name]: addableUnits.map(({ index }) => index) }))}
+                                                      className="text-xs font-black text-blue-600 hover:underline"
+                                                    >全選</button>
+                                                    <span className="text-black/30">|</span>
+                                                    <button
+                                                      onClick={() => setGroupAddSelection(prev => ({ ...prev, [group.name]: [] }))}
+                                                      className="text-xs font-black text-black/40 hover:underline"
+                                                    >清除</button>
+                                                  </div>
+                                                </div>
+                                                <div className="max-h-48 overflow-y-auto divide-y divide-black/5">
+                                                  {addableUnits.map(({ unit, index }) => {
+                                                    const selected = (groupAddSelection[group.name] || []).includes(index);
+                                                    return (
+                                                      <label
+                                                        key={`chk-${groupIdx}-${index}`}
+                                                        className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors ${selected ? 'bg-[#FFEF00]/30' : 'hover:bg-black/3'}`}
+                                                      >
+                                                        <input
+                                                          type="checkbox"
+                                                          checked={selected}
+                                                          onChange={(e) => {
+                                                            setGroupAddSelection(prev => {
+                                                              const current = prev[group.name] || [];
+                                                              return { ...prev, [group.name]: e.target.checked ? [...current, index] : current.filter(i => i !== index) };
+                                                            });
+                                                          }}
+                                                          className="w-4 h-4 accent-black rounded shrink-0"
+                                                        />
+                                                        <span className="text-xs font-black text-blue-600 shrink-0">{unit.customId || `U${index + 1}`}</span>
+                                                        <span className="text-sm font-bold truncate">{unit.name || '未命名'}</span>
+                                                        <span className="ml-auto text-xs font-black text-black/60 shrink-0">${getUnitPrice(unit).toLocaleString()}</span>
+                                                        <span className="text-xs font-bold text-black/40 shrink-0">{unit.group || '未分類'}</span>
+                                                      </label>
+                                                    );
+                                                  })}
+                                                </div>
+                                                <div className="px-4 py-2 bg-black/5 border-t-2 border-black/10 flex items-center justify-between">
+                                                  <span className="text-xs font-bold text-black/50">已選 {(groupAddSelection[group.name] || []).length} 個單元</span>
                                                   <button
-                                                    onClick={() => setGroupAddSelection(prev => ({ ...prev, [group.name]: addableUnits.map(({ index }) => index) }))}
-                                                    className="text-xs font-black text-blue-600 hover:underline"
-                                                  >全選</button>
-                                                  <span className="text-black/30">|</span>
-                                                  <button
-                                                    onClick={() => setGroupAddSelection(prev => ({ ...prev, [group.name]: [] }))}
-                                                    className="text-xs font-black text-black/40 hover:underline"
-                                                  >清除</button>
+                                                    onClick={() => {
+                                                      const selected = groupAddSelection[group.name] || [];
+                                                      if (selected.length === 0) { showToast('請先勾選單元'); return; }
+                                                      setAdminUnitNames(prev => prev.map((u: any, idx: number) => selected.includes(idx) ? { ...u, group: group.name } : u));
+                                                      setGroupAddSelection(prev => ({ ...prev, [group.name]: [] }));
+                                                      showToast(`已加入 ${selected.length} 個單元至「${group.name}」`);
+                                                    }}
+                                                    className="px-5 py-2 rounded-2xl font-black text-sm bg-black text-[#FFEF00] border-2 border-black hover:scale-105 transition-transform"
+                                                  >
+                                                    加入所選單元
+                                                  </button>
                                                 </div>
                                               </div>
-                                              <div className="max-h-48 overflow-y-auto divide-y divide-black/5">
-                                                {addableUnits.map(({ unit, index }) => {
-                                                  const selected = (groupAddSelection[group.name] || []).includes(index);
-                                                  return (
-                                                    <label
-                                                      key={`chk-${groupIdx}-${index}`}
-                                                      className={`flex items-center gap-3 px-4 py-2.5 cursor-pointer transition-colors ${selected ? 'bg-[#FFEF00]/30' : 'hover:bg-black/3'}`}
-                                                    >
-                                                      <input
-                                                        type="checkbox"
-                                                        checked={selected}
-                                                        onChange={(e) => {
-                                                          setGroupAddSelection(prev => {
-                                                            const current = prev[group.name] || [];
-                                                            return { ...prev, [group.name]: e.target.checked ? [...current, index] : current.filter(i => i !== index) };
-                                                          });
-                                                        }}
-                                                        className="w-4 h-4 accent-black rounded shrink-0"
-                                                      />
-                                                      <span className="text-xs font-black text-blue-600 shrink-0">{unit.customId || `U${index + 1}`}</span>
-                                                      <span className="text-sm font-bold truncate">{unit.name || '未命名'}</span>
-                                                      <span className="ml-auto text-xs font-black text-black/60 shrink-0">${getUnitPrice(unit).toLocaleString()}</span>
-                                                      <span className="text-xs font-bold text-black/40 shrink-0">{unit.group || '未分類'}</span>
-                                                    </label>
-                                                  );
-                                                })}
-                                              </div>
-                                              <div className="px-4 py-2 bg-black/5 border-t-2 border-black/10 flex items-center justify-between">
-                                                <span className="text-xs font-bold text-black/50">已選 {(groupAddSelection[group.name] || []).length} 個單元</span>
-                                                <button
-                                                  onClick={() => {
-                                                    const selected = groupAddSelection[group.name] || [];
-                                                    if (selected.length === 0) { showToast('請先勾選單元'); return; }
-                                                    setAdminUnitNames(prev => prev.map((u: any, idx: number) => selected.includes(idx) ? { ...u, group: group.name } : u));
-                                                    setGroupAddSelection(prev => ({ ...prev, [group.name]: [] }));
-                                                    showToast(`已加入 ${selected.length} 個單元至「${group.name}」`);
-                                                  }}
-                                                  className="px-5 py-2 rounded-2xl font-black text-sm bg-black text-[#FFEF00] border-2 border-black hover:scale-105 transition-transform"
-                                                >
-                                                  加入所選單元
-                                                </button>
-                                              </div>
-                                            </div>
-                                          )}
-                                        </div>
+                                            )}
+                                          </div>
+                                        ) : (
+                                          <div className="px-4 pb-4 pt-3 border-t-2 border-black/10 bg-white">
+                                            <p className="text-xs font-bold text-black/40">點擊右側鉛筆即可展開群組明細與單元分配表</p>
+                                          </div>
+                                        )}
                                       </div>
                                     );
                                   })}
