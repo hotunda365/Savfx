@@ -217,6 +217,147 @@ const MaskedImage = ({ src, maskId, className = "" }: { src: string, maskId: str
   </div>
 );
 
+type StudentWork = {
+  id?: string;
+  title: string;
+  youtubeUrl: string;
+  studentName?: string;
+  courseTag?: string;
+  year?: string;
+  description?: string;
+  featured?: boolean;
+  sortOrder?: string | number;
+};
+
+const EMPTY_STUDENT_WORK: StudentWork = {
+  title: '',
+  youtubeUrl: '',
+  studentName: '',
+  courseTag: '',
+  year: '',
+  description: '',
+  featured: false,
+  sortOrder: ''
+};
+
+const getYouTubeEmbedUrl = (input: string): string => {
+  if (!input) return '';
+  const raw = input.trim();
+  if (!raw) return '';
+
+  if (raw.includes('/embed/')) {
+    return raw;
+  }
+
+  try {
+    const parsed = new URL(raw.startsWith('http') ? raw : `https://${raw}`);
+    const host = parsed.hostname.replace('www.', '');
+    if (host === 'youtu.be') {
+      const id = parsed.pathname.replace('/', '').trim();
+      return id ? `https://www.youtube.com/embed/${id}` : raw;
+    }
+    if (host.includes('youtube.com')) {
+      const watchId = parsed.searchParams.get('v');
+      if (watchId) return `https://www.youtube.com/embed/${watchId}`;
+      const shortsMatch = parsed.pathname.match(/\/shorts\/([^/?]+)/);
+      if (shortsMatch?.[1]) return `https://www.youtube.com/embed/${shortsMatch[1]}`;
+      const liveMatch = parsed.pathname.match(/\/live\/([^/?]+)/);
+      if (liveMatch?.[1]) return `https://www.youtube.com/embed/${liveMatch[1]}`;
+    }
+  } catch {
+    // Fallback below for non-URL inputs.
+  }
+
+  const matchedId = raw.match(/(?:v=|be\/|embed\/|shorts\/|live\/)([A-Za-z0-9_-]{6,})/)?.[1];
+  return matchedId ? `https://www.youtube.com/embed/${matchedId}` : raw;
+};
+
+const getStudentWorkSortValue = (value: unknown): number => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 9999;
+};
+
+const sortStudentWorks = (works: StudentWork[]): StudentWork[] => {
+  return [...works].sort((a, b) => {
+    const featuredA = a.featured ? 0 : 1;
+    const featuredB = b.featured ? 0 : 1;
+    if (featuredA !== featuredB) return featuredA - featuredB;
+    const sortDiff = getStudentWorkSortValue(a.sortOrder) - getStudentWorkSortValue(b.sortOrder);
+    if (sortDiff !== 0) return sortDiff;
+    return (a.title || '').localeCompare(b.title || '', 'zh-Hant');
+  });
+};
+
+const StudentWorksGrid = ({ works }: { works: StudentWork[] }) => (
+  <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-8">
+    {works.map((w, i) => (
+      <motion.div
+        key={w.id || i}
+        initial={{ opacity: 0, y: 24 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        transition={{ delay: i * 0.06, duration: 0.4 }}
+        viewport={{ once: true }}
+        className={`group flex flex-col gap-0 bg-black rounded-[2rem] overflow-hidden border-4 border-black shadow-[6px_6px_0px_rgba(0,0,0,1)] ${w.featured ? 'ring-4 ring-[#FFEF00] ring-offset-4 ring-offset-[#FFEF00]' : ''}`}
+      >
+        <div className="aspect-video relative overflow-hidden">
+          <iframe
+            className="w-full h-full"
+            src={getYouTubeEmbedUrl(w.youtubeUrl || '')}
+            title={w.title}
+            frameBorder="0"
+            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+            allowFullScreen
+          />
+          {w.featured && (
+            <div className="absolute top-3 left-3 bg-[#FFEF00] text-black text-[10px] font-black px-2.5 py-1 rounded-full border-2 border-black z-10 pointer-events-none">⭐ 精選</div>
+          )}
+        </div>
+        <div className="p-4 sm:p-5 flex-1 flex flex-col gap-2">
+          <p className="font-black text-[#FFEF00] text-base sm:text-lg leading-snug">{w.title}</p>
+          {w.description && <p className="text-white/60 text-xs sm:text-sm font-bold line-clamp-2 leading-relaxed">{w.description}</p>}
+          <div className="flex flex-wrap gap-1.5 mt-auto pt-2">
+            {w.studentName && (
+              <span className="text-[10px] sm:text-xs font-black bg-white/10 text-white px-2.5 py-1 rounded-full">👤 {w.studentName}</span>
+            )}
+            {w.courseTag && (
+              <span className="text-[10px] sm:text-xs font-black bg-[#FFEF00] text-black px-2.5 py-1 rounded-full border border-black/20">{w.courseTag}</span>
+            )}
+            {w.year && (
+              <span className="text-[10px] sm:text-xs font-black bg-white/10 text-white/70 px-2.5 py-1 rounded-full">{w.year}</span>
+            )}
+          </div>
+        </div>
+      </motion.div>
+    ))}
+  </div>
+);
+
+const StudentWorksFilter = ({ works, allTags }: { works: StudentWork[]; allTags: string[] }) => {
+  const [activeTag, setActiveTag] = React.useState<string>('全部');
+  const tags = ['全部', ...allTags];
+  const filtered = activeTag === '全部' ? works : works.filter(w => w.courseTag === activeTag);
+  return (
+    <div>
+      <div className="flex flex-wrap gap-2 sm:gap-3 mb-8 sm:mb-10">
+        {tags.map(tag => (
+          <button
+            key={tag}
+            onClick={() => setActiveTag(tag)}
+            className={`px-5 py-2.5 rounded-full font-black text-sm border-[3px] transition-all ${
+              activeTag === tag
+                ? 'bg-black text-[#FFEF00] border-black scale-105 shadow-[4px_4px_0px_rgba(0,0,0,0.4)]'
+                : 'bg-white text-black border-black hover:bg-black/10'
+            }`}
+          >
+            {tag}
+          </button>
+        ))}
+      </div>
+      <StudentWorksGrid works={filtered} />
+    </div>
+  );
+};
+
 const SectionTitle = ({ children, subtitle }: { children: React.ReactNode, subtitle?: string, reverse?: boolean }) => (
   <div className="mb-16 text-center px-2 md:px-0">
     <motion.h2 
@@ -1020,7 +1161,7 @@ function AppContent() {
 
       fetchCollection('studentWorks', async () => {
         const items = await apiFetchCollection('studentWorks');
-        setStudentWorks(items);
+        setStudentWorks(sortStudentWorks(items));
       }, 'studentWorks');
 
       fetchCollection('briefingLeads', async () => {
@@ -1109,9 +1250,14 @@ function AppContent() {
   const [tutorPriorityDrafts, setTutorPriorityDrafts] = useState<Record<string, number>>({});
   const [tutorMaskDrafts, setTutorMaskDrafts] = useState<Record<string, string>>({});
   const [newTestimonial, setNewTestimonial] = useState({ name: '', text: '', img: '' });
-  const [newStudentWork, setNewStudentWork] = useState({ title: '', youtubeUrl: '' });
+  const [newStudentWork, setNewStudentWork] = useState<StudentWork>(EMPTY_STUDENT_WORK);
   const [editingStudentWorkId, setEditingStudentWorkId] = useState<string | null>(null);
   const [isSavingStudentWorks, setIsSavingStudentWorks] = useState(false);
+  const [studentWorksSearch, setStudentWorksSearch] = useState('');
+  const [studentWorksFilterTag, setStudentWorksFilterTag] = useState('全部課程');
+  const [studentWorksFilterYear, setStudentWorksFilterYear] = useState('全部年份');
+  const [studentWorksFilterFeatured, setStudentWorksFilterFeatured] = useState<'all' | 'featured' | 'normal'>('all');
+  const [studentWorksSortBy, setStudentWorksSortBy] = useState<'manual' | 'title' | 'year'>('manual');
   const [newCourse, setNewCourse] = useState({ 
     name: '', 
     type: 'Diploma', 
@@ -1619,16 +1765,33 @@ function AppContent() {
     e.preventDefault();
     setIsSavingStudentWorks(true);
     const id = editingStudentWorkId || Date.now().toString();
+    const normalizedWork: StudentWork = {
+      title: (newStudentWork.title || '').trim(),
+      youtubeUrl: (newStudentWork.youtubeUrl || '').trim(),
+      studentName: (newStudentWork.studentName || '').trim(),
+      courseTag: (newStudentWork.courseTag || '').trim(),
+      year: (newStudentWork.year || '').trim(),
+      description: (newStudentWork.description || '').trim(),
+      featured: !!newStudentWork.featured,
+      sortOrder: newStudentWork.sortOrder === '' ? '' : getStudentWorkSortValue(newStudentWork.sortOrder)
+    };
+
+    if (!normalizedWork.title || !normalizedWork.youtubeUrl) {
+      showToast('請填寫作品標題與 YouTube 連結', 'error');
+      setIsSavingStudentWorks(false);
+      return;
+    }
+
     try {
-      await apiSetDoc('studentWorks', id, newStudentWork);
+      await apiSetDoc('studentWorks', id, normalizedWork);
       if (editingStudentWorkId) {
-        setStudentWorks(prev => prev.map(w => w.id === id ? { id, ...newStudentWork } : w));
+        setStudentWorks(prev => sortStudentWorks(prev.map(w => w.id === id ? { id, ...normalizedWork } : w)));
         showToast("作品已更新");
       } else {
-        setStudentWorks(prev => [...prev, { id, ...newStudentWork }]);
+        setStudentWorks(prev => sortStudentWorks([...prev, { id, ...normalizedWork }]));
         showToast("作品已新增");
       }
-      setNewStudentWork({ title: '', youtubeUrl: '' });
+      setNewStudentWork(EMPTY_STUDENT_WORK);
       setEditingStudentWorkId(null);
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, `studentWorks/${id}`);
@@ -1647,6 +1810,52 @@ function AppContent() {
         showToast(error.message || "刪除失敗", "error");
       }
     });
+  };
+
+  const startEditStudentWork = (work: StudentWork) => {
+    setNewStudentWork({
+      title: work.title || '',
+      youtubeUrl: work.youtubeUrl || '',
+      studentName: work.studentName || '',
+      courseTag: work.courseTag || '',
+      year: work.year || '',
+      description: work.description || '',
+      featured: !!work.featured,
+      sortOrder: work.sortOrder?.toString() || ''
+    });
+    setEditingStudentWorkId(work.id || null);
+  };
+
+  const resetStudentWorkForm = () => {
+    setNewStudentWork(EMPTY_STUDENT_WORK);
+    setEditingStudentWorkId(null);
+  };
+
+  const handleToggleStudentWorkFeatured = async (work: StudentWork) => {
+    if (!work.id) return;
+    const updated = { ...work, featured: !work.featured };
+    try {
+      await apiSetDoc('studentWorks', work.id, updated);
+      setStudentWorks(prev => sortStudentWorks(prev.map(item => item.id === work.id ? updated : item)));
+      showToast(updated.featured ? '已設為精選作品' : '已取消精選');
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, `studentWorks/${work.id}`);
+    }
+  };
+
+  const handleAutoSortStudentWorks = async () => {
+    const next = sortStudentWorks(studentWorks).map((work, index) => ({
+      ...work,
+      sortOrder: index + 1
+    }));
+    try {
+      const payload = next.filter(work => !!work.id).map(work => ({ id: work.id!.toString(), ...work }));
+      await apiBulkSet('studentWorks', payload);
+      setStudentWorks(next);
+      showToast('已套用自動排序');
+    } catch (error) {
+      handleFirestoreError(error, OperationType.UPDATE, 'studentWorks/bulk-sort');
+    }
   };
 
   useEffect(() => {
@@ -1680,6 +1889,42 @@ function AppContent() {
     if (priorityDiff !== 0) return priorityDiff;
     return a.id.toString().localeCompare(b.id.toString());
   });
+
+  const studentWorkTagOptions = React.useMemo(() => {
+    return ['全部課程', ...Array.from(new Set(studentWorks.map((w: StudentWork) => (w.courseTag || '').trim()).filter(Boolean)))];
+  }, [studentWorks]);
+
+  const studentWorkYearOptions = React.useMemo(() => {
+    const years = Array.from(new Set(studentWorks.map((w: StudentWork) => (w.year || '').trim()).filter(Boolean)));
+    return ['全部年份', ...years.sort((a, b) => b.localeCompare(a))];
+  }, [studentWorks]);
+
+  const adminStudentWorks = React.useMemo(() => {
+    const keyword = studentWorksSearch.trim().toLowerCase();
+
+    const filtered = studentWorks.filter((w: StudentWork) => {
+      if (studentWorksFilterTag !== '全部課程' && (w.courseTag || '').trim() !== studentWorksFilterTag) return false;
+      if (studentWorksFilterYear !== '全部年份' && (w.year || '').trim() !== studentWorksFilterYear) return false;
+      if (studentWorksFilterFeatured === 'featured' && !w.featured) return false;
+      if (studentWorksFilterFeatured === 'normal' && w.featured) return false;
+
+      if (!keyword) return true;
+      const haystack = [w.title, w.studentName, w.courseTag, w.year, w.description]
+        .map(v => (v || '').toString().toLowerCase())
+        .join(' ');
+      return haystack.includes(keyword);
+    });
+
+    if (studentWorksSortBy === 'title') {
+      return [...filtered].sort((a, b) => (a.title || '').localeCompare(b.title || '', 'zh-Hant'));
+    }
+    if (studentWorksSortBy === 'year') {
+      return [...filtered].sort((a, b) => (b.year || '').localeCompare(a.year || ''));
+    }
+    return sortStudentWorks(filtered);
+  }, [studentWorks, studentWorksFilterFeatured, studentWorksFilterTag, studentWorksFilterYear, studentWorksSearch, studentWorksSortBy]);
+
+  const featuredStudentWorkCount = React.useMemo(() => studentWorks.filter((w: StudentWork) => w.featured).length, [studentWorks]);
 
   const currentCourse = courses.find(c => c.id === selectedCourse) || courses[1] || { mandatory: [], allowExtra: false, name: '', minUnits: 0, type: '' };
   const currentCourseType = String(currentCourse?.type || '').toLowerCase();
@@ -2574,7 +2819,7 @@ function AppContent() {
                     <div className="aspect-video rounded-2xl overflow-hidden border-4 border-[#FFEF00]/30 bg-[#FFEF00]/10">
                       <iframe
                         className="w-full h-full"
-                        src={(w.youtubeUrl || '').replace('watch?v=', 'embed/')}
+                        src={getYouTubeEmbedUrl(w.youtubeUrl || '')}
                         title={w.title}
                         frameBorder="0"
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -2746,50 +2991,50 @@ function AppContent() {
       {/* Activity Review */}
       <section id="activities" className="py-28 sm:py-40 bg-white overflow-hidden">
         <div className="max-w-7xl mx-auto px-8 sm:px-16">
-            <div className="flex justify-between items-end mb-12">
-              <SectionTitle subtitle="精彩瞬間與技術分享">活動回顧</SectionTitle>
-            </div>
+          <div className="flex justify-between items-end mb-12">
+            <SectionTitle subtitle="精彩瞬間與技術分享">活動回顧</SectionTitle>
+          </div>
 
           {isAdmin && showAddForm && (
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
               className="mb-12 bg-white border-4 border-black p-8 rounded-3xl shadow-xl"
             >
               <form onSubmit={handleAddActivity} className="grid md:grid-cols-2 gap-6">
                 <div className="space-y-4">
-                  <input 
-                    type="text" 
-                    placeholder="標題" 
+                  <input
+                    type="text"
+                    placeholder="標題"
                     required
                     className="w-full border-2 border-black p-3 rounded-xl font-bold"
                     value={newActivity.title}
                     onChange={e => setNewActivity({...newActivity, title: e.target.value})}
                   />
-                  <input 
-                    type="text" 
-                    placeholder="日期 (如: 2025年9月10日)" 
+                  <input
+                    type="text"
+                    placeholder="日期 (如: 2025年9月10日)"
                     required
                     className="w-full border-2 border-black p-3 rounded-xl font-bold"
                     value={newActivity.date}
                     onChange={e => setNewActivity({...newActivity, date: e.target.value})}
                   />
-                  <FileUploader 
+                  <FileUploader
                     label="活動圖片"
                     currentImage={newActivity.img}
                     onUpload={(url) => setNewActivity({...newActivity, img: url})}
                   />
-                  <input 
-                    type="url" 
-                    placeholder="或輸入 URL" 
+                  <input
+                    type="url"
+                    placeholder="或輸入 URL"
                     required
                     className="w-full border-2 border-black p-3 rounded-xl font-bold mt-2"
                     value={newActivity.img}
                     onChange={e => setNewActivity({...newActivity, img: e.target.value})}
                   />
-                  <input 
-                    type="text" 
-                    placeholder="標籤 (逗號分隔)" 
+                  <input
+                    type="text"
+                    placeholder="標籤 (逗號分隔)"
                     required
                     className="w-full border-2 border-black p-3 rounded-xl font-bold"
                     value={newActivity.tags}
@@ -2797,8 +3042,8 @@ function AppContent() {
                   />
                 </div>
                 <div className="space-y-4">
-                  <textarea 
-                    placeholder="內容描述" 
+                  <textarea
+                    placeholder="內容描述"
                     required
                     rows={5}
                     className="w-full border-2 border-black p-3 rounded-xl font-bold"
@@ -2813,67 +3058,54 @@ function AppContent() {
 
           <div className="columns-1 md:columns-2 lg:columns-3 gap-8 space-y-8">
             {activities.map((activity) => (
-              <motion.div 
+              <motion.article
                 key={activity.id}
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 viewport={{ once: true }}
                 className="break-inside-avoid bg-white border-4 border-black shadow-[8px_8px_0px_rgba(0,0,0,1)] hover:shadow-[12px_12px_0px_rgba(0,85,255,1)] transition-all duration-300 group rounded-3xl overflow-hidden flex flex-col mb-8"
               >
-                {/* Image Container */}
                 <div className="relative overflow-hidden bg-gray-200 border-b-4 border-black">
-                  <img 
-                    src={getActivityImageUrl(activity)} 
-                    alt={activity.title} 
+                  <img
+                    src={getActivityImageUrl(activity)}
+                    alt={activity.title}
                     className="w-full h-auto object-cover transition-transform duration-500 group-hover:scale-110"
                     onError={(e) => { (e.target as HTMLImageElement).src = 'https://picsum.photos/seed/activity-fallback/900/600'; }}
                   />
-                  {/* SAVFX Logo Overlay */}
-                  <div className="absolute top-4 left-4 flex items-center gap-1 bg-black text-[#FFEF00] px-3 py-1 rounded-full border-2 border-white/20">
-                    <svg width="20" height="14" viewBox="0 0 120 80" className="stroke-[#FFEF00] stroke-[12] fill-none">
-                      <path d="M10,50 L20,30 L35,45 L50,20 L65,45 L80,30 L90,50 L95,80 L5,80 Z" strokeLinejoin="round" />
-                    </svg>
-                    <span className="text-[10px] font-black tracking-tighter">SAVFX</span>
-                  </div>
-                  <div className="absolute bottom-4 right-4 bg-[#0055FF] text-white px-3 py-1 text-[10px] font-black uppercase tracking-widest rounded-full">
-                    {activity.date}
-                  </div>
                 </div>
 
-                {/* Content */}
-                <div className="p-5 sm:p-8 flex flex-col flex-grow bg-white">
-                  <h3 className="text-2xl font-black text-black mb-4 leading-tight group-hover:text-[#0055FF] transition-colors">
-                    {activity.title}
-                  </h3>
-                  <p className="text-black/70 text-base font-bold leading-snug mb-8 line-clamp-6">
-                    {activity.content}
-                  </p>
-                  
-                  {/* Tags */}
-                  <div className="mt-auto flex flex-wrap gap-2">
-                    {activity.tags?.slice(0, 5).map((tag, idx) => (
-                      <span key={idx} className="text-[10px] font-black bg-black/5 px-2 py-1 rounded uppercase hover:bg-black hover:text-[#FFEF00] transition-colors">
-                        {tag.replace('#', '')}
-                      </span>
-                    ))}
-                  </div>
+                <div className="p-6 flex flex-col gap-4">
+                  <p className="text-xs font-black uppercase tracking-wider text-black/60">{activity.date || '未設定日期'}</p>
+                  <h3 className="text-xl font-black leading-tight">{activity.title}</h3>
+                  <p className="font-bold text-black/70 leading-relaxed whitespace-pre-line">{activity.content}</p>
+
+                  {Array.isArray(activity.tags) && activity.tags.length > 0 && (
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {activity.tags.slice(0, 5).map((tag: string, tagIndex: number) => (
+                        <span
+                          key={`${activity.id}-${tag}-${tagIndex}`}
+                          className="bg-[#FFEF00] border-2 border-black px-3 py-1 rounded-full text-xs font-black"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              </motion.div>
+              </motion.article>
             ))}
           </div>
 
           {hasMoreActivities && (
-            <div className="mt-16 flex justify-center pb-12 text-black">
+            <div className="mt-12 flex justify-center">
               <button
                 onClick={handleLoadMoreActivities}
                 disabled={isLoadingMore}
-                className={`px-10 py-4 rounded-full bg-[#0055FF] text-white font-black hover:bg-black transition-all transform hover:scale-105 active:scale-95 flex items-center gap-3 shadow-lg shadow-blue-500/20 uppercase tracking-widest ${
-                  isLoadingMore ? 'opacity-50 cursor-not-allowed' : ''
-                }`}
+                className="inline-flex items-center gap-3 bg-black text-[#FFEF00] px-8 py-4 font-black uppercase rounded-full border-4 border-black hover:scale-105 transition-transform disabled:opacity-70 disabled:cursor-not-allowed"
               >
                 {isLoadingMore ? (
                   <>
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <Loader2 className="animate-spin" size={18} />
                     正在載入中...
                   </>
                 ) : (
@@ -5513,38 +5745,136 @@ function AppContent() {
 
                     {adminActiveTab === 'student-works' && (
                       <section>
-                        <h3 className="text-3xl font-black mb-8 flex items-center gap-3">
-                          <FaYoutube size={32} /> 學生作品管理
-                        </h3>
+                        <div className="flex flex-col xl:flex-row xl:items-end xl:justify-between gap-4 mb-8">
+                          <h3 className="text-3xl font-black flex items-center gap-3">
+                            <FaYoutube size={32} /> 學生作品管理
+                          </h3>
+                          <div className="flex flex-wrap gap-2">
+                            <button
+                              type="button"
+                              onClick={handleAutoSortStudentWorks}
+                              className="px-4 py-2 rounded-full bg-[#FFEF00] border-2 border-black font-black text-xs uppercase hover:scale-105 transition-transform"
+                            >
+                              一鍵自動排序
+                            </button>
+                            <button
+                              type="button"
+                              onClick={resetStudentWorkForm}
+                              className="px-4 py-2 rounded-full border-2 border-black font-black text-xs uppercase hover:bg-black hover:text-white transition-colors"
+                            >
+                              清空編輯表單
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="grid sm:grid-cols-3 gap-3 mb-6">
+                          <div className="bg-white border-4 border-black rounded-2xl p-4">
+                            <p className="text-xs font-black uppercase text-black/50">作品總數</p>
+                            <p className="text-3xl font-black leading-none mt-2">{studentWorks.length}</p>
+                          </div>
+                          <div className="bg-white border-4 border-black rounded-2xl p-4">
+                            <p className="text-xs font-black uppercase text-black/50">精選作品</p>
+                            <p className="text-3xl font-black leading-none mt-2">{featuredStudentWorkCount}</p>
+                          </div>
+                          <div className="bg-white border-4 border-black rounded-2xl p-4">
+                            <p className="text-xs font-black uppercase text-black/50">篩選後結果</p>
+                            <p className="text-3xl font-black leading-none mt-2">{adminStudentWorks.length}</p>
+                          </div>
+                        </div>
+
+                        <div className="bg-white border-4 border-black p-4 rounded-2xl mb-8 grid xl:grid-cols-5 gap-3">
+                          <input
+                            type="text"
+                            placeholder="搜尋標題、學員、課程、年份..."
+                            className="xl:col-span-2 border-2 border-black p-3 rounded-xl font-bold text-sm"
+                            value={studentWorksSearch}
+                            onChange={e => setStudentWorksSearch(e.target.value)}
+                          />
+                          <select
+                            className="border-2 border-black p-3 rounded-xl font-bold text-sm bg-white"
+                            value={studentWorksFilterTag}
+                            onChange={e => setStudentWorksFilterTag(e.target.value)}
+                          >
+                            {studentWorkTagOptions.map(tag => (
+                              <option key={tag} value={tag}>{tag}</option>
+                            ))}
+                          </select>
+                          <select
+                            className="border-2 border-black p-3 rounded-xl font-bold text-sm bg-white"
+                            value={studentWorksFilterYear}
+                            onChange={e => setStudentWorksFilterYear(e.target.value)}
+                          >
+                            {studentWorkYearOptions.map(year => (
+                              <option key={year} value={year}>{year}</option>
+                            ))}
+                          </select>
+                          <div className="grid grid-cols-2 gap-3">
+                            <select
+                              className="border-2 border-black p-3 rounded-xl font-bold text-sm bg-white"
+                              value={studentWorksFilterFeatured}
+                              onChange={e => setStudentWorksFilterFeatured(e.target.value as 'all' | 'featured' | 'normal')}
+                            >
+                              <option value="all">全部狀態</option>
+                              <option value="featured">僅精選</option>
+                              <option value="normal">一般作品</option>
+                            </select>
+                            <select
+                              className="border-2 border-black p-3 rounded-xl font-bold text-sm bg-white"
+                              value={studentWorksSortBy}
+                              onChange={e => setStudentWorksSortBy(e.target.value as 'manual' | 'title' | 'year')}
+                            >
+                              <option value="manual">手動排序</option>
+                              <option value="title">標題排序</option>
+                              <option value="year">年份排序</option>
+                            </select>
+                          </div>
+                        </div>
+
                         <div className="grid md:grid-cols-2 gap-6 mb-12">
-                          {studentWorks.length === 0 && (
-                            <p className="font-black text-black/30 col-span-2">尚無學生作品，請新增。</p>
+                          {adminStudentWorks.length === 0 && (
+                            <p className="font-black text-black/30 col-span-2">目前篩選條件下沒有作品，請調整篩選或新增作品。</p>
                           )}
-                          {studentWorks.map(w => (
-                            <div key={w.id} className="bg-white border-4 border-black p-5 rounded-3xl shadow-[4px_4px_0px_rgba(0,0,0,1)]">
-                              <div className="aspect-video rounded-xl overflow-hidden border-2 border-black mb-4 bg-black">
+                          {adminStudentWorks.map((w: StudentWork) => (
+                            <div key={w.id} className={`bg-white border-4 p-5 rounded-3xl shadow-[4px_4px_0px_rgba(0,0,0,1)] relative ${w.featured ? 'border-[#FFEF00] shadow-[4px_4px_0px_rgba(255,239,0,0.8)]' : 'border-black'}`}>
+                              {w.featured && (
+                                <div className="absolute -top-3 left-4 bg-[#FFEF00] text-black text-[10px] font-black px-3 py-1 rounded-full border-2 border-black uppercase tracking-wider">精選作品</div>
+                              )}
+                              <div className="aspect-video rounded-xl overflow-hidden border-2 border-black mb-3 bg-black">
                                 <iframe
                                   className="w-full h-full"
-                                  src={(w.youtubeUrl || '').replace('watch?v=', 'embed/')}
+                                  src={getYouTubeEmbedUrl(w.youtubeUrl || '')}
                                   title={w.title}
                                   frameBorder="0"
                                   allowFullScreen
                                 />
                               </div>
-                              <p className="font-black text-lg mb-1 truncate">{w.title}</p>
-                              <p className="text-xs text-black/50 font-bold mb-4 truncate">{w.youtubeUrl}</p>
-                              <div className="flex gap-2">
+                              <p className="font-black text-base mb-1 line-clamp-2 leading-tight">{w.title}</p>
+                              <div className="flex flex-wrap gap-1.5 mb-2">
+                                {w.studentName && <span className="text-[10px] font-black bg-black text-white px-2 py-0.5 rounded-full">學員 {w.studentName}</span>}
+                                {w.courseTag && <span className="text-[10px] font-black bg-[#FFEF00] text-black px-2 py-0.5 rounded-full border border-black">{w.courseTag}</span>}
+                                {w.year && <span className="text-[10px] font-black bg-black/10 text-black px-2 py-0.5 rounded-full">{w.year}</span>}
+                                {w.sortOrder !== undefined && w.sortOrder !== '' && <span className="text-[10px] font-black bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">排序 {w.sortOrder}</span>}
+                              </div>
+                              {w.description && <p className="text-xs text-black/60 font-bold mb-3 line-clamp-2">{w.description}</p>}
+                              <div className="grid grid-cols-3 gap-2">
                                 <button
-                                  onClick={() => { setNewStudentWork({ title: w.title, youtubeUrl: w.youtubeUrl }); setEditingStudentWorkId(w.id); }}
-                                  className="flex-1 flex items-center justify-center gap-2 bg-[#FFEF00] border-2 border-black py-2 rounded-full font-black text-sm hover:scale-105 transition-transform"
+                                  onClick={() => startEditStudentWork(w)}
+                                  className="col-span-2 flex items-center justify-center gap-2 bg-[#FFEF00] border-2 border-black py-2 rounded-full font-black text-sm hover:scale-105 transition-transform"
                                 >
                                   <Edit2 size={16} /> 修改
                                 </button>
                                 <button
-                                  onClick={() => handleDeleteStudentWork(w.id)}
-                                  className="flex items-center justify-center gap-2 bg-red-500 text-white border-2 border-black px-4 py-2 rounded-full font-black text-sm hover:scale-105 transition-transform"
+                                  onClick={() => handleDeleteStudentWork((w.id || '').toString())}
+                                  className="flex items-center justify-center gap-2 bg-red-500 text-white border-2 border-black px-3 py-2 rounded-full font-black text-sm hover:scale-105 transition-transform"
                                 >
                                   <Trash2 size={16} />
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleStudentWorkFeatured(w)}
+                                  className="col-span-3 border-2 border-black rounded-full py-2 text-xs font-black uppercase hover:bg-black hover:text-white transition-colors"
+                                >
+                                  {w.featured ? '取消精選' : '設為精選'}
                                 </button>
                               </div>
                             </div>
@@ -5552,29 +5882,89 @@ function AppContent() {
                         </div>
 
                         <div className="bg-white border-4 border-black p-8 rounded-3xl shadow-[8px_8px_0px_rgba(0,0,0,1)]">
-                          <h4 className="text-xl font-black mb-6 uppercase">
-                            {editingStudentWorkId ? '修改學生作品' : '新增學生作品'}
+                          <h4 className="text-xl font-black mb-6 flex items-center gap-3 uppercase">
+                            {editingStudentWorkId ? <><Edit2 size={20}/> 修改學生作品</> : <><Plus size={20}/> 新增學生作品</>}
                           </h4>
                           <form onSubmit={handleSaveStudentWork} className="space-y-4">
-                            <div className="space-y-1">
-                              <label className="text-[10px] font-black uppercase ml-1">作品標題</label>
-                              <input
-                                type="text" required placeholder="例如：2024屆學生動畫作品集"
-                                className="w-full border-2 border-black p-3 rounded-xl font-bold text-sm"
-                                value={newStudentWork.title}
-                                onChange={e => setNewStudentWork({ ...newStudentWork, title: e.target.value })}
-                              />
+                            <div className="grid sm:grid-cols-2 gap-4">
+                              <div className="space-y-1 sm:col-span-2">
+                                <label className="text-[10px] font-black uppercase ml-1">作品標題 *</label>
+                                <input
+                                  type="text" required placeholder="例如：2024屆學生動畫作品集"
+                                  className="w-full border-2 border-black p-3 rounded-xl font-bold text-sm"
+                                  value={newStudentWork.title}
+                                  onChange={e => setNewStudentWork({ ...newStudentWork, title: e.target.value })}
+                                />
+                              </div>
+                              <div className="space-y-1 sm:col-span-2">
+                                <label className="text-[10px] font-black uppercase ml-1">YouTube 連結 *</label>
+                                <input
+                                  type="url" required placeholder="https://www.youtube.com/watch?v=..."
+                                  className="w-full border-2 border-black p-3 rounded-xl font-bold text-sm"
+                                  value={newStudentWork.youtubeUrl}
+                                  onChange={e => setNewStudentWork({ ...newStudentWork, youtubeUrl: e.target.value })}
+                                />
+                                <p className="text-[11px] font-bold text-black/50">支援 watch、youtu.be、shorts、embed 連結格式。</p>
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase ml-1">學生姓名</label>
+                                <input
+                                  type="text" placeholder="例如：陳大文"
+                                  className="w-full border-2 border-black p-3 rounded-xl font-bold text-sm"
+                                  value={newStudentWork.studentName}
+                                  onChange={e => setNewStudentWork({ ...newStudentWork, studentName: e.target.value })}
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase ml-1">課程 / 標籤</label>
+                                <input
+                                  type="text" placeholder="例如：2D動畫、AI應用"
+                                  className="w-full border-2 border-black p-3 rounded-xl font-bold text-sm"
+                                  value={newStudentWork.courseTag}
+                                  onChange={e => setNewStudentWork({ ...newStudentWork, courseTag: e.target.value })}
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase ml-1">年份</label>
+                                <input
+                                  type="text" placeholder="例如：2024"
+                                  className="w-full border-2 border-black p-3 rounded-xl font-bold text-sm"
+                                  value={newStudentWork.year}
+                                  onChange={e => setNewStudentWork({ ...newStudentWork, year: e.target.value })}
+                                />
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-[10px] font-black uppercase ml-1">排列順序（數字越小越前）</label>
+                                <input
+                                  type="number" placeholder="留空則自動放後面"
+                                  className="w-full border-2 border-black p-3 rounded-xl font-bold text-sm"
+                                  value={newStudentWork.sortOrder}
+                                  onChange={e => setNewStudentWork({ ...newStudentWork, sortOrder: e.target.value })}
+                                />
+                              </div>
+                              <div className="space-y-1 sm:col-span-2">
+                                <label className="text-[10px] font-black uppercase ml-1">作品簡介</label>
+                                <textarea
+                                  placeholder="簡短描述這件作品的內容或亮點..."
+                                  rows={2}
+                                  className="w-full border-2 border-black p-3 rounded-xl font-bold text-sm resize-none"
+                                  value={newStudentWork.description}
+                                  onChange={e => setNewStudentWork({ ...newStudentWork, description: e.target.value })}
+                                />
+                              </div>
+                              <div className="sm:col-span-2">
+                                <label className="flex items-center gap-3 cursor-pointer select-none">
+                                  <div
+                                    onClick={() => setNewStudentWork({ ...newStudentWork, featured: !newStudentWork.featured })}
+                                    className={`w-12 h-6 rounded-full border-2 border-black transition-colors flex items-center ${newStudentWork.featured ? 'bg-[#FFEF00]' : 'bg-black/10'}`}
+                                  >
+                                    <div className={`w-4 h-4 rounded-full bg-black mx-1 transition-transform ${newStudentWork.featured ? 'translate-x-6' : 'translate-x-0'}`} />
+                                  </div>
+                                  <span className="font-black text-sm">置頂精選作品</span>
+                                </label>
+                              </div>
                             </div>
-                            <div className="space-y-1">
-                              <label className="text-[10px] font-black uppercase ml-1">YouTube 連結</label>
-                              <input
-                                type="url" required placeholder="https://www.youtube.com/watch?v=..."
-                                className="w-full border-2 border-black p-3 rounded-xl font-bold text-sm"
-                                value={newStudentWork.youtubeUrl}
-                                onChange={e => setNewStudentWork({ ...newStudentWork, youtubeUrl: e.target.value })}
-                              />
-                            </div>
-                            <div className="flex gap-3">
+                            <div className="flex gap-3 pt-2">
                               <button
                                 type="submit"
                                 disabled={isSavingStudentWorks}
@@ -5586,7 +5976,7 @@ function AppContent() {
                               {editingStudentWorkId && (
                                 <button
                                   type="button"
-                                  onClick={() => { setNewStudentWork({ title: '', youtubeUrl: '' }); setEditingStudentWorkId(null); }}
+                                  onClick={resetStudentWorkForm}
                                   className="px-6 py-4 rounded-full font-black uppercase text-sm border-2 border-black hover:bg-black hover:text-white transition-colors"
                                 >
                                   取消

@@ -104,9 +104,37 @@ async function startServer() {
 
   app.get('/api/collections/:collection', async (req, res) => {
     try {
-      const { limit, offset } = req.query;
+      const { limit, offset, featured, tag, year, q } = req.query;
       let query = `SELECT doc_id, data FROM documents WHERE collection_name = $1`;
       const params: any[] = [req.params.collection];
+
+      if (req.params.collection === 'studentWorks') {
+        if (featured === 'true' || featured === 'false') {
+          params.push(featured === 'true' ? 'true' : 'false');
+          query += ` AND COALESCE(data->>'featured', 'false') = $${params.length}`;
+        }
+
+        if (typeof tag === 'string' && tag.trim()) {
+          params.push(tag.trim());
+          query += ` AND COALESCE(data->>'courseTag', '') = $${params.length}`;
+        }
+
+        if (typeof year === 'string' && year.trim()) {
+          params.push(year.trim());
+          query += ` AND COALESCE(data->>'year', '') = $${params.length}`;
+        }
+
+        if (typeof q === 'string' && q.trim()) {
+          params.push(`%${q.trim().toLowerCase()}%`);
+          query += ` AND (
+            LOWER(COALESCE(data->>'title', '')) LIKE $${params.length}
+            OR LOWER(COALESCE(data->>'studentName', '')) LIKE $${params.length}
+            OR LOWER(COALESCE(data->>'courseTag', '')) LIKE $${params.length}
+            OR LOWER(COALESCE(data->>'year', '')) LIKE $${params.length}
+            OR LOWER(COALESCE(data->>'description', '')) LIKE $${params.length}
+          )`;
+        }
+      }
 
       if (req.params.collection === 'activities') {
         query += `
@@ -118,6 +146,15 @@ async function startServer() {
                 ((regexp_match(data->>'date', '([0-9]{4})年([0-9]{1,2})月([0-9]{1,2})日'))[3]::int)
               ELSE 0
             END DESC,
+            created_at DESC`;
+      } else if (req.params.collection === 'studentWorks') {
+        query += `
+          ORDER BY
+            CASE WHEN data->>'featured' = 'true' THEN 0 ELSE 1 END ASC,
+            CASE
+              WHEN COALESCE(data->>'sortOrder', '') ~ '^\\d+$' THEN (data->>'sortOrder')::int
+              ELSE 9999
+            END ASC,
             created_at DESC`;
       } else {
         query += ` ORDER BY created_at DESC`;
