@@ -1115,7 +1115,7 @@ function AppContent() {
   const [newCourse, setNewCourse] = useState({ 
     name: '', 
     type: 'Diploma', 
-    category: 'regular' as 'regular' | 'personal' | 'group',
+    categories: ['regular'] as string[],
     mandatory: [] as number[], 
     mandatoryGroups: [] as string[],
     minUnits: 16, 
@@ -1190,17 +1190,21 @@ function AppContent() {
   const sortActivitiesByDateDesc = (items: any[]): any[] =>
     [...items].sort((a, b) => parseActivityDateForSort(b.date) - parseActivityDateForSort(a.date));
 
+  // Helper: check if course belongs to a category (handles both old string and new array format)
+  const hasCategory = (c: any, cat: string) =>
+    Array.isArray(c.categories) ? c.categories.includes(cat) : c.category === cat;
+
   const handleAddCourse = async (e: React.FormEvent) => {
     e.preventDefault();
     // Group course → save to groupCourses collection
-    if (newCourse.category === 'group') {
+    if (newCourse.categories.length === 1 && newCourse.categories.includes('group')) {
       setIsSavingGroupCourses(true);
       try {
         const groupData = { title: newCourse.title, desc: newCourse.desc, mask: newCourse.mask, img: newCourse.img };
         const result = await apiAddDoc('groupCourses', groupData);
         setGroupCourses(prev => [...prev, { id: result.id, ...groupData }]);
         setShowAddCombinationModal(false);
-        setNewCourse({ name: '', type: 'Diploma', category: 'regular', mandatory: [], mandatoryGroups: [], minUnits: 4, allowExtra: true, title: '', subtitle: '', desc: '', startDate: '', classTime: '', tuition: '', mask: 'mask-book', img: '' });
+        setNewCourse({ name: '', type: 'Diploma', categories: ['regular'], mandatory: [], mandatoryGroups: [], minUnits: 4, allowExtra: true, title: '', subtitle: '', desc: '', startDate: '', classTime: '', tuition: '', mask: 'mask-book', img: '' });
         showToast("已新增團體課程");
       } catch (error) {
         handleFirestoreError(error, OperationType.CREATE, 'groupCourses');
@@ -1223,7 +1227,7 @@ function AppContent() {
       setNewCourse({ 
         name: '', 
         type: 'Diploma', 
-        category: 'regular' as 'regular' | 'personal' | 'group',
+        categories: ['regular'],
         mandatory: [], 
         mandatoryGroups: [],
         minUnits: 4, 
@@ -1249,7 +1253,8 @@ function AppContent() {
     e.preventDefault();
     if (!editingCourse) return;
     // Group course → save to groupCourses collection
-    if (editingCourse.category === 'group') {
+    const editCats = editingCourse.categories || [editingCourse.category || 'regular'];
+    if (editCats.length === 1 && editCats.includes('group')) {
       setIsSavingGroupCourses(true);
       try {
         const groupData = { title: editingCourse.title, desc: editingCourse.desc, mask: editingCourse.mask, img: editingCourse.img };
@@ -2190,7 +2195,7 @@ function AppContent() {
         <div className="max-w-7xl mx-auto px-8 sm:px-16">
           <SectionTitle subtitle={siteSettings.coursesIntroSubtitle || "專業文憑與證書課程"}>{siteSettings.coursesIntroTitle || "課程介紹"}</SectionTitle>
           <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-6">
-            {courses.filter(c => c.category === 'regular' || !c.category).map((course, i) => (
+            {courses.filter(c => hasCategory(c, 'regular') || (!c.categories && !c.category)).map((course, i) => (
               <motion.div 
                 key={i}
                 whileHover={{ y: -10 }}
@@ -2231,22 +2236,49 @@ function AppContent() {
         <div className="max-w-7xl mx-auto relative z-10">
           <SectionTitle subtitle={siteSettings.personalCourseSubtitle || "選擇您的專業路徑與單元組合"}>{siteSettings.personalCourseTitle || "個人課程"}</SectionTitle>
           
-          {/* Course Selector Tabs */}
-          <div className="flex flex-wrap gap-2 sm:gap-4 mb-10 sm:mb-16 justify-center">
-            {courses.filter(c => c.category === 'personal').map(course => (
-              <button
-                key={course.id}
-                onClick={() => handleCourseChange(course.id)}
-                className={`w-full sm:w-auto px-4 sm:px-10 py-2.5 sm:py-5 rounded-full font-black text-xs sm:text-sm transition-all border-[4px] shadow-lg ${
-                  selectedCourse === course.id 
-                    ? 'bg-black text-[#FFEF00] border-black scale-105' 
-                    : 'bg-white text-black border-black hover:bg-black/5'
-                }`}
-              >
-                {course.name}
-              </button>
-            ))}
-          </div>
+          {/* Course Selector Tabs with arrow navigation */}
+          {(() => {
+            const personalCourses = courses.filter(c => hasCategory(c, 'personal'));
+            const currentIdx = personalCourses.findIndex(c => c.id === selectedCourse);
+            const goPrev = () => {
+              if (personalCourses.length === 0) return;
+              const prevIdx = (currentIdx <= 0 ? personalCourses.length : currentIdx) - 1;
+              handleCourseChange(personalCourses[prevIdx].id);
+            };
+            const goNext = () => {
+              if (personalCourses.length === 0) return;
+              const nextIdx = (currentIdx + 1) % personalCourses.length;
+              handleCourseChange(personalCourses[nextIdx].id);
+            };
+            return (
+              <div className="flex items-center gap-3 mb-10 sm:mb-16 justify-center">
+                <button
+                  onClick={goPrev}
+                  className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center rounded-full bg-black text-[#FFEF00] border-[3px] border-black font-black text-lg hover:scale-110 transition-all shadow-lg flex-shrink-0"
+                >‹</button>
+                <div className="flex flex-wrap gap-2 sm:gap-4 justify-center">
+                  {personalCourses.map(course => (
+                    <button
+                      key={course.id}
+                      onClick={() => handleCourseChange(course.id)}
+                      className={`px-4 sm:px-10 py-2.5 sm:py-5 rounded-full font-black text-xs sm:text-sm transition-all border-[4px] shadow-lg ${
+                        selectedCourse === course.id
+                          ? 'bg-black text-[#FFEF00] border-black scale-105'
+                          : 'bg-white text-black border-black hover:bg-black/5'
+                      }`}
+                    >
+                      {course.name}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  onClick={goNext}
+                  className="w-10 h-10 sm:w-12 sm:h-12 flex items-center justify-center rounded-full bg-black text-[#FFEF00] border-[3px] border-black font-black text-lg hover:scale-110 transition-all shadow-lg flex-shrink-0"
+                >›</button>
+              </div>
+            );
+          })()}
+
 
           <div className="bg-black text-[#FFEF00] p-4 sm:p-10 md:p-16 border-[6px] sm:border-[10px] border-white shadow-[10px_10px_0px_rgba(0,0,0,1)] sm:shadow-[20px_20px_0px_rgba(0,0,0,1)] rounded-[2rem] sm:rounded-[4rem] relative">
             <div className="grid lg:grid-cols-[0.88fr_1.12fr] gap-8 sm:gap-16 items-start">
@@ -3202,7 +3234,7 @@ function AppContent() {
                             📋 課程列表
                           </h3>
                           <button
-                            onClick={() => { setNewCourse({ name: '', type: 'Diploma', category: 'regular', mandatory: [], mandatoryGroups: [], minUnits: 16, allowExtra: true, title: '', subtitle: '', desc: '', startDate: '', classTime: '', tuition: '', mask: 'mask-book', img: '' }); setShowAddCombinationModal(true); }}
+                            onClick={() => { setNewCourse({ name: '', type: 'Diploma', categories: ['regular'], mandatory: [], mandatoryGroups: [], minUnits: 16, allowExtra: true, title: '', subtitle: '', desc: '', startDate: '', classTime: '', tuition: '', mask: 'mask-book', img: '' }); setShowAddCombinationModal(true); }}
                             className="bg-black text-[#FFEF00] px-6 py-3 rounded-full font-black flex items-center gap-2 hover:scale-105 transition-transform text-sm"
                           >
                             <Plus size={20} /> 新增課程
@@ -3229,18 +3261,18 @@ function AppContent() {
                                     <td className="px-4 py-3 font-bold">{c.name}</td>
                                     <td className="px-4 py-3">
                                       <span className={`px-2 py-1 rounded-full text-[10px] font-black uppercase ${
-                                        c.category === 'personal'
+                                        hasCategory(c, 'personal')
                                           ? 'bg-blue-100 text-blue-700'
                                           : 'bg-green-100 text-green-700'
                                       }`}>
-                                        {c.category === 'personal' ? '🧩 個人課程' : '🎓 常規課程'}
+                                        {(c.categories || [c.category || 'regular']).map((cat: string) => cat === 'personal' ? '🧩 個人課程' : cat === 'group' ? '👥 團體課程' : '🎓 常規課程').join(' + ')}
                                       </span>
                                     </td>
                                     <td className="px-4 py-3 text-xs text-black/60 font-bold">{c.type}</td>
                                     <td className="px-4 py-3">
                                       <div className="flex gap-2">
                                         <button
-                                          onClick={() => { setEditingCourse({...c}); setShowEditCombinationModal(true); }}
+                                          onClick={() => { setEditingCourse({...c, categories: c.categories || [c.category || 'regular']}); setShowEditCombinationModal(true); }}
                                           className="text-blue-600 p-1 hover:bg-blue-50 rounded-lg transition-colors"
                                         ><Pencil size={16} /></button>
                                         <button
@@ -3265,7 +3297,7 @@ function AppContent() {
                                     <td className="px-4 py-3">
                                       <div className="flex gap-2">
                                         <button
-                                          onClick={() => { setEditingCourse({...gc, category: 'group', type: ''}); setShowEditCombinationModal(true); }}
+                                          onClick={() => { setEditingCourse({...gc, categories: ['group'], type: ''}); setShowEditCombinationModal(true); }}
                                           className="text-blue-600 p-1 hover:bg-blue-50 rounded-lg transition-colors"
                                         ><Pencil size={16} /></button>
                                         <button
@@ -3301,7 +3333,7 @@ function AppContent() {
                             <GraduationCap size={32} /> 常規課程
                           </h3>
                           <button
-                            onClick={() => { setNewCourse({ name: '', type: 'Diploma', category: 'regular', mandatory: [], mandatoryGroups: [], minUnits: 16, allowExtra: true, title: '', subtitle: '', desc: '', startDate: '', classTime: '', tuition: '', mask: 'mask-book', img: '' }); setShowAddCombinationModal(true); }}
+                            onClick={() => { setNewCourse({ name: '', type: 'Diploma', categories: ['regular'], mandatory: [], mandatoryGroups: [], minUnits: 16, allowExtra: true, title: '', subtitle: '', desc: '', startDate: '', classTime: '', tuition: '', mask: 'mask-book', img: '' }); setShowAddCombinationModal(true); }}
                             className="bg-black text-[#FFEF00] px-6 py-3 rounded-full font-black flex items-center gap-2 hover:scale-105 transition-transform text-sm"
                           >
                             <Plus size={20} /> 新增常規課程
@@ -3327,18 +3359,18 @@ function AppContent() {
                                     <td className="px-4 py-3 font-bold">{c.name}</td>
                                     <td className="px-4 py-3">
                                       <span className={`px-2 py-1 rounded-full text-[10px] font-black uppercase ${
-                                        c.category === 'personal'
+                                        hasCategory(c, 'personal')
                                           ? 'bg-blue-100 text-blue-700'
                                           : 'bg-green-100 text-green-700'
                                       }`}>
-                                        {c.category === 'personal' ? '個人課程' : '常規課程'}
+                                        {(c.categories || [c.category || 'regular']).map((cat: string) => cat === 'personal' ? '個人課程' : cat === 'group' ? '團體課程' : '常規課程').join(' + ')}
                                       </span>
                                     </td>
                                     <td className="px-4 py-3 text-xs text-black/60 font-bold">{c.type}</td>
                                     <td className="px-4 py-3">
                                       <div className="flex gap-2">
                                         <button
-                                          onClick={() => { setEditingCourse({...c}); setShowEditCombinationModal(true); }}
+                                          onClick={() => { setEditingCourse({...c, categories: c.categories || [c.category || 'regular']}); setShowEditCombinationModal(true); }}
                                           className="text-blue-600 p-1 hover:bg-blue-50 rounded-lg transition-colors"
                                         ><Pencil size={16} /></button>
                                         <button
@@ -3349,7 +3381,7 @@ function AppContent() {
                                     </td>
                                   </tr>
                                 ))}
-                          {(courses.filter(c => c.category === 'regular' || !c.category).length === 0) && (
+                          {(courses.filter(c => hasCategory(c, 'regular') || (!c.categories && !c.category)).length === 0) && (
                             <tr>
                               <td colSpan={5} className="px-4 py-12 text-center text-black/30 font-black">
                                 尚無常規課程
@@ -3370,309 +3402,11 @@ function AppContent() {
                             🧩 個人課程
                           </h3>
                           <button
-                            onClick={() => { setNewCourse({ name: '', type: 'Diploma', category: 'personal', mandatory: [], mandatoryGroups: [], minUnits: 4, allowExtra: true, title: '', subtitle: '', desc: '', startDate: '', classTime: '', tuition: '', mask: 'mask-cloud', img: '' }); setShowAddCombinationModal(true); }}
+                            onClick={() => { setNewCourse({ name: '', type: 'Diploma', categories: ['personal'], mandatory: [], mandatoryGroups: [], minUnits: 4, allowExtra: true, title: '', subtitle: '', desc: '', startDate: '', classTime: '', tuition: '', mask: 'mask-cloud', img: '' }); setShowAddCombinationModal(true); }}
                             className="bg-black text-[#FFEF00] px-6 py-3 rounded-full font-black flex items-center gap-2 hover:scale-105 transition-transform text-sm"
                           >
                             <Plus size={20} /> 新增個人課程
                           </button>
-                        </div>
-
-                        {/* Unified course table */}
-                        <div className="bg-white border-4 border-black rounded-3xl overflow-hidden shadow-[6px_6px_0px_rgba(0,0,0,1)]">
-                          <table className="w-full text-sm">
-                            <thead>
-                              <tr className="bg-black text-[#FFEF00]">
-                                <th className="px-4 py-3 text-left font-black">課程 ID</th>
-                                <th className="px-4 py-3 text-left font-black">名稱</th>
-                                <th className="px-4 py-3 text-left font-black">類別</th>
-                                <th className="px-4 py-3 text-left font-black">Type</th>
-                                <th className="px-4 py-3 text-left font-black">操作</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {courses.filter(c => c.category === 'personal').map((c, idx) => (
-                                <tr key={c.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-black/5'}>
-                                  <td className="px-4 py-3 font-mono text-xs text-black/50">{c.id}</td>
-                                  <td className="px-4 py-3 font-bold">{c.name}</td>
-                                  <td className="px-4 py-3">
-                                    <span className="px-2 py-1 rounded-full text-[10px] font-black uppercase bg-blue-100 text-blue-700">
-                                      個人課程
-                                    </span>
-                                  </td>
-                                  <td className="px-4 py-3 text-xs text-black/60 font-bold">{c.type}</td>
-                                  <td className="px-4 py-3">
-                                    <div className="flex gap-2">
-                                      <button
-                                        onClick={() => { setEditingCourse({...c}); setShowEditCombinationModal(true); }}
-                                        className="text-blue-600 p-1 hover:bg-blue-50 rounded-lg transition-colors"
-                                      ><Pencil size={16} /></button>
-                                      <button
-                                        onClick={() => handleDeleteCourse(c.id.toString())}
-                                        className="text-red-600 p-1 hover:bg-red-50 rounded-lg transition-colors"
-                                      ><Trash2 size={16} /></button>
-                                    </div>
-                                  </td>
-                                </tr>
-                              ))}
-                              {courses.filter(c => c.category === 'personal').length === 0 && (
-                                <tr>
-                                  <td colSpan={5} className="px-4 py-12 text-center text-black/30 font-black">
-                                    尚無個人課程
-                                  </td>
-                                </tr>
-                              )}
-                            </tbody>
-                          </table>
-                        </div>
-
-                        {/* Course Combinations Section */}
-                        <div className="mt-12">
-                          <h3 className="text-3xl font-black mb-8 flex items-center gap-3">
-                            ⚙️ 課程組合設定
-                          </h3>
-                          <div className="grid md:grid-cols-4 gap-8">
-                            {/* Course List — all courses */}
-                            <div className="md:col-span-1 space-y-4">
-                              <div className="flex items-center justify-between ml-2 mr-1">
-                                <h4 className="text-sm font-black uppercase text-black/40">選擇課程</h4>
-                                <button
-                                  onClick={() => { setNewCourse({ name: '', type: 'Diploma', category: 'personal', mandatory: [], mandatoryGroups: [], minUnits: 4, allowExtra: true, title: '', subtitle: '', desc: '', startDate: '', classTime: '', tuition: '', mask: 'mask-cloud', img: '' }); setShowAddCombinationModal(true); }}
-                                  className="flex items-center gap-1 bg-black text-[#FFEF00] px-3 py-1.5 rounded-xl font-black text-xs hover:scale-105 transition-transform"
-                                >
-                                  <Plus size={14} /> 新增課程
-                                </button>
-                              </div>
-                              <div className="flex flex-col gap-2 max-h-[700px] overflow-y-auto pr-2 custom-scrollbar">
-                                {courses.length > 0 ? (
-                                  courses.map((course) => {
-                                    const isSelected = adminSelectedCourseId?.toString() === course.id.toString();
-                                    return (
-                                      <button
-                                        key={course.id}
-                                        onClick={() => setAdminSelectedCourseId(course.id.toString())}
-                                        className={`w-full text-left px-4 py-3 rounded-2xl font-black transition-all border-4 ${
-                                          isSelected ? 'bg-black text-[#FFEF00] border-black' : 'bg-white text-black border-black/10 hover:border-black'
-                                        }`}
-                                      >
-                                        <div className="flex items-center gap-3">
-                                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center font-black text-[10px] shrink-0 ${isSelected ? 'bg-[#FFEF00] text-black' : 'bg-black text-[#FFEF00]'}`}>
-                                            {course.category === 'group' ? 'G' : course.type === 'Diploma' ? 'D' : 'S'}
-                                          </div>
-                                          <span className="truncate flex-1 text-sm">{course.name}</span>
-                                        </div>
-                                      </button>
-                                    );
-                                  })
-                                ) : (
-                                  <div className="text-center py-8 bg-black/5 rounded-2xl border-2 border-dashed border-black/10">
-                                    <p className="text-sm font-bold text-black/40">先建立課程</p>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* Unit / Group Selection for Course */}
-                            <div className="md:col-span-3">
-                              {adminSelectedCourseId !== null ? (
-                                <div className="bg-white border-[6px] border-black p-8 rounded-[3rem] shadow-[12px_12px_0px_rgba(0,0,0,1)] space-y-6">
-                                  {(() => {
-                                    const selectedCourse = courses.find(c => c.id.toString() === adminSelectedCourseId.toString());
-                                    if (!selectedCourse) return null;
-
-                                    const mandatory: number[] = selectedCourse.mandatory || [];
-                                    const mandatoryGroups: string[] = selectedCourse.mandatoryGroups || [];
-                                    const unitsForAdmin = adminUnitNames;
-                                    const groupsFromUnits = Array.from(
-                                      new Map(
-                                        unitsForAdmin
-                                          .filter((u: any) => u.group && u.group !== '未分類')
-                                          .map((u: any) => [u.group, {
-                                            name: u.group,
-                                            description: u.groupDescription,
-                                            customId: u.groupCustomId
-                                          }])
-                                      ).values()
-                                    ) as { name: string; description?: string; customId?: string }[];
-                                    const groupsForAdmin = groupsFromUnits.length > 0 ? groupsFromUnits : adminGroups;
-                                    const groupPriceMap = new Map<string, number>(
-                                      groupsForAdmin.map(g => [g.name, getGroupPrice(g.name, unitsForAdmin)])
-                                    );
-
-                                    // Units already in the course
-                                    const assignedUnits = unitsForAdmin
-                                      .map((u, i) => ({ unit: u, index: i }))
-                                      .filter(({ index }) => mandatory.includes(index) || unitsForAdmin[index]?.isMandatory);
-
-                                    // Groups already in the course
-                                    const assignedGroups = groupsForAdmin.filter(g => mandatoryGroups.includes(g.name));
-
-                                    // Addable units (not yet assigned)
-                                    const addableUnits = unitsForAdmin
-                                      .map((u, i) => ({ unit: u, index: i }))
-                                      .filter(({ index, unit }) => !mandatory.includes(index) && !unit.isMandatory);
-
-                                    // Addable groups (not yet assigned)
-                                    const addableGroups = groupsForAdmin.filter(g => !mandatoryGroups.includes(g.name));
-
-                                    const assignedUnitsPrice = assignedUnits.reduce((sum, { unit }) => sum + getUnitPrice(unit), 0);
-                                    const assignedGroupsPrice = assignedGroups.reduce((sum, group) => sum + (groupPriceMap.get(group.name) || 0), 0);
-                                    const classTotalPrice = assignedUnitsPrice + assignedGroupsPrice;
-
-                                    return (
-                                      <>
-                                        {/* Header */}
-                                        <div className="flex items-center justify-between">
-                                          <div>
-                                            <h4 className="text-2xl font-black">{selectedCourse.name}</h4>
-                                            <p className="text-sm font-bold text-black/40">管理此課程的必修單元與群組</p>
-                                          </div>
-                                          <div className="flex items-center gap-2">
-                                            <button onClick={() => { setEditingCourse({...selectedCourse}); setShowEditCombinationModal(true); }} className="text-blue-500 hover:bg-blue-50 p-2 rounded-xl transition-all"><Edit2 size={22} /></button>
-                                            <button onClick={() => handleDeleteCourse(selectedCourse.id.toString())} className="text-red-500 hover:bg-red-50 p-2 rounded-xl transition-all"><Trash2 size={22} /></button>
-                                          </div>
-                                        </div>
-
-                                        <div className="flex flex-wrap gap-2">
-                                          <span className="px-3 py-1.5 rounded-full text-xs font-black border-2 border-black/20 bg-white">單元總價: ${assignedUnitsPrice.toLocaleString()}</span>
-                                          <span className="px-3 py-1.5 rounded-full text-xs font-black border-2 border-blue-600 bg-blue-50 text-blue-700">群組總價: ${assignedGroupsPrice.toLocaleString()}</span>
-                                          <span className="px-3 py-1.5 rounded-full text-xs font-black border-2 border-black bg-black text-[#FFEF00]">課程合計: ${classTotalPrice.toLocaleString()}</span>
-                                        </div>
-
-                                        {/* Assigned Units */}
-                                        <div>
-                                          <p className="text-xs font-black uppercase text-black/50 mb-2">已加入的單元 ({assignedUnits.length})</p>
-                                          <div className="flex flex-wrap gap-2 min-h-[36px]">
-                                            {assignedUnits.length === 0 ? (
-                                              <span className="text-xs font-bold text-black/30">尚未加入任何單元</span>
-                                            ) : assignedUnits.map(({ unit, index }) => (
-                                              <button
-                                                key={`assigned-unit-${index}`}
-                                                disabled={unit.isMandatory}
-                                                onClick={() => toggleCourseMandatory(selectedCourse.id.toString(), index)}
-                                                className={`px-3 py-1.5 rounded-full text-xs font-black border-2 transition-transform ${unit.isMandatory ? 'bg-black/10 text-black/40 border-black/10 cursor-default' : 'bg-black text-[#FFEF00] border-black hover:scale-105'}`}
-                                                title={unit.isMandatory ? '全域必修，無法移除' : '點擊移除'}
-                                              >
-                                                {unit.customId || `U${index+1}`} · {unit.name} {unit.isMandatory ? '🔒' : '✕'}
-                                              </button>
-                                            ))}
-                                          </div>
-                                        </div>
-
-                                        {/* Assigned Groups */}
-                                        <div>
-                                          <p className="text-xs font-black uppercase text-black/50 mb-2">已加入的群組 ({assignedGroups.length})</p>
-                                          <div className="flex flex-wrap gap-2 min-h-[36px]">
-                                            {assignedGroups.length === 0 ? (
-                                              <span className="text-xs font-bold text-black/30">尚未加入任何群組</span>
-                                            ) : assignedGroups.map((group) => (
-                                              <button
-                                                key={`assigned-grp-${group.name}`}
-                                                onClick={async () => {
-                                                  const newGroups = mandatoryGroups.filter(g => g !== group.name);
-                                                  const { id, ...rest } = selectedCourse;
-                                                  await apiSetDoc('courses', id.toString(), { ...rest, mandatoryGroups: newGroups });
-                                                  setCourses(prev => prev.map(c => c.id.toString() === id.toString() ? { ...c, mandatoryGroups: newGroups } : c));
-                                                  showToast(`已從課程移除群組「${group.name}」`);
-                                                }}
-                                                className="px-3 py-1.5 rounded-full text-xs font-black border-2 bg-blue-600 text-white border-blue-600 hover:scale-105 transition-transform"
-                                                title="點擊移除"
-                                              >
-                                                📁 {group.name}{group.customId ? ` (${group.customId})` : ''} · ${((groupPriceMap.get(group.name) || 0)).toLocaleString()} ✕
-                                              </button>
-                                            ))}
-                                          </div>
-                                        </div>
-
-                                        <div className="grid md:grid-cols-2 gap-4">
-                                          {/* Add Units (checkbox) */}
-                                          {addableUnits.length > 0 && (
-                                            <div className="border-2 border-black/20 rounded-2xl overflow-hidden">
-                                              <div className="flex items-center justify-between px-4 py-2 bg-black/5 border-b-2 border-black/10">
-                                                <span className="text-xs font-black uppercase text-black/60">加入單元</span>
-                                                <div className="flex gap-2">
-                                                  <label className="text-xs font-black text-black/70 inline-flex items-center gap-1.5 cursor-pointer">
-                                                    <input
-                                                      type="checkbox"
-                                                      checked={addableUnits.length === 0}
-                                                      onChange={() => setAllCourseMandatory(selectedCourse.id.toString(), true)}
-                                                      className="w-3.5 h-3.5 accent-black"
-                                                    />
-                                                    全選加入
-                                                  </label>
-                                                  <button onClick={() => setAllCourseMandatory(selectedCourse.id.toString(), true)} className="text-xs font-black text-blue-600 hover:underline">全選</button>
-                                                  <span className="text-black/30">|</span>
-                                                  <button onClick={() => setAllCourseMandatory(selectedCourse.id.toString(), false)} className="text-xs font-black text-black/40 hover:underline">清除全部</button>
-                                                </div>
-                                              </div>
-                                              <div className="max-h-52 overflow-y-auto divide-y divide-black/5">
-                                                {addableUnits.map(({ unit, index }) => (
-                                                  <label key={`add-unit-${index}`} className="flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-black/3 transition-colors">
-                                                    <input
-                                                      type="checkbox"
-                                                      checked={false}
-                                                      onChange={() => toggleCourseMandatory(selectedCourse.id.toString(), index)}
-                                                      className="w-4 h-4 accent-black shrink-0"
-                                                    />
-                                                    <span className="text-xs font-black text-blue-600 shrink-0">{unit.customId || `U${index+1}`}</span>
-                                                    <span className="text-sm font-bold truncate">{unit.name}</span>
-                                                    {unit.price > 0 && <span className="ml-auto text-xs font-bold text-black/40 shrink-0">${unit.price}</span>}
-                                                  </label>
-                                                ))}
-                                              </div>
-                                            </div>
-                                          )}
-
-                                          {/* Add Groups (checkbox) */}
-                                          {addableGroups.length > 0 && (
-                                            <div className="border-2 border-black/20 rounded-2xl overflow-hidden">
-                                              <div className="flex items-center justify-between px-4 py-2 bg-black/5 border-b-2 border-black/10">
-                                                <span className="text-xs font-black uppercase text-black/60">加入群組</span>
-                                                <label className="text-xs font-black text-black/70 inline-flex items-center gap-1.5 cursor-pointer">
-                                                  <input
-                                                    type="checkbox"
-                                                    checked={addableGroups.length === 0}
-                                                    onChange={() => setAllCourseMandatoryGroups(selectedCourse.id.toString(), true)}
-                                                    className="w-3.5 h-3.5 accent-black"
-                                                  />
-                                                  全選加入
-                                                </label>
-                                              </div>
-                                              <div className="max-h-52 overflow-y-auto divide-y divide-black/5">
-                                                {addableGroups.map((group) => (
-                                                  <label key={`add-grp-${group.name}`} className="flex items-center gap-3 px-4 py-2.5 cursor-pointer hover:bg-black/3 transition-colors">
-                                                    <input
-                                                      type="checkbox"
-                                                      checked={false}
-                                                      onChange={async () => {
-                                                        const newGroups = [...mandatoryGroups, group.name];
-                                                        const { id, ...rest } = selectedCourse;
-                                                        await apiSetDoc('courses', id.toString(), { ...rest, mandatoryGroups: newGroups });
-                                                        setCourses(prev => prev.map(c => c.id.toString() === id.toString() ? { ...c, mandatoryGroups: newGroups } : c));
-                                                        showToast(`已將群組「${group.name}」加入課程`);
-                                                      }}
-                                                      className="w-4 h-4 accent-black shrink-0"
-                                                    />
-                                                    <span className="text-sm font-bold truncate">📁 {group.name}</span>
-                                                    <span className="ml-auto text-xs font-bold text-black/50 shrink-0">${((groupPriceMap.get(group.name) || 0)).toLocaleString()}</span>
-                                                    {group.customId && <span className="text-xs font-bold text-black/40 shrink-0">{group.customId}</span>}
-                                                  </label>
-                                                ))}
-                                              </div>
-                                            </div>
-                                          )}
-                                        </div>
-                                      </>
-                                    );
-                                  })()}
-                                </div>
-                              ) : (
-                                <div className="h-full min-h-[400px] bg-black/5 border-4 border-dashed border-black/20 rounded-[3rem] flex flex-col items-center justify-center text-black/40">
-                                  <LayoutGrid size={64} className="mb-4 opacity-20" />
-                                  <p className="font-black text-xl">請從左側選擇一個課程進行單元設定</p>
-                                </div>
-                              )}
-                            </div>
-                          </div>
                         </div>
 
                         {/* Section Settings Block */}
@@ -3691,36 +3425,7 @@ function AppContent() {
                                 value={siteSettings.personalCourseSubtitle}
                                 onChange={e => setSiteSettings({...siteSettings, personalCourseSubtitle: e.target.value})} />
                             </div>
-                            <div className="space-y-1 md:col-span-2">
-                              <label className="text-xs font-black uppercase">證書課程介紹文字</label>
-                              <input type="text" className="w-full border-4 border-black p-3 rounded-xl font-bold"
-                                value={siteSettings.certCourseDesc || ''}
-                                onChange={e => setSiteSettings({...siteSettings, certCourseDesc: e.target.value})} />
-                            </div>
-                            <div className="space-y-1 md:col-span-2">
-                              <label className="text-xs font-black uppercase">文憑課程介紹文字</label>
-                              <input type="text" className="w-full border-4 border-black p-3 rounded-xl font-bold"
-                                value={siteSettings.diplomaCourseDesc || ''}
-                                onChange={e => setSiteSettings({...siteSettings, diplomaCourseDesc: e.target.value})} />
-                            </div>
-                            <div className="space-y-1">
-                              <label className="text-xs font-black uppercase">收費項目 1</label>
-                              <input type="text" className="w-full border-4 border-black p-3 rounded-xl font-bold"
-                                value={siteSettings.priceItem1 || ''}
-                                onChange={e => setSiteSettings({...siteSettings, priceItem1: e.target.value})} />
-                            </div>
-                            <div className="space-y-1">
-                              <label className="text-xs font-black uppercase">收費項目 2</label>
-                              <input type="text" className="w-full border-4 border-black p-3 rounded-xl font-bold"
-                                value={siteSettings.priceItem2 || ''}
-                                onChange={e => setSiteSettings({...siteSettings, priceItem2: e.target.value})} />
-                            </div>
-                            <div className="space-y-1 md:col-span-2">
-                              <label className="text-xs font-black uppercase">折扣優惠說明文字</label>
-                              <input type="text" className="w-full border-4 border-black p-3 rounded-xl font-bold"
-                                value={siteSettings.priceItemExtra || ''}
-                                onChange={e => setSiteSettings({...siteSettings, priceItemExtra: e.target.value})} />
-                            </div>
+
                           </div>
                           <button
                             onClick={async () => {
@@ -3741,6 +3446,55 @@ function AppContent() {
                             儲存區塊設定
                           </button>
                         </div>
+
+                        {/* Unified course table */}
+                        <div className="bg-white border-4 border-black rounded-3xl overflow-hidden shadow-[6px_6px_0px_rgba(0,0,0,1)]">
+                          <table className="w-full text-sm">
+                            <thead>
+                              <tr className="bg-black text-[#FFEF00]">
+                                <th className="px-4 py-3 text-left font-black">課程 ID</th>
+                                <th className="px-4 py-3 text-left font-black">名稱</th>
+                                <th className="px-4 py-3 text-left font-black">類別</th>
+                                <th className="px-4 py-3 text-left font-black">Type</th>
+                                <th className="px-4 py-3 text-left font-black">操作</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {courses.filter(c => hasCategory(c, 'personal')).map((c, idx) => (
+                                <tr key={c.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-black/5'}>
+                                  <td className="px-4 py-3 font-mono text-xs text-black/50">{c.id}</td>
+                                  <td className="px-4 py-3 font-bold">{c.name}</td>
+                                  <td className="px-4 py-3">
+                                    <span className="px-2 py-1 rounded-full text-[10px] font-black uppercase bg-blue-100 text-blue-700">
+                                      個人課程
+                                    </span>
+                                  </td>
+                                  <td className="px-4 py-3 text-xs text-black/60 font-bold">{c.type}</td>
+                                  <td className="px-4 py-3">
+                                    <div className="flex gap-2">
+                                      <button
+                                        onClick={() => { setEditingCourse({...c, categories: c.categories || [c.category || 'regular']}); setShowEditCombinationModal(true); }}
+                                        className="text-blue-600 p-1 hover:bg-blue-50 rounded-lg transition-colors"
+                                      ><Pencil size={16} /></button>
+                                      <button
+                                        onClick={() => handleDeleteCourse(c.id.toString())}
+                                        className="text-red-600 p-1 hover:bg-red-50 rounded-lg transition-colors"
+                                      ><Trash2 size={16} /></button>
+                                    </div>
+                                  </td>
+                                </tr>
+                              ))}
+                              {courses.filter(c => hasCategory(c, 'personal')).length === 0 && (
+                                <tr>
+                                  <td colSpan={5} className="px-4 py-12 text-center text-black/30 font-black">
+                                    尚無個人課程
+                                  </td>
+                                </tr>
+                              )}
+                            </tbody>
+                          </table>
+                        </div>
+
                       </div>
                     )}
 
@@ -3752,7 +3506,7 @@ function AppContent() {
                             👥 團體課程
                           </h3>
                           <button
-                            onClick={() => { setNewCourse({ name: '', type: 'Diploma', category: 'group', mandatory: [], mandatoryGroups: [], minUnits: 0, allowExtra: false, title: '', subtitle: '', desc: '', startDate: '', classTime: '', tuition: '', mask: 'mask-cloud', img: '' }); setShowAddCombinationModal(true); }}
+                            onClick={() => { setNewCourse({ name: '', type: 'Diploma', categories: ['group'], mandatory: [], mandatoryGroups: [], minUnits: 0, allowExtra: false, title: '', subtitle: '', desc: '', startDate: '', classTime: '', tuition: '', mask: 'mask-cloud', img: '' }); setShowAddCombinationModal(true); }}
                             className="bg-black text-[#FFEF00] px-6 py-3 rounded-full font-black flex items-center gap-2 hover:scale-105 transition-transform text-sm"
                           >
                             <Plus size={20} /> 新增團體課程
@@ -3785,7 +3539,7 @@ function AppContent() {
                                   <td className="px-4 py-3">
                                     <div className="flex gap-2">
                                       <button
-                                        onClick={() => { setEditingCourse({ id: gc.id, category: 'group', title: gc.title, desc: gc.desc, mask: gc.mask || 'mask-cloud', img: gc.img || '', name: gc.title, type: '', mandatory: [], minUnits: 0, allowExtra: false, subtitle: '', startDate: '', classTime: '', tuition: '' }); setShowEditCombinationModal(true); }}
+                                        onClick={() => { setEditingCourse({ id: gc.id, categories: ['group'], title: gc.title, desc: gc.desc, mask: gc.mask || 'mask-cloud', img: gc.img || '', name: gc.title, type: '', mandatory: [], minUnits: 0, allowExtra: false, subtitle: '', startDate: '', classTime: '', tuition: '' }); setShowEditCombinationModal(true); }}
                                         className="text-blue-600 p-1 hover:bg-blue-50 rounded-lg transition-colors"
                                       >
                                         <Pencil size={16} />
@@ -5006,7 +4760,7 @@ function AppContent() {
                           </button>
                                 
                           <h3 className="text-3xl font-black mb-6 uppercase">
-                            {newCourse.category === 'group' ? '新增團體課程' : newCourse.category === 'personal' ? '新增個人課程' : '新增常規課程'}
+                            {newCourse.categories.includes('group') ? '新增團體課程' : '新增課程'}
                           </h3>
                           
                           <form onSubmit={handleAddCourse} className="space-y-6">
@@ -5016,8 +4770,18 @@ function AppContent() {
                               <div className="flex gap-2 flex-wrap">
                                 {(['regular', 'personal', 'group'] as const).map(cat => (
                                   <button key={cat} type="button"
-                                    onClick={() => setNewCourse({...newCourse, category: cat})}
-                                    className={`px-5 py-2 rounded-full font-black text-sm border-2 border-black transition-all ${newCourse.category === cat ? 'bg-[#FFEF00] text-black shadow-[2px_2px_0px_rgba(0,0,0,1)]' : 'bg-white text-black hover:bg-black/5'}`}
+                                    onClick={() => {
+                                      if (cat === 'group') {
+                                        setNewCourse({...newCourse, categories: ['group']});
+                                      } else {
+                                        const cur = newCourse.categories.filter(c => c !== 'group');
+                                        const next = cur.includes(cat)
+                                          ? cur.filter(c => c !== cat).length > 0 ? cur.filter(c => c !== cat) : cur
+                                          : [...cur, cat];
+                                        setNewCourse({...newCourse, categories: next});
+                                      }
+                                    }}
+                                    className={`px-5 py-2 rounded-full font-black text-sm border-2 border-black transition-all ${newCourse.categories.includes(cat) ? 'bg-[#FFEF00] text-black shadow-[2px_2px_0px_rgba(0,0,0,1)]' : 'bg-white text-black hover:bg-black/5'}`}
                                   >{cat === 'regular' ? '🎓 常規課程' : cat === 'personal' ? '🧩 個人課程' : '👥 團體課程'}</button>
                                 ))}
                               </div>
@@ -5025,16 +4789,16 @@ function AppContent() {
 
                             {/* Name field */}
                             <div className="space-y-2">
-                              <label className="text-xs font-black uppercase ml-1">{newCourse.category === 'group' ? '課程名稱' : '課程名稱（內部）'}</label>
+                              <label className="text-xs font-black uppercase ml-1">{newCourse.categories.includes('group') ? '課程名稱' : '課程名稱（內部）'}</label>
                               <input 
                                 type="text" required placeholder="例如: AI 基礎課程"
                                 className="w-full border-4 border-black p-4 rounded-xl font-bold"
-                                value={newCourse.name} onChange={e => setNewCourse({...newCourse, name: e.target.value, ...(newCourse.category === 'group' ? { title: e.target.value } : {})})}
+                                value={newCourse.name} onChange={e => setNewCourse({...newCourse, name: e.target.value, ...(newCourse.categories.includes('group') ? { title: e.target.value } : {})})}
                               />
                             </div>
 
                             {/* Type — regular/personal only */}
-                            {newCourse.category !== 'group' && (
+                            {!newCourse.categories.includes('group') && (
                             <div className="space-y-2">
                               <label className="text-xs font-black uppercase ml-1">學制類型</label>
                               <select 
@@ -5049,7 +4813,7 @@ function AppContent() {
                             )}
 
                             {/* Mandatory units — regular/personal only */}
-                            {newCourse.category !== 'group' && (
+                            {!newCourse.categories.includes('group') && (
                             <div className="space-y-3">
                               <label className="text-xs font-black uppercase ml-1 flex justify-between items-center">
                                 <span>選擇包含單元 (必填)</span>
@@ -5089,7 +4853,7 @@ function AppContent() {
                             )}
 
                             {/* Groups — regular/personal only */}
-                            {newCourse.category !== 'group' && (
+                            {!newCourse.categories.includes('group') && (
                             <div className="space-y-3">
                               <label className="text-xs font-black uppercase ml-1 flex justify-between items-center">
                                 <span>選擇包含群組 (可選)</span>
@@ -5131,7 +4895,7 @@ function AppContent() {
                             )}
 
                             {/* Title/subtitle — regular/personal only */}
-                            {newCourse.category !== 'group' && (
+                            {!newCourse.categories.includes('group') && (
                             <div className="grid md:grid-cols-2 gap-6">
                               <div className="space-y-2">
                                 <label className="text-xs font-black uppercase ml-1">首頁標題</label>
@@ -5153,7 +4917,7 @@ function AppContent() {
                             )}
 
                             {/* Dates — regular/personal only */}
-                            {newCourse.category !== 'group' && (
+                            {!newCourse.categories.includes('group') && (
                             <div className="grid md:grid-cols-3 gap-6">
                               <div className="space-y-2">
                                 <label className="text-xs font-black uppercase ml-1">開課日期</label>
@@ -5232,7 +4996,7 @@ function AppContent() {
                           </div>
                           <button 
                             onClick={() => {
-                              setNewCourse({ name: '', type: 'Diploma', category: 'group', mandatory: [], mandatoryGroups: [], minUnits: 0, allowExtra: false, title: '', subtitle: '', desc: '', startDate: '', classTime: '', tuition: '', mask: 'mask-cloud', img: '' });
+                              setNewCourse({ name: '', type: 'Diploma', categories: ['group'], mandatory: [], mandatoryGroups: [], minUnits: 0, allowExtra: false, title: '', subtitle: '', desc: '', startDate: '', classTime: '', tuition: '', mask: 'mask-cloud', img: '' });
                               setShowAddCombinationModal(true);
                             }}
                             className="bg-black text-[#FFEF00] px-6 py-3 rounded-full font-black flex items-center gap-2 hover:scale-105 transition-transform"
@@ -5257,7 +5021,7 @@ function AppContent() {
                                 <div className="flex flex-col gap-2">
                                   <button 
                                     onClick={() => {
-                                      setEditingCourse({ id: item.id, category: 'group', title: item.title, desc: item.desc, mask: item.mask || 'mask-cloud', img: item.img || '', name: item.title, type: '', mandatory: [], minUnits: 0, allowExtra: false, subtitle: '', startDate: '', classTime: '', tuition: '' });
+                                      setEditingCourse({ id: item.id, categories: ['group'], title: item.title, desc: item.desc, mask: item.mask || 'mask-cloud', img: item.img || '', name: item.title, type: '', mandatory: [], minUnits: 0, allowExtra: false, subtitle: '', startDate: '', classTime: '', tuition: '' });
                                       setShowEditCombinationModal(true);
                                     }}
                                     className="p-3 bg-blue-500 text-white rounded-xl hover:scale-110 transition-transform shadow-[2px_2px_0px_rgba(0,0,0,1)]"
@@ -5311,7 +5075,7 @@ function AppContent() {
                                 <X size={24} />
                               </button>
                               <h3 className="text-3xl font-black mb-6 uppercase">
-                                {editingCourse.category === 'group' ? '編輯團體課程' : editingCourse.category === 'personal' ? '編輯個人課程' : '編輯常規課程'}
+                                {(editingCourse.categories || [editingCourse.category]).includes('group') ? '編輯團體課程' : '編輯課程'}
                               </h3>
                               <form onSubmit={handleUpdateCourse} className="space-y-6">
                                 {/* Category selector */}
@@ -5320,8 +5084,19 @@ function AppContent() {
                                   <div className="flex gap-2 flex-wrap">
                                     {(['regular', 'personal', 'group'] as const).map(cat => (
                                       <button key={cat} type="button"
-                                        onClick={() => setEditingCourse({...editingCourse, category: cat})}
-                                        className={`px-5 py-2 rounded-full font-black text-sm border-2 border-black transition-all ${editingCourse.category === cat ? 'bg-[#FFEF00] text-black shadow-[2px_2px_0px_rgba(0,0,0,1)]' : 'bg-white text-black hover:bg-black/5'}`}
+                                        onClick={() => {
+                                          const cur = editingCourse.categories || [editingCourse.category || 'regular'];
+                                          if (cat === 'group') {
+                                            setEditingCourse({...editingCourse, categories: ['group']});
+                                          } else {
+                                            const nonGroup = cur.filter((c: string) => c !== 'group');
+                                            const next = nonGroup.includes(cat)
+                                              ? nonGroup.filter((c: string) => c !== cat).length > 0 ? nonGroup.filter((c: string) => c !== cat) : nonGroup
+                                              : [...nonGroup, cat];
+                                            setEditingCourse({...editingCourse, categories: next});
+                                          }
+                                        }}
+                                        className={`px-5 py-2 rounded-full font-black text-sm border-2 border-black transition-all ${(editingCourse.categories || [editingCourse.category || 'regular']).includes(cat) ? 'bg-[#FFEF00] text-black shadow-[2px_2px_0px_rgba(0,0,0,1)]' : 'bg-white text-black hover:bg-black/5'}`}
                                       >{cat === 'regular' ? '🎓 常規課程' : cat === 'personal' ? '🧩 個人課程' : '👥 團體課程'}</button>
                                     ))}
                                   </div>
@@ -5330,16 +5105,16 @@ function AppContent() {
                                 {/* Common fields */}
                                 <div className="grid md:grid-cols-2 gap-6">
                                   <div className="space-y-2">
-                                    <label className="text-xs font-black uppercase ml-1">{editingCourse.category === 'group' ? '課程名稱' : '課程名稱（內部）'}</label>
+                                    <label className="text-xs font-black uppercase ml-1">{(editingCourse.categories || [editingCourse.category]).includes('group') ? '課程名稱' : '課程名稱（內部）'}</label>
                                     <input type="text" required placeholder="課程名稱"
                                       className="w-full border-4 border-black p-4 rounded-xl font-bold"
-                                      value={editingCourse.category === 'group' ? editingCourse.title : editingCourse.name}
-                                      onChange={e => editingCourse.category === 'group'
+                                      value={(editingCourse.categories || [editingCourse.category]).includes('group') ? editingCourse.title : editingCourse.name}
+                                      onChange={e => (editingCourse.categories || [editingCourse.category]).includes('group')
                                         ? setEditingCourse({...editingCourse, title: e.target.value, name: e.target.value})
                                         : setEditingCourse({...editingCourse, name: e.target.value})}
                                     />
                                   </div>
-                                  {editingCourse.category !== 'group' && (
+                                  {!(editingCourse.categories || [editingCourse.category]).includes('group') && (
                                     <div className="space-y-2">
                                       <label className="text-xs font-black uppercase ml-1">學制類型</label>
                                       <select className="w-full border-4 border-black p-4 rounded-xl font-bold bg-white"
@@ -5351,7 +5126,7 @@ function AppContent() {
                                       </select>
                                     </div>
                                   )}
-                                  {editingCourse.category !== 'group' && (
+                                  {!(editingCourse.categories || [editingCourse.category]).includes('group') && (
                                     <div className="space-y-2">
                                       <label className="text-xs font-black uppercase ml-1">最低單元要求</label>
                                       <input type="number"
@@ -5363,7 +5138,7 @@ function AppContent() {
                                   )}
                                 </div>
                                 {/* Mandatory units — only for regular/personal */}
-                                {editingCourse.category !== 'group' && (
+                                {!(editingCourse.categories || [editingCourse.category]).includes('group') && (
                                 <div className="space-y-3">
                                   <label className="text-xs font-black uppercase ml-1 flex justify-between items-center">
                                     <span>必修單元</span>
@@ -5399,7 +5174,7 @@ function AppContent() {
                                 </div>
                                 )}
                                 {/* Title/subtitle — only for regular/personal */}
-                                {editingCourse.category !== 'group' && (
+                                {!(editingCourse.categories || [editingCourse.category]).includes('group') && (
                                 <div className="grid md:grid-cols-2 gap-6">
                                   <div className="space-y-2">
                                     <label className="text-xs font-black uppercase ml-1">首頁顯示標題</label>
@@ -5418,7 +5193,7 @@ function AppContent() {
                                 </div>
                                 )}
                                 {/* Dates/time/tuition — only for regular/personal */}
-                                {editingCourse.category !== 'group' && (
+                                {!(editingCourse.categories || [editingCourse.category]).includes('group') && (
                                 <div className="grid md:grid-cols-3 gap-6">
                                   <div className="space-y-2">
                                     <label className="text-xs font-black uppercase ml-1">開課日期</label>
