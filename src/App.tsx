@@ -2458,17 +2458,28 @@ function AppContent() {
                               whileTap={isMandatory ? {} : { scale: 0.95 }}
                               onClick={() => toggleUnit(i)}
                               disabled={isMandatory}
-                              className={`p-2 sm:p-3 border-[3px] flex flex-col items-center justify-center font-black text-[10px] sm:text-[13px] transition-all rounded-xl sm:rounded-2xl min-h-[86px] sm:min-h-[92px] h-auto text-center leading-tight relative shadow-xl ${
+                              className={`p-2 sm:p-3 border-[3px] flex flex-col items-center justify-center font-black text-[10px] sm:text-[13px] transition-all rounded-xl sm:rounded-2xl min-h-[94px] sm:min-h-[104px] h-auto text-center leading-tight relative shadow-xl ${
                                 isHighlighted 
                                   ? 'bg-[#FFEF00] text-black border-white shadow-[#FFEF00]/30' 
                                   : 'bg-[#2A2A2A] border-white/10 hover:border-white/30 text-white/80 hover:text-white'
                               } ${isMandatory ? 'cursor-default' : 'cursor-pointer'}`}
                             >
-                              <span className="block break-words leading-tight text-[13px] sm:text-[17px]">{unit.name}</span>
-                              <div className="flex items-center gap-1 sm:gap-2 mt-1">
+                              <span
+                                className="block w-full break-words leading-[1.12] text-[14px] sm:text-[18px]"
+                                style={{
+                                  display: '-webkit-box',
+                                  WebkitLineClamp: 2,
+                                  WebkitBoxOrient: 'vertical',
+                                  overflow: 'hidden',
+                                  minHeight: '2.24em',
+                                }}
+                              >
+                                {unit.name}
+                              </span>
+                              <div className="flex flex-wrap items-center justify-center gap-1 sm:gap-1.5 mt-1.5">
                                 <span className={`text-[10px] sm:text-[12px] ${isHighlighted ? 'text-black/70' : 'text-white/55'}`}>(U{i+1})</span>
                                 {unit.price > 0 && (
-                                  <span className={`text-[10px] sm:text-[12px] font-black px-1.5 sm:px-2 py-0.5 rounded-md ${
+                                  <span className={`text-[11px] sm:text-[14px] font-black px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-lg ${
                                     isHighlighted
                                       ? 'text-black bg-black/10'
                                       : 'text-[#FFEF00] bg-white/15 border border-white/20'
@@ -2476,17 +2487,17 @@ function AppContent() {
                                     ${Number(unit.price || 0).toLocaleString()}
                                   </span>
                                 )}
+                                {isMandatory && (
+                                  <span className="bg-black text-[#FFEF00] px-1.5 py-0.5 rounded-md text-[8px] sm:text-[9px] font-black tracking-tight border border-white/20">
+                                    必修
+                                  </span>
+                                )}
+                                {isElective && (
+                                  <span className="bg-blue-600 text-white px-1.5 py-0.5 rounded-md text-[8px] sm:text-[9px] font-black tracking-tight">
+                                    選修
+                                  </span>
+                                )}
                               </div>
-                              {isMandatory && (
-                                <div className="absolute top-1 right-1 sm:top-2 sm:right-2 flex items-center gap-1 bg-black text-[#FFEF00] px-1 sm:px-1.5 py-0.5 rounded-md text-[7px] sm:text-[8px] font-black uppercase tracking-tighter border border-white/20 shadow-sm">
-                                  必修
-                                </div>
-                              )}
-                              {isElective && (
-                                <div className="absolute top-1 right-1 sm:top-2 sm:right-2 flex items-center gap-1 bg-blue-600 text-white px-1 sm:px-1.5 py-0.5 rounded-md text-[7px] sm:text-[8px] font-black uppercase tracking-tighter shadow-sm">
-                                  選修
-                                </div>
-                              )}
                             </motion.button>
                           );
                         });
