@@ -1117,6 +1117,7 @@ function AppContent() {
     type: 'Diploma', 
     categories: ['regular'] as string[],
     mandatory: [] as number[], 
+    elective: [] as number[],
     mandatoryGroups: [] as string[],
     minUnits: 16, 
     allowExtra: true,
@@ -1135,6 +1136,39 @@ function AppContent() {
   const [showEditCombinationModal, setShowEditCombinationModal] = useState(false);
   const [editingCourse, setEditingCourse] = useState<any>(null);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [courseSort, setCourseSort] = useState<{ col: string; dir: 'asc' | 'desc' }>({ col: 'name', dir: 'asc' });
+
+  const sortedCourses = (list: any[]) => {
+    if (!courseSort.col) return list;
+    return [...list].sort((a, b) => {
+      let va = '', vb = '';
+      if (courseSort.col === 'name') { va = (a.name || a.title || '').toLowerCase(); vb = (b.name || b.title || '').toLowerCase(); }
+      else if (courseSort.col === 'type') { va = (a.type || '').toLowerCase(); vb = (b.type || '').toLowerCase(); }
+      else if (courseSort.col === 'cat') {
+        va = (a.categories || [a.category || 'regular']).join(',');
+        vb = (b.categories || [b.category || 'regular']).join(',');
+      }
+      return courseSort.dir === 'asc' ? va.localeCompare(vb) : vb.localeCompare(va);
+    });
+  };
+
+  const SortTh = ({ col, children }: { col: string; children: React.ReactNode }) => {
+    const active = courseSort.col === col;
+    return (
+      <th
+        onClick={() => setCourseSort(prev => prev.col === col ? { col, dir: prev.dir === 'asc' ? 'desc' : 'asc' } : { col, dir: 'asc' })}
+        className="px-4 py-3 text-left font-black cursor-pointer select-none group"
+      >
+        <span className="flex items-center gap-1">
+          {children}
+          <span className={`text-[10px] transition-opacity ${active ? 'opacity-100' : 'opacity-30 group-hover:opacity-60'}`}>
+            {active && courseSort.dir === 'desc' ? '↓' : '↑'}
+          </span>
+        </span>
+      </th>
+    );
+  };
+
 
   const normalizeLegacySavfxImageUrl = (url?: string) => {
     if (!url) return '';
@@ -1204,7 +1238,7 @@ function AppContent() {
         const result = await apiAddDoc('groupCourses', groupData);
         setGroupCourses(prev => [...prev, { id: result.id, ...groupData }]);
         setShowAddCombinationModal(false);
-        setNewCourse({ name: '', type: 'Diploma', categories: ['regular'], mandatory: [], mandatoryGroups: [], minUnits: 4, allowExtra: true, title: '', subtitle: '', desc: '', startDate: '', classTime: '', tuition: '', mask: 'mask-book', img: '' });
+        setNewCourse({ name: '', type: 'Diploma', categories: ['regular'], mandatory: [], elective: [], mandatoryGroups: [], minUnits: 4, allowExtra: true, title: '', subtitle: '', desc: '', startDate: '', classTime: '', tuition: '', mask: 'mask-book', img: '' });
         showToast("已新增團體課程");
       } catch (error) {
         handleFirestoreError(error, OperationType.CREATE, 'groupCourses');
@@ -1229,6 +1263,7 @@ function AppContent() {
         type: 'Diploma', 
         categories: ['regular'],
         mandatory: [], 
+        elective: [],
         mandatoryGroups: [],
         minUnits: 4, 
         allowExtra: true,
@@ -2285,16 +2320,16 @@ function AppContent() {
               <div className="space-y-4 sm:space-y-6">
                 
                 <div className="space-y-3 sm:space-y-4">
-                  {siteSettings.certCourseDesc && (
+                  <div>
                     <p className="text-2xl sm:text-4xl md:text-5xl font-black leading-tight tracking-tighter">
-                      {siteSettings.certCourseDesc}
+                      {currentCourse.title || currentCourse.name}
                     </p>
-                  )}
-                  {siteSettings.diplomaCourseDesc && (
-                    <p className="text-xl sm:text-2xl md:text-3xl font-black leading-snug opacity-80">
-                      {siteSettings.diplomaCourseDesc}
-                    </p>
-                  )}
+                    {currentCourse.subtitle && (
+                      <p className="text-xl sm:text-2xl md:text-3xl font-black leading-snug opacity-80 mt-1">
+                        {currentCourse.subtitle}
+                      </p>
+                    )}
+                  </div>
                   
                   <ul className="space-y-3">
                     <li className="flex items-center gap-3 text-sm sm:text-lg font-black">
@@ -2402,45 +2437,60 @@ function AppContent() {
                     </div>
                   ) : (
                     <>
-                      {unitNames.map((unit, i) => {
-                        const isMandatory = currentCourse.mandatory.includes(i) || unit.isMandatory;
-                        const isSelected = selectedUnits.includes(i);
-                        const isHighlighted = isSelected || isMandatory;
-                        
-                        return (
-                          <motion.button
-                            key={i}
-                            whileHover={isMandatory ? {} : { scale: 1.05, y: -2 }}
-                            whileTap={isMandatory ? {} : { scale: 0.95 }}
-                            onClick={() => toggleUnit(i)}
-                            disabled={isMandatory}
-                            className={`p-2 sm:p-3 border-[3px] flex flex-col items-center justify-center font-black text-[10px] sm:text-[13px] transition-all rounded-xl sm:rounded-2xl min-h-[86px] sm:min-h-[92px] h-auto text-center leading-tight relative shadow-xl ${
-                              isHighlighted 
-                                ? 'bg-[#FFEF00] text-black border-white shadow-[#FFEF00]/30' 
-                                : 'bg-[#2A2A2A] border-white/10 hover:border-white/30 text-white/80 hover:text-white'
-                            } ${isMandatory ? 'cursor-default' : 'cursor-pointer'}`}
-                          >
-                            <span className="block break-words leading-tight text-[13px] sm:text-[17px]">{unit.name}</span>
-                            <div className="flex items-center gap-1 sm:gap-2 mt-1">
-                              <span className={`text-[10px] sm:text-[12px] ${isHighlighted ? 'text-black/70' : 'text-white/55'}`}>(U{i+1})</span>
-                              {unit.price > 0 && (
-                                <span className={`text-[10px] sm:text-[12px] font-black px-1.5 sm:px-2 py-0.5 rounded-md ${
-                                  isHighlighted
-                                    ? 'text-black bg-black/10'
-                                    : 'text-[#FFEF00] bg-white/15 border border-white/20'
-                                }`}>
-                                  ${Number(unit.price || 0).toLocaleString()}
-                                </span>
-                              )}
-                            </div>
-                            {isMandatory && (
-                              <div className="absolute top-1 right-1 sm:top-2 sm:right-2 flex items-center gap-1 bg-black text-[#FFEF00] px-1 sm:px-1.5 py-0.5 rounded-md text-[7px] sm:text-[8px] font-black uppercase tracking-tighter border border-white/20 shadow-sm">
-                                必修
+                      {(() => {
+                        const courseElective: number[] = currentCourse.elective || [];
+                        const visibleIndices = courseElective.length > 0
+                          ? unitNames.map((_, idx) => idx).filter(idx =>
+                              currentCourse.mandatory.includes(idx) || unitNames[idx]?.isMandatory || courseElective.includes(idx)
+                            )
+                          : unitNames.map((_, idx) => idx);
+                        return visibleIndices.map((i) => {
+                          const unit = unitNames[i];
+                          const isMandatory = currentCourse.mandatory.includes(i) || unit.isMandatory;
+                          const isSelected = selectedUnits.includes(i);
+                          const isHighlighted = isSelected || isMandatory;
+                          const isElective = courseElective.includes(i) && !isMandatory;
+                          
+                          return (
+                            <motion.button
+                              key={i}
+                              whileHover={isMandatory ? {} : { scale: 1.05, y: -2 }}
+                              whileTap={isMandatory ? {} : { scale: 0.95 }}
+                              onClick={() => toggleUnit(i)}
+                              disabled={isMandatory}
+                              className={`p-2 sm:p-3 border-[3px] flex flex-col items-center justify-center font-black text-[10px] sm:text-[13px] transition-all rounded-xl sm:rounded-2xl min-h-[86px] sm:min-h-[92px] h-auto text-center leading-tight relative shadow-xl ${
+                                isHighlighted 
+                                  ? 'bg-[#FFEF00] text-black border-white shadow-[#FFEF00]/30' 
+                                  : 'bg-[#2A2A2A] border-white/10 hover:border-white/30 text-white/80 hover:text-white'
+                              } ${isMandatory ? 'cursor-default' : 'cursor-pointer'}`}
+                            >
+                              <span className="block break-words leading-tight text-[13px] sm:text-[17px]">{unit.name}</span>
+                              <div className="flex items-center gap-1 sm:gap-2 mt-1">
+                                <span className={`text-[10px] sm:text-[12px] ${isHighlighted ? 'text-black/70' : 'text-white/55'}`}>(U{i+1})</span>
+                                {unit.price > 0 && (
+                                  <span className={`text-[10px] sm:text-[12px] font-black px-1.5 sm:px-2 py-0.5 rounded-md ${
+                                    isHighlighted
+                                      ? 'text-black bg-black/10'
+                                      : 'text-[#FFEF00] bg-white/15 border border-white/20'
+                                  }`}>
+                                    ${Number(unit.price || 0).toLocaleString()}
+                                  </span>
+                                )}
                               </div>
-                            )}
-                          </motion.button>
-                        );
-                      })}
+                              {isMandatory && (
+                                <div className="absolute top-1 right-1 sm:top-2 sm:right-2 flex items-center gap-1 bg-black text-[#FFEF00] px-1 sm:px-1.5 py-0.5 rounded-md text-[7px] sm:text-[8px] font-black uppercase tracking-tighter border border-white/20 shadow-sm">
+                                  必修
+                                </div>
+                              )}
+                              {isElective && (
+                                <div className="absolute top-1 right-1 sm:top-2 sm:right-2 flex items-center gap-1 bg-blue-600 text-white px-1 sm:px-1.5 py-0.5 rounded-md text-[7px] sm:text-[8px] font-black uppercase tracking-tighter shadow-sm">
+                                  選修
+                                </div>
+                              )}
+                            </motion.button>
+                          );
+                        });
+                      })()}
                     </>
                   )}
                 </div>
@@ -3234,7 +3284,7 @@ function AppContent() {
                             📋 課程列表
                           </h3>
                           <button
-                            onClick={() => { setNewCourse({ name: '', type: 'Diploma', categories: ['regular'], mandatory: [], mandatoryGroups: [], minUnits: 16, allowExtra: true, title: '', subtitle: '', desc: '', startDate: '', classTime: '', tuition: '', mask: 'mask-book', img: '' }); setShowAddCombinationModal(true); }}
+                            onClick={() => { setNewCourse({ name: '', type: 'Diploma', categories: ['regular'], mandatory: [], elective: [], mandatoryGroups: [], minUnits: 16, allowExtra: true, title: '', subtitle: '', desc: '', startDate: '', classTime: '', tuition: '', mask: 'mask-book', img: '' }); setShowAddCombinationModal(true); }}
                             className="bg-black text-[#FFEF00] px-6 py-3 rounded-full font-black flex items-center gap-2 hover:scale-105 transition-transform text-sm"
                           >
                             <Plus size={20} /> 新增課程
@@ -3246,18 +3296,18 @@ function AppContent() {
                           <table className="w-full text-sm">
                               <thead>
                                 <tr className="bg-black text-[#FFEF00]">
-                                  <th className="px-4 py-3 text-left font-black">課程 ID</th>
-                                  <th className="px-4 py-3 text-left font-black">名稱</th>
-                                  <th className="px-4 py-3 text-left font-black">課程類型</th>
-                                  <th className="px-4 py-3 text-left font-black">Type</th>
+                                  <th className="px-4 py-3 text-left font-black text-xs opacity-50">#</th>
+                                  <SortTh col="name">名稱</SortTh>
+                                  <SortTh col="cat">類型</SortTh>
+                                  <SortTh col="type">學制</SortTh>
                                   <th className="px-4 py-3 text-left font-black">操作</th>
                                 </tr>
                               </thead>
                               <tbody>
                                 {/* Regular and personal courses */}
-                                {courses.map((c, idx) => (
-                                  <tr key={c.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-black/5'}>
-                                    <td className="px-4 py-3 font-mono text-xs text-black/50">{c.id}</td>
+                                {sortedCourses(courses).map((c, idx) => (
+                                  <tr key={c.id} className={`transition-colors hover:bg-[#FFEF00]/10 ${idx % 2 === 0 ? 'bg-white' : 'bg-black/[0.03]'}`}>
+                                    <td className="px-4 py-3 font-mono text-xs text-black/30">{idx + 1}</td>
                                     <td className="px-4 py-3 font-bold">{c.name}</td>
                                     <td className="px-4 py-3">
                                       <span className={`px-2 py-1 rounded-full text-[10px] font-black uppercase ${
@@ -3265,10 +3315,10 @@ function AppContent() {
                                           ? 'bg-blue-100 text-blue-700'
                                           : 'bg-green-100 text-green-700'
                                       }`}>
-                                        {(c.categories || [c.category || 'regular']).map((cat: string) => cat === 'personal' ? '🧩 個人課程' : cat === 'group' ? '👥 團體課程' : '🎓 常規課程').join(' + ')}
+                                        {(c.categories || [c.category || 'regular']).map((cat: string) => cat === 'personal' ? '🧩 個人' : cat === 'group' ? '👥 團體' : '🎓 常規').join(' + ')}
                                       </span>
                                     </td>
-                                    <td className="px-4 py-3 text-xs text-black/60 font-bold">{c.type}</td>
+                                    <td className="px-4 py-3 text-xs text-black/60 font-bold">{c.type || '—'}</td>
                                     <td className="px-4 py-3">
                                       <div className="flex gap-2">
                                         <button
@@ -3285,15 +3335,15 @@ function AppContent() {
                                 ))}
                                 {/* Group courses */}
                                 {groupCourses.map((gc, idx) => (
-                                  <tr key={gc.id} className={(courses.length + idx) % 2 === 0 ? 'bg-white' : 'bg-black/5'}>
-                                    <td className="px-4 py-3 font-mono text-xs text-black/50">{gc.id}</td>
+                                  <tr key={gc.id} className={`transition-colors hover:bg-[#FFEF00]/10 ${(courses.length + idx) % 2 === 0 ? 'bg-white' : 'bg-black/[0.03]'}`}>
+                                    <td className="px-4 py-3 font-mono text-xs text-black/30">{courses.length + idx + 1}</td>
                                     <td className="px-4 py-3 font-bold">{gc.title}</td>
                                     <td className="px-4 py-3">
                                       <span className="px-2 py-1 rounded-full text-[10px] font-black uppercase bg-yellow-100 text-yellow-700">
-                                        👥 團體課程
+                                        👥 團體
                                       </span>
                                     </td>
-                                    <td className="px-4 py-3 text-xs text-black/60 font-bold">-</td>
+                                    <td className="px-4 py-3 text-xs text-black/60 font-bold">—</td>
                                     <td className="px-4 py-3">
                                       <div className="flex gap-2">
                                         <button
@@ -3333,7 +3383,7 @@ function AppContent() {
                             <GraduationCap size={32} /> 常規課程
                           </h3>
                           <button
-                            onClick={() => { setNewCourse({ name: '', type: 'Diploma', categories: ['regular'], mandatory: [], mandatoryGroups: [], minUnits: 16, allowExtra: true, title: '', subtitle: '', desc: '', startDate: '', classTime: '', tuition: '', mask: 'mask-book', img: '' }); setShowAddCombinationModal(true); }}
+                            onClick={() => { setNewCourse({ name: '', type: 'Diploma', categories: ['regular'], mandatory: [], elective: [], mandatoryGroups: [], minUnits: 16, allowExtra: true, title: '', subtitle: '', desc: '', startDate: '', classTime: '', tuition: '', mask: 'mask-book', img: '' }); setShowAddCombinationModal(true); }}
                             className="bg-black text-[#FFEF00] px-6 py-3 rounded-full font-black flex items-center gap-2 hover:scale-105 transition-transform text-sm"
                           >
                             <Plus size={20} /> 新增常規課程
@@ -3345,17 +3395,17 @@ function AppContent() {
                           <table className="w-full text-sm">
                               <thead>
                                 <tr className="bg-black text-[#FFEF00]">
-                                  <th className="px-4 py-3 text-left font-black">課程 ID</th>
-                                  <th className="px-4 py-3 text-left font-black">名稱</th>
-                                  <th className="px-4 py-3 text-left font-black">類別</th>
-                                  <th className="px-4 py-3 text-left font-black">Type</th>
+                                  <th className="px-4 py-3 text-left font-black text-xs opacity-50">#</th>
+                                  <SortTh col="name">名稱</SortTh>
+                                  <SortTh col="cat">類別</SortTh>
+                                  <SortTh col="type">學制</SortTh>
                                   <th className="px-4 py-3 text-left font-black">操作</th>
                                 </tr>
                               </thead>
                               <tbody>
-                                {courses.map((c, idx) => (
-                                  <tr key={c.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-black/5'}>
-                                    <td className="px-4 py-3 font-mono text-xs text-black/50">{c.id}</td>
+                                {sortedCourses(courses.filter(c => hasCategory(c, 'regular') || (!c.categories && !c.category))).map((c, idx) => (
+                                  <tr key={c.id} className={`transition-colors hover:bg-[#FFEF00]/10 ${idx % 2 === 0 ? 'bg-white' : 'bg-black/[0.03]'}`}>
+                                    <td className="px-4 py-3 font-mono text-xs text-black/30">{idx + 1}</td>
                                     <td className="px-4 py-3 font-bold">{c.name}</td>
                                     <td className="px-4 py-3">
                                       <span className={`px-2 py-1 rounded-full text-[10px] font-black uppercase ${
@@ -3363,10 +3413,10 @@ function AppContent() {
                                           ? 'bg-blue-100 text-blue-700'
                                           : 'bg-green-100 text-green-700'
                                       }`}>
-                                        {(c.categories || [c.category || 'regular']).map((cat: string) => cat === 'personal' ? '個人課程' : cat === 'group' ? '團體課程' : '常規課程').join(' + ')}
+                                        {(c.categories || [c.category || 'regular']).map((cat: string) => cat === 'personal' ? '🧩 個人' : cat === 'group' ? '👥 團體' : '🎓 常規').join(' + ')}
                                       </span>
                                     </td>
-                                    <td className="px-4 py-3 text-xs text-black/60 font-bold">{c.type}</td>
+                                    <td className="px-4 py-3 text-xs text-black/60 font-bold">{c.type || '—'}</td>
                                     <td className="px-4 py-3">
                                       <div className="flex gap-2">
                                         <button
@@ -3402,7 +3452,7 @@ function AppContent() {
                             🧩 個人課程
                           </h3>
                           <button
-                            onClick={() => { setNewCourse({ name: '', type: 'Diploma', categories: ['personal'], mandatory: [], mandatoryGroups: [], minUnits: 4, allowExtra: true, title: '', subtitle: '', desc: '', startDate: '', classTime: '', tuition: '', mask: 'mask-cloud', img: '' }); setShowAddCombinationModal(true); }}
+                            onClick={() => { setNewCourse({ name: '', type: 'Diploma', categories: ['personal'], mandatory: [], elective: [], mandatoryGroups: [], minUnits: 4, allowExtra: true, title: '', subtitle: '', desc: '', startDate: '', classTime: '', tuition: '', mask: 'mask-cloud', img: '' }); setShowAddCombinationModal(true); }}
                             className="bg-black text-[#FFEF00] px-6 py-3 rounded-full font-black flex items-center gap-2 hover:scale-105 transition-transform text-sm"
                           >
                             <Plus size={20} /> 新增個人課程
@@ -3452,24 +3502,24 @@ function AppContent() {
                           <table className="w-full text-sm">
                             <thead>
                               <tr className="bg-black text-[#FFEF00]">
-                                <th className="px-4 py-3 text-left font-black">課程 ID</th>
-                                <th className="px-4 py-3 text-left font-black">名稱</th>
-                                <th className="px-4 py-3 text-left font-black">類別</th>
-                                <th className="px-4 py-3 text-left font-black">Type</th>
+                                <th className="px-4 py-3 text-left font-black text-xs opacity-50">#</th>
+                                <SortTh col="name">名稱</SortTh>
+                                <SortTh col="cat">類別</SortTh>
+                                <SortTh col="type">學制</SortTh>
                                 <th className="px-4 py-3 text-left font-black">操作</th>
                               </tr>
                             </thead>
                             <tbody>
-                              {courses.filter(c => hasCategory(c, 'personal')).map((c, idx) => (
-                                <tr key={c.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-black/5'}>
-                                  <td className="px-4 py-3 font-mono text-xs text-black/50">{c.id}</td>
+                              {sortedCourses(courses.filter(c => hasCategory(c, 'personal'))).map((c, idx) => (
+                                <tr key={c.id} className={`transition-colors hover:bg-[#FFEF00]/10 ${idx % 2 === 0 ? 'bg-white' : 'bg-black/[0.03]'}`}>
+                                  <td className="px-4 py-3 font-mono text-xs text-black/30">{idx + 1}</td>
                                   <td className="px-4 py-3 font-bold">{c.name}</td>
                                   <td className="px-4 py-3">
                                     <span className="px-2 py-1 rounded-full text-[10px] font-black uppercase bg-blue-100 text-blue-700">
-                                      個人課程
+                                      🧩 個人
                                     </span>
                                   </td>
-                                  <td className="px-4 py-3 text-xs text-black/60 font-bold">{c.type}</td>
+                                  <td className="px-4 py-3 text-xs text-black/60 font-bold">{c.type || '—'}</td>
                                   <td className="px-4 py-3">
                                     <div className="flex gap-2">
                                       <button
@@ -3506,7 +3556,7 @@ function AppContent() {
                             👥 團體課程
                           </h3>
                           <button
-                            onClick={() => { setNewCourse({ name: '', type: 'Diploma', categories: ['group'], mandatory: [], mandatoryGroups: [], minUnits: 0, allowExtra: false, title: '', subtitle: '', desc: '', startDate: '', classTime: '', tuition: '', mask: 'mask-cloud', img: '' }); setShowAddCombinationModal(true); }}
+                            onClick={() => { setNewCourse({ name: '', type: 'Diploma', categories: ['group'], mandatory: [], elective: [], mandatoryGroups: [], minUnits: 0, allowExtra: false, title: '', subtitle: '', desc: '', startDate: '', classTime: '', tuition: '', mask: 'mask-cloud', img: '' }); setShowAddCombinationModal(true); }}
                             className="bg-black text-[#FFEF00] px-6 py-3 rounded-full font-black flex items-center gap-2 hover:scale-105 transition-transform text-sm"
                           >
                             <Plus size={20} /> 新增團體課程
@@ -3518,21 +3568,21 @@ function AppContent() {
                           <table className="w-full text-sm">
                             <thead>
                               <tr className="bg-black text-[#FFEF00]">
-                                <th className="px-4 py-3 text-left font-black">課程 ID</th>
-                                <th className="px-4 py-3 text-left font-black">名稱</th>
-                                <th className="px-4 py-3 text-left font-black">類別</th>
-                                <th className="px-4 py-3 text-left font-black">Type</th>
+                                <th className="px-4 py-3 text-left font-black text-xs opacity-50">#</th>
+                                <SortTh col="name">名稱</SortTh>
+                                <SortTh col="cat">類別</SortTh>
+                                <th className="px-4 py-3 text-left font-black">—</th>
                                 <th className="px-4 py-3 text-left font-black">操作</th>
                               </tr>
                             </thead>
                             <tbody>
-                              {groupCourses.map((gc, idx) => (
-                                <tr key={`gc-${gc.id}`} className={idx % 2 === 0 ? 'bg-white' : 'bg-black/5'}>
-                                  <td className="px-4 py-3 font-mono text-xs text-black/50">{gc.id}</td>
+                              {sortedCourses(groupCourses.map(gc => ({...gc, name: gc.title || gc.name}))).map((gc, idx) => (
+                                <tr key={`gc-${gc.id}`} className={`transition-colors hover:bg-[#FFEF00]/10 ${idx % 2 === 0 ? 'bg-white' : 'bg-black/[0.03]'}`}>
+                                  <td className="px-4 py-3 font-mono text-xs text-black/30">{idx + 1}</td>
                                   <td className="px-4 py-3 font-bold">{gc.title}</td>
                                   <td className="px-4 py-3">
                                     <span className="px-2 py-1 rounded-full text-[10px] font-black uppercase bg-yellow-100 text-yellow-700">
-                                      團體課程
+                                      👥 團體
                                     </span>
                                   </td>
                                   <td className="px-4 py-3 text-xs text-black/60 font-bold">—</td>
@@ -4812,42 +4862,76 @@ function AppContent() {
                             </div>
                             )}
 
-                            {/* Mandatory units — regular/personal only */}
+                            {/* Unit assignment table — regular/personal only */}
                             {!newCourse.categories.includes('group') && (
                             <div className="space-y-3">
-                              <label className="text-xs font-black uppercase ml-1 flex justify-between items-center">
-                                <span>選擇包含單元 (必填)</span>
-                                <span className="text-black/40">{newCourse.mandatory.length} 個已選擇</span>
-                              </label>
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[200px] overflow-y-auto p-2 border-2 border-black/10 rounded-xl custom-scrollbar">
-                                {adminUnitNames.map((unit, i) => (
-                                  <label key={i} className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all cursor-pointer ${
-                                    newCourse.mandatory.includes(i) 
-                                    ? 'bg-black text-[#FFEF00] border-black' 
-                                    : 'bg-white text-black border-black/10 hover:border-black'
-                                  }`}>
-                                    <input 
-                                      type="checkbox" 
-                                      className="hidden"
-                                      checked={newCourse.mandatory.includes(i)} 
-                                      onChange={e => {
-                                        const newMandatory = e.target.checked 
-                                          ? [...newCourse.mandatory, i] 
-                                          : newCourse.mandatory.filter(id => id !== i);
-                                        setNewCourse({...newCourse, mandatory: newMandatory});
-                                      }}
-                                    />
-                                    <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
-                                      newCourse.mandatory.includes(i) ? 'bg-[#FFEF00] border-[#FFEF00]' : 'border-black/20'
-                                    }`}>
-                                      {newCourse.mandatory.includes(i) && <CheckCircle2 size={14} className="text-black" />}
-                                    </div>
-                                    <div className="flex flex-col min-w-0">
-                                      <span className="text-sm font-black truncate">{unit.name}</span>
-                                      {unit.price > 0 && <span className="text-[10px] font-black opacity-40">${unit.price}</span>}
-                                    </div>
-                                  </label>
-                                ))}
+                              <div className="flex items-center justify-between">
+                                <label className="text-xs font-black uppercase ml-1">單元設定</label>
+                                <div className="flex items-center gap-4 text-[10px] font-black text-black/50 uppercase mr-1">
+                                  <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-black inline-block"></span> 必修</span>
+                                  <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-blue-600 inline-block"></span> 選修</span>
+                                  <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-black/10 border border-black/20 inline-block"></span> 不包含</span>
+                                </div>
+                              </div>
+                              <div className="border-2 border-black/10 rounded-xl overflow-hidden">
+                                <div className="grid grid-cols-[auto_1fr_auto_auto] bg-black/5 px-3 py-2 text-[10px] font-black uppercase text-black/40 gap-3">
+                                  <span></span>
+                                  <span>單元名稱</span>
+                                  <span className="w-14 text-center">必修</span>
+                                  <span className="w-14 text-center">選修</span>
+                                </div>
+                                <div className="max-h-[280px] overflow-y-auto custom-scrollbar divide-y divide-black/5">
+                                  {adminUnitNames.map((unit, i) => {
+                                    const isMand = newCourse.mandatory.includes(i);
+                                    const isElec = (newCourse.elective || []).includes(i);
+                                    return (
+                                      <div key={i} className={`grid grid-cols-[auto_1fr_auto_auto] items-center px-3 py-2.5 gap-3 transition-colors ${
+                                        isMand ? 'bg-black/5' : isElec ? 'bg-blue-50' : 'bg-white hover:bg-black/[0.02]'
+                                      }`}>
+                                        <div className={`w-7 h-5 rounded flex items-center justify-center font-black text-[9px] shrink-0 ${
+                                          isMand ? 'bg-black text-[#FFEF00]' : isElec ? 'bg-blue-600 text-white' : 'bg-black/10 text-black/40'
+                                        }`}>U{i+1}</div>
+                                        <div className="flex flex-col min-w-0">
+                                          <span className="text-xs font-bold truncate">{unit.name}</span>
+                                          {unit.price > 0 && <span className="text-[10px] text-black/40">${unit.price}</span>}
+                                        </div>
+                                        {/* 必修 checkbox */}
+                                        <div className="w-14 flex justify-center">
+                                          <input
+                                            type="checkbox"
+                                            className="w-4 h-4 accent-black cursor-pointer"
+                                            checked={isMand}
+                                            onChange={e => {
+                                              const newMandatory = e.target.checked
+                                                ? [...newCourse.mandatory, i]
+                                                : newCourse.mandatory.filter(id => id !== i);
+                                              const newElective = (newCourse.elective || []).filter(id => id !== i);
+                                              setNewCourse({...newCourse, mandatory: newMandatory, elective: newElective});
+                                            }}
+                                          />
+                                        </div>
+                                        {/* 選修 checkbox */}
+                                        <div className="w-14 flex justify-center">
+                                          <input
+                                            type="checkbox"
+                                            className="w-4 h-4 accent-blue-600 cursor-pointer"
+                                            checked={isElec}
+                                            onChange={e => {
+                                              const cur = newCourse.elective || [];
+                                              const next = e.target.checked ? [...cur, i] : cur.filter(id => id !== i);
+                                              const newMandatory = newCourse.mandatory.filter(id => id !== i);
+                                              setNewCourse({...newCourse, elective: next, mandatory: newMandatory});
+                                            }}
+                                          />
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                                <div className="flex gap-4 px-3 py-2 bg-black/5 text-[10px] font-black text-black/50 border-t border-black/10">
+                                  <span>必修: {newCourse.mandatory.length} 個</span>
+                                  <span>選修: {(newCourse.elective || []).length} 個</span>
+                                </div>
                               </div>
                             </div>
                             )}
@@ -4996,7 +5080,7 @@ function AppContent() {
                           </div>
                           <button 
                             onClick={() => {
-                              setNewCourse({ name: '', type: 'Diploma', categories: ['group'], mandatory: [], mandatoryGroups: [], minUnits: 0, allowExtra: false, title: '', subtitle: '', desc: '', startDate: '', classTime: '', tuition: '', mask: 'mask-cloud', img: '' });
+                              setNewCourse({ name: '', type: 'Diploma', categories: ['group'], mandatory: [], elective: [], mandatoryGroups: [], minUnits: 0, allowExtra: false, title: '', subtitle: '', desc: '', startDate: '', classTime: '', tuition: '', mask: 'mask-cloud', img: '' });
                               setShowAddCombinationModal(true);
                             }}
                             className="bg-black text-[#FFEF00] px-6 py-3 rounded-full font-black flex items-center gap-2 hover:scale-105 transition-transform"
@@ -5137,39 +5221,78 @@ function AppContent() {
                                     </div>
                                   )}
                                 </div>
-                                {/* Mandatory units — only for regular/personal */}
+                                {/* Unit assignment table — only for regular/personal */}
                                 {!(editingCourse.categories || [editingCourse.category]).includes('group') && (
                                 <div className="space-y-3">
-                                  <label className="text-xs font-black uppercase ml-1 flex justify-between items-center">
-                                    <span>必修單元</span>
-                                    <span className="text-black/40">{(editingCourse.mandatory || []).length} 個已選擇</span>
-                                  </label>
-                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-[200px] overflow-y-auto p-2 border-2 border-black/10 rounded-xl custom-scrollbar">
-                                    {adminUnitNames.map((unit, i) => (
-                                      <label key={i} className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all cursor-pointer ${
-                                        (editingCourse.mandatory || []).includes(i) || unit.isMandatory
-                                        ? 'bg-black text-[#FFEF00] border-black' 
-                                        : 'bg-white text-black border-black/10 hover:border-black'
-                                      } ${unit.isMandatory ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                                        <input type="checkbox" className="hidden" disabled={unit.isMandatory}
-                                          checked={(editingCourse.mandatory || []).includes(i) || unit.isMandatory} 
-                                          onChange={e => {
-                                            const newMandatory = e.target.checked 
-                                              ? [...(editingCourse.mandatory || []), i] 
-                                              : (editingCourse.mandatory || []).filter((id: number) => id !== i);
-                                            setEditingCourse({...editingCourse, mandatory: newMandatory});
-                                          }}
-                                        />
-                                        <div className={`w-8 h-6 rounded flex items-center justify-center font-black text-[10px] ${
-                                          (editingCourse.mandatory || []).includes(i) || unit.isMandatory ? 'bg-[#FFEF00] text-black' : 'bg-black text-[#FFEF00]'
-                                        }`}>U{i+1}</div>
-                                        <div className="flex flex-col flex-1 min-w-0">
-                                          <span className="text-xs font-bold truncate">{unit.name}</span>
-                                          {unit.price > 0 && <span className="text-[10px] font-black opacity-40">${unit.price}</span>}
-                                        </div>
-                                        {((editingCourse.mandatory || []).includes(i) || unit.isMandatory) && <CheckCircle2 size={16} />}
-                                      </label>
-                                    ))}
+                                  <div className="flex items-center justify-between">
+                                    <label className="text-xs font-black uppercase ml-1">單元設定</label>
+                                    <div className="flex items-center gap-4 text-[10px] font-black text-black/50 uppercase mr-1">
+                                      <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-black inline-block"></span> 必修</span>
+                                      <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-blue-600 inline-block"></span> 選修</span>
+                                      <span className="flex items-center gap-1"><span className="w-3 h-3 rounded-sm bg-black/10 border border-black/20 inline-block"></span> 不包含</span>
+                                    </div>
+                                  </div>
+                                  <div className="border-2 border-black/10 rounded-xl overflow-hidden">
+                                    <div className="grid grid-cols-[auto_1fr_auto_auto] bg-black/5 px-3 py-2 text-[10px] font-black uppercase text-black/40 gap-3">
+                                      <span></span>
+                                      <span>單元名稱</span>
+                                      <span className="w-14 text-center">必修</span>
+                                      <span className="w-14 text-center">選修</span>
+                                    </div>
+                                    <div className="max-h-[280px] overflow-y-auto custom-scrollbar divide-y divide-black/5">
+                                      {adminUnitNames.map((unit, i) => {
+                                        const isMand = (editingCourse.mandatory || []).includes(i) || unit.isMandatory;
+                                        const isElec = (editingCourse.elective || []).includes(i);
+                                        return (
+                                          <div key={i} className={`grid grid-cols-[auto_1fr_auto_auto] items-center px-3 py-2.5 gap-3 transition-colors ${
+                                            isMand ? 'bg-black/5' : isElec ? 'bg-blue-50' : 'bg-white hover:bg-black/[0.02]'
+                                          }`}>
+                                            <div className={`w-7 h-5 rounded flex items-center justify-center font-black text-[9px] shrink-0 ${
+                                              isMand ? 'bg-black text-[#FFEF00]' : isElec ? 'bg-blue-600 text-white' : 'bg-black/10 text-black/40'
+                                            }`}>U{i+1}</div>
+                                            <div className="flex flex-col min-w-0">
+                                              <span className="text-xs font-bold truncate">{unit.name}</span>
+                                              {unit.price > 0 && <span className="text-[10px] text-black/40">${unit.price}</span>}
+                                            </div>
+                                            {/* 必修 checkbox */}
+                                            <div className="w-14 flex justify-center">
+                                              <input
+                                                type="checkbox"
+                                                className="w-4 h-4 accent-black cursor-pointer disabled:cursor-not-allowed"
+                                                checked={isMand}
+                                                disabled={unit.isMandatory}
+                                                onChange={e => {
+                                                  const newMandatory = e.target.checked
+                                                    ? [...(editingCourse.mandatory || []), i]
+                                                    : (editingCourse.mandatory || []).filter((id: number) => id !== i);
+                                                  const newElective = (editingCourse.elective || []).filter((id: number) => id !== i);
+                                                  setEditingCourse({...editingCourse, mandatory: newMandatory, elective: newElective});
+                                                }}
+                                              />
+                                            </div>
+                                            {/* 選修 checkbox */}
+                                            <div className="w-14 flex justify-center">
+                                              <input
+                                                type="checkbox"
+                                                className="w-4 h-4 accent-blue-600 cursor-pointer disabled:cursor-not-allowed"
+                                                checked={isElec}
+                                                disabled={unit.isMandatory}
+                                                onChange={e => {
+                                                  const cur = editingCourse.elective || [];
+                                                  const next = e.target.checked ? [...cur, i] : cur.filter((id: number) => id !== i);
+                                                  const newMandatory = (editingCourse.mandatory || []).filter((id: number) => id !== i);
+                                                  setEditingCourse({...editingCourse, elective: next, mandatory: newMandatory});
+                                                }}
+                                              />
+                                            </div>
+                                          </div>
+                                        );
+                                      })}
+                                    </div>
+                                    <div className="flex gap-4 px-3 py-2 bg-black/5 text-[10px] font-black text-black/50 border-t border-black/10">
+                                      <span>必修: {(editingCourse.mandatory || []).length} 個</span>
+                                      <span>選修: {(editingCourse.elective || []).length} 個</span>
+                                    </div>
                                   </div>
                                 </div>
                                 )}
