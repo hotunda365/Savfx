@@ -2329,103 +2329,82 @@ function AppContent() {
                         {currentCourse.subtitle}
                       </p>
                     )}
+                    {(currentCourse as any).discount && (
+                      <div className="inline-flex items-center gap-2 mt-3 bg-[#FFEF00] text-black px-4 sm:px-5 py-2 sm:py-2.5 rounded-full text-sm sm:text-base font-black border-2 border-white shadow-[0_0_0_2px_rgba(255,239,0,0.35),4px_4px_0px_rgba(0,0,0,0.45)] animate-pulse">
+                        <span className="text-base sm:text-lg">🏷️</span>
+                        <span className="tracking-tight">限時優惠 {(currentCourse as any).discount}% OFF</span>
+                      </div>
+                    )}
                   </div>
                   
-                  <ul className="space-y-3">
-                    <li className="flex items-center gap-3 text-sm sm:text-lg font-black">
-                      <div className="w-2 h-2 bg-[#FFEF00] rounded-full" />
-                      {siteSettings.priceItem1 || '單元 1-4：$1,600 / 每個'}
-                    </li>
-                    <li className="flex items-center gap-3 text-sm sm:text-lg font-black">
-                      <div className="w-2 h-2 bg-[#FFEF00] rounded-full" />
-                      {siteSettings.priceItem2 || '其他單元：$3,000 / 每個'}
-                    </li>
-                    {currentCourse.allowExtra && (
-                      <li className="flex items-center gap-3 text-sm sm:text-lg font-black">
-                        <div className="w-2 h-2 bg-[#FFEF00] rounded-full" />
-                        {siteSettings.priceItemExtra || '超過 16 個單元後，額外單元享 8 折優惠！'}
-                      </li>
-                    )}
-                  </ul>
                 </div>
 
                 <div className="flex items-end gap-3 sm:gap-4">
-                  <div className="text-6xl sm:text-8xl font-black leading-none">{selectedUnits.filter(idx => idx < unitNames.length).length}</div>
+                  <div className="relative">
+                    <div className="absolute inset-0 bg-[#FFEF00]/15 blur-2xl rounded-full scale-[2] pointer-events-none" />
+                    <div className="text-6xl sm:text-8xl font-black leading-none relative z-10">{selectedUnits.filter(idx => idx < unitNames.length).length}</div>
+                  </div>
                   <div className="text-base sm:text-2xl font-black mb-1 sm:mb-2">
-                    <span className="opacity-60">/ {unitNames.length}</span>
+                    <span className="opacity-50">/ {unitNames.length}</span>
                     <br />
-                    已選單元
+                    <span className="text-sm sm:text-base opacity-70 tracking-wider">已選單元</span>
                   </div>
                 </div>
 
                 <div className="space-y-4">
-                  <div className="text-sm font-black uppercase tracking-widest opacity-70">預計總學費</div>
-                  {(currentCourse?.mandatoryGroups || []).length > 0 && (
-                    <div className="text-xs font-black text-white/70">
-                      已包含群組總價: ${currentCourseGroupTotalPrice.toLocaleString()}
-                    </div>
-                  )}
-                  <div className="flex flex-wrap items-center gap-4 sm:gap-6">
-                    <div className="text-5xl sm:text-7xl font-black text-white tracking-tighter">${totalPrice.toLocaleString()}</div>
-                    {selectedUnits.filter(idx => idx < unitNames.length).length > 16 && currentCourse.allowExtra && (
-                      <div className="bg-[#00FF00]/20 text-[#00FF00] text-xs font-black px-3 py-1.5 rounded-md border border-[#00FF00]/30 uppercase tracking-widest">
-                        已享 8 折
+                  <div className="bg-white/5 rounded-2xl sm:rounded-3xl px-4 sm:px-6 py-4 sm:py-5 border border-white/10 relative overflow-hidden">
+                    <div className="absolute left-0 top-4 bottom-4 w-[3px] bg-[#FFEF00] rounded-r-full" />
+                    <div className="text-xs sm:text-sm font-black uppercase tracking-widest opacity-60 mb-3">預計總學費</div>
+                    {(currentCourse?.mandatoryGroups || []).length > 0 && (
+                      <div className="text-xs font-black text-white/70 mb-2">
+                        已包含群組總價: ${currentCourseGroupTotalPrice.toLocaleString()}
                       </div>
                     )}
+                    <div className="flex flex-wrap items-center gap-4 sm:gap-6">
+                      <motion.div
+                        key={totalPrice}
+                        initial={{ scale: 1.06, opacity: 0.6 }}
+                        animate={{ scale: 1, opacity: 1 }}
+                        transition={{ type: 'spring', stiffness: 200, damping: 20 }}
+                        className="text-5xl sm:text-7xl font-black text-white tracking-tighter"
+                      >${totalPrice.toLocaleString()}</motion.div>
+                      {selectedUnits.filter(idx => idx < unitNames.length).length > 16 && currentCourse.allowExtra && (
+                        <div className="bg-[#00FF00]/20 text-[#00FF00] text-xs font-black px-3 py-1.5 rounded-md border border-[#00FF00]/30 uppercase tracking-widest">
+                          已享 8 折
+                        </div>
+                      )}
+                    </div>
                   </div>
                   
                   <div className="flex items-center gap-3 flex-wrap">
                     {selectedUnits.filter(idx => idx < unitNames.length).length < currentCourse.minUnits ? (
-                      <div className="text-red-500 text-xs sm:text-sm font-black flex items-center gap-2 bg-red-500/10 px-3 sm:px-4 py-2 rounded-full border border-red-500/20">
+                      <div className="text-red-400 text-xs sm:text-sm font-black flex items-center gap-2 bg-red-500/10 px-3 sm:px-4 py-2 rounded-full border border-red-500/20">
                         <X size={18} /> 還差 {currentCourse.minUnits - selectedUnits.filter(idx => idx < unitNames.length).length} 個單元即可報名
                       </div>
                     ) : (
-                      <div className="text-[#00FF00] text-xs sm:text-sm font-black flex items-center gap-2 bg-[#00FF00]/10 px-3 sm:px-4 py-2 rounded-full border border-[#00FF00]/20">
+                      <div className="text-[#00FF00] text-xs sm:text-sm font-black flex items-center gap-2 bg-[#00FF00]/10 px-3 sm:px-4 py-2 rounded-full border border-[#00FF00]/30 shadow-[0_0_12px_rgba(0,255,0,0.15)]">
                         <CheckCircle2 size={18} /> 已達最低報名要求
                       </div>
                     )}
                   </div>
                 </div>
 
-                <div className="w-full bg-white/10 h-6 rounded-full overflow-hidden border-2 border-white/5">
-                  <motion.div 
-                    className="bg-[#FFEF00] h-full shadow-[0_0_20px_rgba(255,239,0,0.4)]"
-                    initial={{ width: 0 }}
-                    animate={{ width: `${(selectedUnits.filter(idx => idx < unitNames.length).length / unitNames.length) * 100}%` }}
-                    transition={{ type: "spring", stiffness: 50 }}
-                  />
+                <div className="space-y-1.5">
+                  <div className="flex justify-between items-center text-xs font-black">
+                    <span className="opacity-50 uppercase tracking-widest">選課進度</span>
+                    <span className="text-[#FFEF00]">{Math.round((selectedUnits.filter(idx => idx < unitNames.length).length / Math.max(unitNames.length, 1)) * 100)}%</span>
+                  </div>
+                  <div className="w-full bg-white/10 h-4 rounded-full overflow-hidden border border-white/5">
+                    <motion.div 
+                      className="bg-[#FFEF00] h-full shadow-[0_0_16px_rgba(255,239,0,0.6)] rounded-full"
+                      initial={{ width: 0 }}
+                      animate={{ width: `${(selectedUnits.filter(idx => idx < unitNames.length).length / Math.max(unitNames.length, 1)) * 100}%` }}
+                      transition={{ type: "spring", stiffness: 50 }}
+                    />
+                  </div>
                 </div>
 
-                <div className="flex flex-wrap gap-2 sm:gap-3 pt-2 sm:pt-4">
-                  <button 
-                    onClick={() => {
-                      const allIndices = unitNames.map((_, i) => i);
-                      setSelectedUnits([...new Set([...selectedUnits, ...allIndices])]);
-                    }}
-                    className="w-full sm:w-auto px-4 sm:px-6 py-2.5 sm:py-3 rounded-full font-black text-xs transition-all border-[3px] border-white bg-white text-black hover:bg-[#FFEF00] hover:border-[#FFEF00] shadow-md"
-                  >
-                    全選單元
-                  </button>
-                  <button 
-                    onClick={() => {
-                      const globalMandatory = unitNames.filter(u => u.isMandatory).map(u => u.id);
-                      const courseMandatory = currentCourse.mandatory || [];
-                      setSelectedUnits([...new Set([...courseMandatory, ...globalMandatory])]);
-                    }}
-                    className="w-full sm:w-auto px-4 sm:px-6 py-2.5 sm:py-3 rounded-full font-black text-xs transition-all border-[3px] border-white bg-white text-black hover:bg-[#FFEF00] hover:border-[#FFEF00] shadow-md"
-                  >
-                    重設必修
-                  </button>
-                  <button 
-                    onClick={() => {
-                      const indices = [0, 1, 2, 3];
-                      setSelectedUnits([...new Set([...selectedUnits, ...indices])]);
-                    }}
-                    className="w-full sm:w-auto px-4 sm:px-6 py-2.5 sm:py-3 rounded-full font-black text-xs transition-all border-[3px] border-white bg-white text-black hover:bg-[#FFEF00] hover:border-[#FFEF00] shadow-md"
-                  >
-                    選取單元 1-4
-                  </button>
-                </div>
+
               </div>
               
               <div className="relative lg:-mr-6 xl:-mr-8">
@@ -2460,10 +2439,15 @@ function AppContent() {
                               disabled={isMandatory}
                               className={`p-2 sm:p-3 border-[3px] flex flex-col items-center justify-center font-black text-[10px] sm:text-[13px] transition-all rounded-xl sm:rounded-2xl min-h-[94px] sm:min-h-[104px] h-auto text-center leading-tight relative shadow-xl ${
                                 isHighlighted 
-                                  ? 'bg-[#FFEF00] text-black border-white shadow-[#FFEF00]/30' 
-                                  : 'bg-[#2A2A2A] border-white/10 hover:border-white/30 text-white/80 hover:text-white'
+                                  ? 'bg-[#FFEF00] text-black border-[#FFEF00] shadow-[0_0_20px_4px_rgba(255,239,0,0.3)]' 
+                                  : 'bg-[#2A2A2A] border-white/10 hover:border-white/40 hover:bg-[#333] text-white/80 hover:text-white'
                               } ${isMandatory ? 'cursor-default' : 'cursor-pointer'}`}
                             >
+                              {isHighlighted && !isMandatory && (
+                                <div className="absolute top-1.5 right-1.5 w-4 h-4 sm:w-5 sm:h-5 bg-black rounded-full flex items-center justify-center shadow-md z-10">
+                                  <CheckCircle2 size={11} className="text-[#FFEF00]" />
+                                </div>
+                              )}
                               <span
                                 className="block w-full break-words leading-[1.12] text-[14px] sm:text-[18px]"
                                 style={{
