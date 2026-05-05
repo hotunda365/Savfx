@@ -516,6 +516,8 @@ function AppContent() {
         '影視級後期合成特效'
       ],
       businessCoopYoutubeUrl: '',
+      businessCoopImg1: '',
+      businessCoopImg2: '',
       studentWorksTitle: '學生作品',
       studentWorksSubtitle: '優秀學員作品展示',
       studentWorksContent: '我們的學生以 AI 與傳統動畫技術創作出色作品，每一件作品都是創意與技術的完美結合。',
@@ -2622,7 +2624,7 @@ function AppContent() {
       </section>
 
       {/* Business Cooperation */}
-      <section id="business" className="py-28 sm:py-40 px-8 sm:px-16 bg-white">
+      <section id="business" className="py-28 sm:py-40 px-8 sm:px-16 bg-white border-y-8 border-black">
         <div className="max-w-7xl mx-auto">
           <SectionTitle subtitle={siteSettings.businessCoopSubtitle || "專業動畫製作與 AI 方案"}>{siteSettings.businessCoopTitle || "商業合作"}</SectionTitle>
           <div className="bg-[#FFEF00] text-black p-8 md:p-12 border-8 border-black rounded-[3rem]">
@@ -2664,10 +2666,10 @@ function AppContent() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="aspect-video bg-black rounded-xl overflow-hidden border-2 border-black">
-                    <img src="https://picsum.photos/seed/biz1/400/225" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    <img src={siteSettings.businessCoopImg1 || 'https://picsum.photos/seed/biz1/400/225'} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                   </div>
                   <div className="aspect-video bg-black rounded-xl overflow-hidden border-2 border-black">
-                    <img src="https://picsum.photos/seed/biz2/400/225" className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    <img src={siteSettings.businessCoopImg2 || 'https://picsum.photos/seed/biz2/400/225'} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                   </div>
                 </div>
               </div>
@@ -2677,20 +2679,26 @@ function AppContent() {
       </section>
 
       {/* Testimonials */}
-      <section id="testimonials" className="py-28 sm:py-40 bg-white">
+      <section id="testimonials" className="py-28 sm:py-40 bg-[#FFEF00] border-y-8 border-black">
         <div className="max-w-7xl mx-auto px-8 sm:px-16">
           <SectionTitle subtitle="聽聽學員怎麼說">學生見證</SectionTitle>
           <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-8 xl:gap-12">
             {testimonials.map((t, i) => (
-              <div key={i} className="flex flex-col items-center">
-                <MaskedImage 
-                  src={(t.img.startsWith('http') || t.img.startsWith('data:') || t.img.startsWith('/')) ? t.img : `https://picsum.photos/seed/${t.img}/300/300`} 
-                  maskId="mask-dream" 
-                  className="w-40 h-40 mb-6 bg-[#FFEF00]"
-                />
-                <div className="bg-[#FFEF00] p-6 border-4 border-black relative rounded-2xl">
-                  <p className="italic font-bold mb-4">"{t.text}"</p>
-                  <div className="font-black">— {t.name}</div>
+              <div key={i} className="flex flex-col items-center group">
+                <div className="relative z-10 mb-[-2rem]">
+                  <MaskedImage 
+                    src={(t.img.startsWith('http') || t.img.startsWith('data:') || t.img.startsWith('/')) ? t.img : `https://picsum.photos/seed/${t.img}/300/300`} 
+                    maskId="mask-dream" 
+                    className="w-36 h-36 bg-white border-4 border-black group-hover:scale-105 transition-transform duration-300"
+                  />
+                </div>
+                <div className="bg-white border-4 border-black rounded-3xl pt-14 pb-8 px-8 w-full shadow-[6px_6px_0px_rgba(0,0,0,1)] group-hover:shadow-[8px_8px_0px_rgba(0,0,0,1)] group-hover:-translate-y-1 transition-all duration-300 relative">
+                  <span className="absolute top-6 left-8 text-6xl font-black text-[#FFEF00] leading-none select-none" style={{textShadow: '2px 2px 0 #000'}}>"</span>
+                  <p className="font-bold text-base leading-relaxed mb-6 relative z-10">{t.text}</p>
+                  <div className="flex items-center gap-3 border-t-2 border-black/10 pt-4">
+                    <div className="w-2 h-2 rounded-full bg-black shrink-0" />
+                    <div className="font-black text-sm uppercase tracking-wide">{t.name}</div>
+                  </div>
                 </div>
               </div>
             ))}
@@ -2699,7 +2707,7 @@ function AppContent() {
       </section>
 
       {/* Tutor Profiles */}
-      <section id="tutors" className="py-28 sm:py-40 bg-[#FFEF00] border-y-8 border-black">
+      <section id="tutors" className="py-28 sm:py-40 bg-white border-y-8 border-black">
         <div className="max-w-7xl mx-auto px-8 sm:px-16">
           <SectionTitle subtitle="業界頂尖專家親自授課">專業團隊</SectionTitle>
           <div className="grid md:grid-cols-2 gap-12">
@@ -2707,7 +2715,7 @@ function AppContent() {
               <motion.div 
                 key={i} 
                 whileHover={{ scale: 1.02 }}
-                className="bg-white border-4 border-black p-6 md:p-8 flex flex-col xl:flex-row gap-6 md:gap-8 items-start rounded-3xl group shadow-[8px_8px_0px_rgba(0,0,0,1)] h-full"
+                className="bg-[#FFEF00] border-4 border-black p-6 md:p-8 flex flex-col xl:flex-row gap-6 md:gap-8 items-start rounded-3xl group shadow-[8px_8px_0px_rgba(0,0,0,1)] hover:shadow-[12px_12px_0px_rgba(0,0,0,1)] hover:-translate-y-1 transition-all duration-300 h-full"
               >
                 <div className="relative w-32 h-32 flex-shrink-0 mx-auto xl:mx-0">
                   <MaskedImage 
@@ -2731,7 +2739,7 @@ function AppContent() {
       </section>
 
       {/* Activity Review */}
-      <section id="activities" className="py-28 sm:py-40 bg-white overflow-hidden">
+      <section id="activities" className="py-28 sm:py-40 bg-[#FFEF00] border-y-8 border-black overflow-hidden">
         <div className="max-w-7xl mx-auto px-8 sm:px-16">
             <div className="flex justify-between items-end mb-12">
               <SectionTitle subtitle="精彩瞬間與技術分享">活動回顧</SectionTitle>
@@ -2873,7 +2881,7 @@ function AppContent() {
       </section>
 
       {/* Briefing Session Form */}
-      <section className="py-28 sm:py-40 px-8 sm:px-16 bg-[#FFEF00] border-y-8 border-black">
+      <section className="py-28 sm:py-40 px-8 sm:px-16 bg-white border-y-8 border-black">
         <div className="max-w-3xl mx-auto bg-white border-8 border-black p-14 text-center relative rounded-[3rem]">
           <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-20 h-20 bg-black rounded-full flex items-center justify-center">
             <Play className="text-[#FFEF00] fill-[#FFEF00] w-8 h-8 ml-1" />
@@ -2921,7 +2929,7 @@ function AppContent() {
       </section>
 
       {/* Partners */}
-      <section className="py-28 sm:py-40 bg-white border-t-8 border-black">
+      <section className="py-28 sm:py-40 bg-[#FFEF00] border-y-8 border-black">
         <div className="max-w-7xl mx-auto px-8 sm:px-16 text-center">
           <h3 className="text-2xl font-black uppercase mb-12">{siteSettings.partnersTitle || "曾合作機構"}</h3>
           <div className="flex flex-wrap justify-center gap-12 opacity-50 hover:opacity-100 transition-all">
@@ -5865,6 +5873,18 @@ function AppContent() {
                                 className="w-full border-4 border-black p-4 rounded-xl font-bold"
                                 value={siteSettings.businessCoopYoutubeUrl || ''}
                                 onChange={e => setSiteSettings({...siteSettings, businessCoopYoutubeUrl: e.target.value})}
+                              />
+                            </div>
+                            <div className="md:col-span-2 grid grid-cols-2 gap-6">
+                              <FileUploader
+                                label="圖片 1"
+                                currentImage={siteSettings.businessCoopImg1 || ''}
+                                onUpload={url => setSiteSettings({...siteSettings, businessCoopImg1: url})}
+                              />
+                              <FileUploader
+                                label="圖片 2"
+                                currentImage={siteSettings.businessCoopImg2 || ''}
+                                onUpload={url => setSiteSettings({...siteSettings, businessCoopImg2: url})}
                               />
                             </div>
                             <div className="md:col-span-2 space-y-4">
