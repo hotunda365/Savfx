@@ -515,6 +515,7 @@ function AppContent() {
         'AI 輔助高效動畫流程',
         '影視級後期合成特效'
       ],
+      businessCoopYoutubeUrl: '',
       studentWorksTitle: '學生作品',
       studentWorksSubtitle: '優秀學員作品展示',
       studentWorksContent: '我們的學生以 AI 與傳統動畫技術創作出色作品，每一件作品都是創意與技術的完美結合。',
@@ -2648,14 +2649,18 @@ function AppContent() {
               </div>
               <div className="grid grid-cols-1 gap-4">
                 <div className="aspect-video bg-black rounded-2xl overflow-hidden border-4 border-black shadow-lg">
-                  <iframe 
-                    className="w-full h-full"
-                    src="https://www.youtube.com/embed/dQw4w9WgXcQ" 
-                    title="YouTube video player" 
-                    frameBorder="0" 
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                    allowFullScreen
-                  ></iframe>
+                  {siteSettings.businessCoopYoutubeUrl ? (
+                    <iframe
+                      className="w-full h-full"
+                      src={toYouTubeEmbedUrl(siteSettings.businessCoopYoutubeUrl)}
+                      title="YouTube video player"
+                      frameBorder="0"
+                      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                      allowFullScreen
+                    ></iframe>
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-white/40 font-bold text-sm">尚未設定影片</div>
+                  )}
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="aspect-video bg-black rounded-xl overflow-hidden border-2 border-black">
@@ -2668,54 +2673,6 @@ function AppContent() {
               </div>
             </div>
           </div>
-        </div>
-      </section>
-
-      {/* Briefing Session Form */}
-      <section className="py-28 sm:py-40 px-8 sm:px-16 bg-[#FFEF00] border-y-8 border-black">
-        <div className="max-w-3xl mx-auto bg-white border-8 border-black p-14 text-center relative rounded-[3rem]">
-          <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-20 h-20 bg-black rounded-full flex items-center justify-center">
-            <Play className="text-[#FFEF00] fill-[#FFEF00] w-8 h-8 ml-1" />
-          </div>
-          <h2 className="text-4xl font-black mb-4 mt-4">{siteSettings.briefingTitle || "課程簡介會"}</h2>
-          <p className="text-black/60 font-black uppercase tracking-wide text-base md:text-lg mb-8">{siteSettings.briefingSubtitle || "留下您的聯絡資料，我們將把 YouTube 簡介會影片傳送給您。"}</p>
-          
-          <form onSubmit={handleBriefingSubmit} className="space-y-4">
-            <input 
-              type="email" 
-              placeholder="您的 Email" 
-              required
-              className="w-full border-4 border-black p-4 font-bold focus:outline-none focus:bg-[#FFEF00]/10 rounded-xl"
-              value={briefingForm.email}
-              onChange={e => setBriefingForm({...briefingForm, email: e.target.value})}
-            />
-            <input 
-              type="tel" 
-              placeholder="您的電話號碼" 
-              required
-              className="w-full border-4 border-black p-4 font-bold focus:outline-none focus:bg-[#FFEF00]/10 rounded-xl"
-              value={briefingForm.phone}
-              onChange={e => setBriefingForm({...briefingForm, phone: e.target.value})}
-            />
-            <button 
-              type="submit" 
-              disabled={isSubmittingBriefing}
-              className={`w-full bg-black text-[#FFEF00] py-4 font-black uppercase text-xl hover:scale-[1.02] transition-transform rounded-full flex items-center justify-center gap-2 ${isSubmittingBriefing ? 'opacity-70 cursor-not-allowed' : ''}`}
-            >
-              {isSubmittingBriefing ? <Loader2 className="animate-spin" size={20} /> : null}
-              {isSubmittingBriefing ? '提交中...' : '獲取簡介會影片'}
-            </button>
-          </form>
-
-          {isSubmitted && (
-            <motion.div 
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="mt-6 text-green-600 font-black"
-            >
-              提交成功！請留意您的電郵。
-            </motion.div>
-          )}
         </div>
       </section>
 
@@ -2915,8 +2872,56 @@ function AppContent() {
         </div>
       </section>
 
+      {/* Briefing Session Form */}
+      <section className="py-28 sm:py-40 px-8 sm:px-16 bg-[#FFEF00] border-y-8 border-black">
+        <div className="max-w-3xl mx-auto bg-white border-8 border-black p-14 text-center relative rounded-[3rem]">
+          <div className="absolute -top-10 left-1/2 -translate-x-1/2 w-20 h-20 bg-black rounded-full flex items-center justify-center">
+            <Play className="text-[#FFEF00] fill-[#FFEF00] w-8 h-8 ml-1" />
+          </div>
+          <h2 className="text-4xl font-black mb-4 mt-4">{siteSettings.briefingTitle || "課程簡介會"}</h2>
+          <p className="text-black/60 font-black uppercase tracking-wide text-base md:text-lg mb-8">{siteSettings.briefingSubtitle || "留下您的聯絡資料，我們將把 YouTube 簡介會影片傳送給您。"}</p>
+          
+          <form onSubmit={handleBriefingSubmit} className="space-y-4">
+            <input 
+              type="email" 
+              placeholder="您的 Email" 
+              required
+              className="w-full border-4 border-black p-4 font-bold focus:outline-none focus:bg-[#FFEF00]/10 rounded-xl"
+              value={briefingForm.email}
+              onChange={e => setBriefingForm({...briefingForm, email: e.target.value})}
+            />
+            <input 
+              type="tel" 
+              placeholder="您的電話號碼" 
+              required
+              className="w-full border-4 border-black p-4 font-bold focus:outline-none focus:bg-[#FFEF00]/10 rounded-xl"
+              value={briefingForm.phone}
+              onChange={e => setBriefingForm({...briefingForm, phone: e.target.value})}
+            />
+            <button 
+              type="submit" 
+              disabled={isSubmittingBriefing}
+              className={`w-full bg-black text-[#FFEF00] py-4 font-black uppercase text-xl hover:scale-[1.02] transition-transform rounded-full flex items-center justify-center gap-2 ${isSubmittingBriefing ? 'opacity-70 cursor-not-allowed' : ''}`}
+            >
+              {isSubmittingBriefing ? <Loader2 className="animate-spin" size={20} /> : null}
+              {isSubmittingBriefing ? '提交中...' : '獲取簡介會影片'}
+            </button>
+          </form>
+
+          {isSubmitted && (
+            <motion.div 
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-6 text-green-600 font-black"
+            >
+              提交成功！請留意您的電郵。
+            </motion.div>
+          )}
+        </div>
+      </section>
+
       {/* Partners */}
-      <section className="py-28 sm:py-40 bg-[#FFEF00] border-t-8 border-black">
+      <section className="py-28 sm:py-40 bg-white border-t-8 border-black">
         <div className="max-w-7xl mx-auto px-8 sm:px-16 text-center">
           <h3 className="text-2xl font-black uppercase mb-12">{siteSettings.partnersTitle || "曾合作機構"}</h3>
           <div className="flex flex-wrap justify-center gap-12 opacity-50 hover:opacity-100 transition-all">
@@ -3053,6 +3058,7 @@ function AppContent() {
                 { id: 'student-works', label: '學生作品', icon: Film },
                 { id: 'testimonials', label: '學生見證', icon: MessageSquare },
                 { id: 'activities', label: '活動管理', icon: Film },
+                { id: 'business-coop', label: '商業合作', icon: Briefcase },
                 { id: 'masks', label: '遮罩管理', icon: Box },
               ].map(tab => (
                 <button
@@ -3993,53 +3999,6 @@ function AppContent() {
                                 placeholder="https://www.youtube.com/watch?v=..."
                                 onChange={e => setSiteSettings({...siteSettings, studentWorksYoutubeUrl: e.target.value})} />
                             </div>
-                            <div className="space-y-2">
-                              <label className="text-xs font-black uppercase">商業合作 - 標題</label>
-                              <input 
-                                type="text" 
-                                className="w-full border-4 border-black p-4 rounded-xl font-bold"
-                                value={siteSettings.businessCoopTitle}
-                                onChange={e => setSiteSettings({...siteSettings, businessCoopTitle: e.target.value})}
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <label className="text-xs font-black uppercase">商業合作 - 副標題</label>
-                              <input 
-                                type="text" 
-                                className="w-full border-4 border-black p-4 rounded-xl font-bold"
-                                value={siteSettings.businessCoopSubtitle}
-                                onChange={e => setSiteSettings({...siteSettings, businessCoopSubtitle: e.target.value})}
-                              />
-                            </div>
-                            <div className="md:col-span-2 space-y-2">
-                              <label className="text-xs font-black uppercase">商業合作 - 內容詳情</label>
-                              <textarea 
-                                className="w-full border-4 border-black p-4 rounded-xl font-bold"
-                                rows={3}
-                                value={siteSettings.businessCoopContent}
-                                onChange={e => setSiteSettings({...siteSettings, businessCoopContent: e.target.value})}
-                              />
-                            </div>
-                            <div className="md:col-span-2 space-y-4">
-                              <label className="text-xs font-black uppercase block">商業合作 - 特色列表 (3 項)</label>
-                              <div className="grid md:grid-cols-3 gap-4">
-                                {[0, 1, 2].map(i => (
-                                  <input 
-                                    key={i}
-                                    type="text" 
-                                    placeholder={`特色 ${i+1}`}
-                                    className="w-full border-4 border-black p-4 rounded-xl font-bold"
-                                    value={siteSettings.businessCoopFeatures?.[i] || ''}
-                                    onChange={e => {
-                                      const newFeatures = [...(siteSettings.businessCoopFeatures || [])];
-                                      newFeatures[i] = e.target.value;
-                                      setSiteSettings({...siteSettings, businessCoopFeatures: newFeatures});
-                                    }}
-                                  />
-                                ))}
-                              </div>
-                            </div>
-
                             <div className="space-y-2">
                               <label className="text-xs font-black uppercase">課程簡介會 - 標題</label>
                               <input 
@@ -5859,6 +5818,100 @@ function AppContent() {
                               {isSavingActivities ? '正在發佈...' : '發佈活動'}
                             </button>
                           </form>
+                        </div>
+                      </section>
+                    )}
+
+                    {adminActiveTab === 'business-coop' && (
+                      <section className="space-y-10">
+                        <h3 className="text-3xl font-black mb-8 flex items-center gap-3">
+                          <Briefcase size={32} /> 商業合作管理
+                        </h3>
+
+                        <div className="bg-white border-4 border-black p-8 rounded-3xl shadow-[8px_8px_0px_rgba(0,0,0,1)] space-y-6">
+                          <div className="grid md:grid-cols-2 gap-6">
+                            <div className="space-y-2">
+                              <label className="text-xs font-black uppercase">標題</label>
+                              <input
+                                type="text"
+                                className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                value={siteSettings.businessCoopTitle || ''}
+                                onChange={e => setSiteSettings({...siteSettings, businessCoopTitle: e.target.value})}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <label className="text-xs font-black uppercase">副標題</label>
+                              <input
+                                type="text"
+                                className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                value={siteSettings.businessCoopSubtitle || ''}
+                                onChange={e => setSiteSettings({...siteSettings, businessCoopSubtitle: e.target.value})}
+                              />
+                            </div>
+                            <div className="md:col-span-2 space-y-2">
+                              <label className="text-xs font-black uppercase">內容詳情</label>
+                              <textarea
+                                className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                rows={4}
+                                value={siteSettings.businessCoopContent || ''}
+                                onChange={e => setSiteSettings({...siteSettings, businessCoopContent: e.target.value})}
+                              />
+                            </div>
+                            <div className="md:col-span-2 space-y-2">
+                              <label className="text-xs font-black uppercase">YouTube 影片連結</label>
+                              <input
+                                type="url"
+                                placeholder="https://www.youtube.com/watch?v=..."
+                                className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                value={siteSettings.businessCoopYoutubeUrl || ''}
+                                onChange={e => setSiteSettings({...siteSettings, businessCoopYoutubeUrl: e.target.value})}
+                              />
+                            </div>
+                            <div className="md:col-span-2 space-y-4">
+                              <label className="text-xs font-black uppercase block">特色列表（3 項）</label>
+                              <div className="grid md:grid-cols-3 gap-4">
+                                {[0, 1, 2].map(i => (
+                                  <input
+                                    key={i}
+                                    type="text"
+                                    placeholder={`特色 ${i + 1}`}
+                                    className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                                    value={siteSettings.businessCoopFeatures?.[i] || ''}
+                                    onChange={e => {
+                                      const newFeatures = [...(siteSettings.businessCoopFeatures || ['', '', ''])];
+                                      newFeatures[i] = e.target.value;
+                                      setSiteSettings({...siteSettings, businessCoopFeatures: newFeatures});
+                                    }}
+                                  />
+                                ))}
+                              </div>
+                            </div>
+                          </div>
+
+                          <button
+                            onClick={async () => {
+                              setIsSavingSettings(true);
+                              const saveTimeout = setTimeout(() => {
+                                setIsSavingSettings(false);
+                                showToast('儲存逾時，請檢查網路連線', 'error');
+                              }, 15000);
+                              try {
+                                await apiSetDoc('settings', 'global', siteSettings);
+                                clearTimeout(saveTimeout);
+                                showToast('商業合作設定已儲存！');
+                              } catch (error) {
+                                clearTimeout(saveTimeout);
+                                handleFirestoreError(error, OperationType.WRITE, 'settings/global');
+                              } finally {
+                                setIsSavingSettings(false);
+                              }
+                            }}
+                            disabled={isSavingSettings || !dataLoaded.settings}
+                            className={`w-full bg-black text-[#FFEF00] py-6 rounded-full font-black text-xl flex items-center justify-center gap-3 hover:scale-[1.02] transition-transform shadow-[8px_8px_0px_rgba(0,85,255,1)] ${isSavingSettings || !dataLoaded.settings ? 'opacity-70 cursor-not-allowed' : ''}`}
+                          >
+                            {isSavingSettings ? <Loader2 className="animate-spin" size={24} /> : <Save size={24} />}
+                            {!dataLoaded.settings ? '正在載入資料...' : (isSavingSettings ? '正在儲存...' : '儲存商業合作設定')}
+                          </button>
                         </div>
                       </section>
                     )}
