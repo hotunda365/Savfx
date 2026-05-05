@@ -460,6 +460,7 @@ function AppContent() {
   const [newGroupDesc, setNewGroupDesc] = useState('');
   const [newGroupId, setNewGroupId] = useState('');
   const [courseMenuExpanded, setCourseMenuExpanded] = useState(false);
+  const [settingsMenuExpanded, setSettingsMenuExpanded] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
@@ -3075,15 +3076,6 @@ function AppContent() {
               {[
                 { id: 'overview', label: '總覽', icon: Monitor },
                 { id: 'landing-page', label: '首頁管理', icon: LayoutGrid },
-                { id: 'settings', label: '基本設定', icon: Settings },
-                { id: 'briefing-leads', label: '簡介會留名', icon: FileText },
-                { id: 'tutors', label: '導師管理', icon: Users },
-                { id: 'student-works', label: '學生作品', icon: Film },
-                { id: 'testimonials', label: '學生見證', icon: MessageSquare },
-                { id: 'activities', label: '活動管理', icon: Film },
-                { id: 'business-coop', label: '商業合作', icon: Briefcase },
-                { id: 'partners', label: '曾合作機構', icon: Building2 },
-                { id: 'masks', label: '遮罩管理', icon: Box },
               ].map(tab => (
                 <button
                   key={tab.id}
@@ -3098,7 +3090,7 @@ function AppContent() {
                   {tab.label}
                 </button>
               ))}
-              
+
               {/* Course Management Submenu */}
               <button
                 onClick={() => setCourseMenuExpanded(!courseMenuExpanded)}
@@ -3112,7 +3104,7 @@ function AppContent() {
                 <span className="flex-1 text-left">課程管理</span>
                 <ChevronDown size={16} className={`transition-transform ${courseMenuExpanded ? 'rotate-180' : ''}`} />
               </button>
-              
+
               {courseMenuExpanded && (
                 <div className="space-y-1 pl-4 border-l-2 border-white/20">
                   <button
@@ -3167,7 +3159,69 @@ function AppContent() {
                   </button>
                 </div>
               )}
+
+              {[
+                { id: 'student-works', label: '學生作品', icon: Film },
+                { id: 'business-coop', label: '商業合作', icon: Briefcase },
+                { id: 'testimonials', label: '學生見證', icon: MessageSquare },
+                { id: 'tutors', label: '導師管理', icon: Users },
+                { id: 'activities', label: '活動管理', icon: Film },
+                { id: 'briefing-leads', label: '簡介會留名', icon: FileText },
+                { id: 'partners', label: '曾合作機構', icon: Building2 },
+              ].map(tab => (
+                <button
+                  key={tab.id}
+                  onClick={() => setAdminActiveTab(tab.id)}
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${
+                    adminActiveTab === tab.id 
+                    ? 'bg-[#FFEF00] text-black scale-105 shadow-[4px_4px_0px_rgba(255,255,255,0.3)]' 
+                    : 'hover:bg-white/10 text-white/70 hover:text-white'
+                  }`}
+                >
+                  <tab.icon size={20} />
+                  {tab.label}
+                </button>
+              ))}
               
+              {/* Settings Submenu */}
+              <button
+                onClick={() => setSettingsMenuExpanded(!settingsMenuExpanded)}
+                className={`flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${
+                  settingsMenuExpanded || adminActiveTab === 'settings' || adminActiveTab === 'masks'
+                  ? 'bg-white/10 text-white'
+                  : 'hover:bg-white/10 text-white/70 hover:text-white'
+                }`}
+              >
+                <Settings size={20} />
+                <span className="flex-1 text-left">基本設定</span>
+                <ChevronDown size={16} className={`transition-transform ${settingsMenuExpanded ? 'rotate-180' : ''}`} />
+              </button>
+
+              {settingsMenuExpanded && (
+                <div className="space-y-1 pl-4 border-l-2 border-white/20">
+                  <button
+                    onClick={() => { setAdminActiveTab('settings'); setSettingsMenuExpanded(true); }}
+                    className={`flex items-center gap-3 px-4 py-2 rounded-lg font-bold transition-all w-full text-sm ${
+                      adminActiveTab === 'settings'
+                      ? 'bg-[#FFEF00] text-black'
+                      : 'hover:bg-white/10 text-white/70 hover:text-white'
+                    }`}
+                  >
+                    ⚙️ 公司資料
+                  </button>
+                  <button
+                    onClick={() => { setAdminActiveTab('masks'); setSettingsMenuExpanded(true); }}
+                    className={`flex items-center gap-3 px-4 py-2 rounded-lg font-bold transition-all w-full text-sm ${
+                      adminActiveTab === 'masks'
+                      ? 'bg-[#FFEF00] text-black'
+                      : 'hover:bg-white/10 text-white/70 hover:text-white'
+                    }`}
+                  >
+                    🎭 遮罩管理
+                  </button>
+                </div>
+              )}
+
               <div className="mt-auto pt-8 border-t border-white/10 space-y-2">
                 <button 
                   onClick={() => setShowAdminPanel(false)}
@@ -3955,100 +4009,6 @@ function AppContent() {
                                   );
                                 })}
                               </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div>
-                          <h3 className="text-2xl font-black mb-6 uppercase tracking-tight">各區塊標題與內容</h3>
-                          <div className="grid md:grid-cols-2 gap-6 bg-white border-4 border-black p-8 rounded-3xl shadow-[8px_8px_0px_rgba(0,0,0,1)]">
-                            <div className="space-y-2">
-                              <label className="text-xs font-black uppercase">課程介紹 - 標題</label>
-                              <input 
-                                type="text" 
-                                className="w-full border-4 border-black p-4 rounded-xl font-bold"
-                                value={siteSettings.coursesIntroTitle}
-                                onChange={e => setSiteSettings({...siteSettings, coursesIntroTitle: e.target.value})}
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <label className="text-xs font-black uppercase">課程介紹 - 副標題</label>
-                              <input 
-                                type="text" 
-                                className="w-full border-4 border-black p-4 rounded-xl font-bold"
-                                value={siteSettings.coursesIntroSubtitle}
-                                onChange={e => setSiteSettings({...siteSettings, coursesIntroSubtitle: e.target.value})}
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <label className="text-xs font-black uppercase">團體課程 - 標題</label>
-                              <input 
-                                type="text" 
-                                className="w-full border-4 border-black p-4 rounded-xl font-bold"
-                                value={siteSettings.groupCourseTitle}
-                                onChange={e => setSiteSettings({...siteSettings, groupCourseTitle: e.target.value})}
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <label className="text-xs font-black uppercase">團體課程 - 副標題</label>
-                              <input 
-                                type="text" 
-                                className="w-full border-4 border-black p-4 rounded-xl font-bold"
-                                value={siteSettings.groupCourseSubtitle}
-                                onChange={e => setSiteSettings({...siteSettings, groupCourseSubtitle: e.target.value})}
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <label className="text-xs font-black uppercase">學生作品 - 標題</label>
-                              <input type="text" className="w-full border-4 border-black p-4 rounded-xl font-bold"
-                                value={siteSettings.studentWorksTitle || ''}
-                                onChange={e => setSiteSettings({...siteSettings, studentWorksTitle: e.target.value})} />
-                            </div>
-                            <div className="space-y-2">
-                              <label className="text-xs font-black uppercase">學生作品 - 副標題</label>
-                              <input type="text" className="w-full border-4 border-black p-4 rounded-xl font-bold"
-                                value={siteSettings.studentWorksSubtitle || ''}
-                                onChange={e => setSiteSettings({...siteSettings, studentWorksSubtitle: e.target.value})} />
-                            </div>
-                            <div className="space-y-2">
-                              <label className="text-xs font-black uppercase">學生作品 - 內容簡介</label>
-                              <input type="text" className="w-full border-4 border-black p-4 rounded-xl font-bold"
-                                value={siteSettings.studentWorksContent || ''}
-                                onChange={e => setSiteSettings({...siteSettings, studentWorksContent: e.target.value})} />
-                            </div>
-                            <div className="space-y-2">
-                              <label className="text-xs font-black uppercase">學生作品 - YouTube 連結</label>
-                              <input type="url" className="w-full border-4 border-black p-4 rounded-xl font-bold"
-                                value={siteSettings.studentWorksYoutubeUrl || ''}
-                                placeholder="https://www.youtube.com/watch?v=..."
-                                onChange={e => setSiteSettings({...siteSettings, studentWorksYoutubeUrl: e.target.value})} />
-                            </div>
-                            <div className="space-y-2">
-                              <label className="text-xs font-black uppercase">課程簡介會 - 標題</label>
-                              <input 
-                                type="text" 
-                                className="w-full border-4 border-black p-4 rounded-xl font-bold"
-                                value={siteSettings.briefingTitle}
-                                onChange={e => setSiteSettings({...siteSettings, briefingTitle: e.target.value})}
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <label className="text-xs font-black uppercase">課程簡介會 - 副標題</label>
-                              <input 
-                                type="text" 
-                                className="w-full border-4 border-black p-4 rounded-xl font-bold"
-                                value={siteSettings.briefingSubtitle}
-                                onChange={e => setSiteSettings({...siteSettings, briefingSubtitle: e.target.value})}
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <label className="text-xs font-black uppercase">曾合作機構 - 標題</label>
-                              <input 
-                                type="text" 
-                                className="w-full border-4 border-black p-4 rounded-xl font-bold"
-                                value={siteSettings.partnersTitle}
-                                onChange={e => setSiteSettings({...siteSettings, partnersTitle: e.target.value})}
-                              />
                             </div>
                           </div>
                         </div>
@@ -5695,71 +5655,6 @@ function AppContent() {
 
                     {adminActiveTab === 'activities' && (
                       <section>
-                        {/* 🚀 強制置頂的批次匯入區域 */}
-                        <div className="bg-[#0055FF] border-[6px] border-black p-10 rounded-[3rem] shadow-[12px_12px_0px_rgba(0,0,0,1)] mb-16 relative overflow-hidden">
-                          <div className="absolute top-[-20px] right-[-20px] opacity-10 rotate-12">
-                            <Database size={200} />
-                          </div>
-                          
-                          <div className="relative z-10">
-                            <h3 className="text-4xl font-[1000] text-white mb-4 flex items-center gap-4 italic tracking-tighter">
-                              <UploadCloud size={48} className="text-[#FFEF00]" /> 
-                              數據大遷移 (Phase 3)
-                            </h3>
-                            <p className="font-bold text-lg text-white/90 mb-8 max-w-2xl leading-relaxed">
-                              已經成功抓取 <span className="bg-[#FFEF00] text-black px-2 py-1 rounded-lg">1144 筆</span> 歷史數據！<br/>
-                              請點擊下方按鈕，選擇 <code className="bg-black/30 px-2 py-1 rounded">scripts/migrated_activities.json</code> 開始匯入。
-                            </p>
-                            
-                            <div className="flex flex-col items-start gap-4">
-                              <input 
-                                type="file" accept=".json" id="bulk-import-json-fix" className="hidden"
-                                onChange={async (e) => {
-                                  const file = e.target.files?.[0];
-                                  if (!file) return;
-                                  try {
-                                    const text = await file.text();
-                                    const data = JSON.parse(text);
-                                    if (!Array.isArray(data)) throw new Error("無效 JSON");
-                                    if (!confirm(`確定要匯入這 ${data.length} 筆活動資料嗎？這可能需要幾分鐘。`)) return;
-                                    
-                                    setIsSavingActivities(true);
-                                    let count = 0;
-                                    for (const item of data) {
-                                      const id = item.id || `migrated-${Date.now()}-${count}`;
-                                      const normalized = normalizeActivity({
-                                        ...item,
-                                        id,
-                                        tags: Array.isArray(item.tags) ? item.tags : (item.tags || '').split(',').map((t: any) => t.trim())
-                                      });
-                                      await apiSetDoc('activities', id.toString(), normalized);
-                                      count++;
-                                    }
-                                    showToast(`🎉 成功匯入 ${count} 筆資料！`);
-                                    window.location.reload(); // 強制刷新獲取最新數據
-                                  } catch (err) {
-                                    showToast("匯入出錯，請檢查檔案", "error");
-                                  } finally {
-                                    setIsSavingActivities(false);
-                                  }
-                                }}
-                              />
-                              <label 
-                                htmlFor="bulk-import-json-fix"
-                                className={`cursor-pointer inline-flex items-center justify-center gap-4 bg-[#FFEF00] text-black px-12 py-6 rounded-full font-[1000] text-2xl uppercase hover:scale-110 active:scale-95 transition-all shadow-[8px_8px_0px_rgba(0,0,0,1)] border-4 border-black ${isSavingActivities ? 'opacity-50 pointer-events-none' : ''}`}
-                              >
-                                {isSavingActivities ? <Loader2 className="animate-spin" size={32} /> : <Database size={32} />}
-                                {isSavingActivities ? '正在寫入 1144 筆數據...' : '立即開始匯入資料'}
-                              </label>
-                              {isSavingActivities && (
-                                <div className="mt-4 bg-black/20 p-4 rounded-2xl border-2 border-dashed border-white/50 w-full text-white font-black text-center">
-                                  ⏳ 請耐心等候，系統正在處理大量數據，請勿重新整理頁面...
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        </div>
-
                         <h3 className="text-3xl font-black mb-8 flex items-center gap-3">
                           <Film size={32} /> 單筆新增活動
                         </h3>
