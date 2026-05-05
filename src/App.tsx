@@ -737,6 +737,14 @@ function AppContent() {
             canvas.height = height;
             const ctx = canvas.getContext('2d');
             ctx?.drawImage(img, 0, 0, width, height);
+
+            // Keep alpha channel for transparent logos to avoid black background artifacts.
+            const outputMimeType = file.type === 'image/png'
+              ? 'image/png'
+              : file.type === 'image/webp'
+                ? 'image/webp'
+                : 'image/jpeg';
+            const outputQuality = outputMimeType === 'image/jpeg' ? 0.8 : 0.9;
             
             canvas.toBlob((blob) => {
               clearTimeout(timeout);
@@ -747,7 +755,7 @@ function AppContent() {
                 console.warn("Canvas toBlob failed, using original file");
                 resolve(file);
               }
-            }, 'image/jpeg', 0.8);
+            }, outputMimeType, outputQuality);
           };
         };
       });
@@ -780,7 +788,7 @@ function AppContent() {
         }
 
         const formData = new FormData();
-        formData.append('image', new File([blobToUpload], file.name, { type: file.type }));
+        formData.append('image', new File([blobToUpload], file.name, { type: blobToUpload.type || file.type }));
 
         const response = await fetch('/api/upload', {
           method: 'POST',
@@ -2716,21 +2724,25 @@ function AppContent() {
             {sortedTutors.map((tutor, i) => (
               <motion.div 
                 key={i} 
-                whileHover={{ scale: 1.02 }}
-                className="bg-[#FFEF00] border-4 border-black p-6 md:p-8 flex flex-col xl:flex-row gap-6 md:gap-8 items-start rounded-3xl group shadow-[8px_8px_0px_rgba(0,0,0,1)] hover:shadow-[12px_12px_0px_rgba(0,0,0,1)] hover:-translate-y-1 transition-all duration-300 h-full"
+                whileHover={{ scale: 1.01, y: -6 }}
+                className="bg-gradient-to-br from-[#FFF8C6] to-[#FFEF00] border-4 border-black p-6 md:p-8 rounded-3xl group shadow-[8px_8px_0px_rgba(0,0,0,1)] hover:shadow-[12px_12px_0px_rgba(0,0,0,1)] transition-all duration-300 h-full flex flex-col gap-6"
               >
-                <div className="relative w-32 h-32 flex-shrink-0 mx-auto xl:mx-0">
-                  <MaskedImage 
-                    src={(tutor.img.startsWith('http') || tutor.img.startsWith('data:') || tutor.img.startsWith('/')) ? tutor.img : `https://picsum.photos/seed/${tutor.img}/300/300`} 
-                    maskId={tutorMaskDrafts[tutor.id?.toString()] || tutor.mask || 'mask-notebook'} 
-                    className="w-full h-full bg-black transition-all duration-500 object-cover"
-                  />
-                  <div className="absolute -bottom-2 -right-2 w-8 h-8 bg-[#0055FF] rounded-full border-2 border-black" />
+                <div className="flex flex-col sm:flex-row gap-5 sm:items-center">
+                  <div className="relative w-28 h-28 md:w-32 md:h-32 shrink-0 mx-auto sm:mx-0">
+                    <MaskedImage 
+                      src={(tutor.img.startsWith('http') || tutor.img.startsWith('data:') || tutor.img.startsWith('/')) ? tutor.img : `https://picsum.photos/seed/${tutor.img}/300/300`} 
+                      maskId={tutorMaskDrafts[tutor.id?.toString()] || tutor.mask || 'mask-notebook'} 
+                      className="w-full h-full bg-black transition-all duration-500 object-cover"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0 text-center sm:text-left">
+                    <h3 className="text-2xl md:text-3xl font-black group-hover:text-[#0055FF] transition-colors leading-tight">{tutor.name}</h3>
+                    <div className="text-[#FFEF00] bg-black px-3 py-1 inline-block text-xs font-black mt-2 uppercase tracking-wide rounded-md">{tutor.role}</div>
+                  </div>
                 </div>
-                <div className="flex-1 w-full flex flex-col min-w-0">
-                  <h3 className="text-2xl font-black group-hover:text-[#0055FF] transition-colors text-center xl:text-left">{tutor.name}</h3>
-                  <div className="text-[#FFEF00] bg-black px-2 py-1 inline-block text-xs font-black mb-4 uppercase tracking-tighter self-center xl:self-start">{tutor.role}</div>
-                  <div className="font-bold text-black/70 leading-relaxed whitespace-pre-line max-h-[250px] overflow-y-auto pr-4" style={{ scrollbarWidth: 'thin' }}>
+
+                <div className="bg-white/85 border-2 border-black/15 rounded-2xl p-5 md:p-6">
+                  <div className="font-bold text-black/80 leading-relaxed whitespace-pre-line max-h-[260px] overflow-y-auto pr-2" style={{ scrollbarWidth: 'thin' }}>
                     {tutor.desc}
                   </div>
                 </div>
@@ -2933,10 +2945,10 @@ function AppContent() {
       {/* Partners */}
       <section className="py-28 sm:py-40 bg-[#FFEF00] border-y-8 border-black">
         <div className="max-w-7xl mx-auto px-8 sm:px-16 text-center">
-          <h3 className="text-2xl font-black uppercase mb-12">{siteSettings.partnersTitle || "曾合作機構"}</h3>
-          <div className="flex flex-wrap justify-center items-center gap-10 opacity-60 hover:opacity-100 transition-all">
+          <SectionTitle>{siteSettings.partnersTitle || "曾合作機構"}</SectionTitle>
+          <div className="flex flex-wrap justify-center items-center gap-6 sm:gap-8 opacity-80 hover:opacity-100 transition-all">
             {(siteSettings.partnerLogos?.length ? siteSettings.partnerLogos : Array.from({ length: 6 }).map((_, i) => `https://picsum.photos/seed/logo-${i}/120/60`)).map((src: string, i: number) => (
-              <div key={i} className="flex items-center justify-center w-32 h-16">
+              <div key={i} className="flex items-center justify-center w-36 h-20 px-4 py-3 bg-white border-2 border-black rounded-2xl shadow-[3px_3px_0px_rgba(0,0,0,0.8)]">
                 <img
                   src={src}
                   alt="Partner"
@@ -2944,7 +2956,6 @@ function AppContent() {
                   referrerPolicy="no-referrer"
                 />
               </div>
-            ))}
             ))}
           </div>
         </div>
