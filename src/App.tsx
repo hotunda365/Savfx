@@ -109,6 +109,19 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
 
 const apiPath = (collection: string, id?: string) => id ? `/api/collections/${collection}/${id}` : `/api/collections/${collection}`;
 
+function toYouTubeEmbedUrl(url: string): string {
+  if (!url) return '';
+  // youtu.be/ID or youtu.be/ID?si=...
+  const shortMatch = url.match(/youtu\.be\/([\w-]+)/);
+  if (shortMatch) return `https://www.youtube.com/embed/${shortMatch[1]}`;
+  // youtube.com/watch?v=ID
+  const watchMatch = url.match(/[?&]v=([\w-]+)/);
+  if (watchMatch) return `https://www.youtube.com/embed/${watchMatch[1]}`;
+  // already embed URL
+  if (url.includes('/embed/')) return url;
+  return url;
+}
+
 async function apiFetchCollection(collection: string, limit?: number, offset?: number) {
   let url = apiPath(collection);
   const params = new URLSearchParams();
@@ -2591,7 +2604,7 @@ function AppContent() {
                     <div className="aspect-video rounded-2xl overflow-hidden border-4 border-[#FFEF00]/30 bg-[#FFEF00]/10">
                       <iframe
                         className="w-full h-full"
-                        src={(w.youtubeUrl || '').replace('watch?v=', 'embed/')}
+                        src={toYouTubeEmbedUrl(w.youtubeUrl || '')}
                         title={w.title}
                         frameBorder="0"
                         allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
@@ -5542,7 +5555,7 @@ function AppContent() {
                               <div className="aspect-video rounded-xl overflow-hidden border-2 border-black mb-4 bg-black">
                                 <iframe
                                   className="w-full h-full"
-                                  src={(w.youtubeUrl || '').replace('watch?v=', 'embed/')}
+                                  src={toYouTubeEmbedUrl(w.youtubeUrl || '')}
                                   title={w.title}
                                   frameBorder="0"
                                   allowFullScreen
