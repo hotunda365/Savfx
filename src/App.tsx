@@ -25,6 +25,7 @@ import {
   X,
   Users,
   Briefcase,
+  Building2,
   Settings,
   Plus,
   Trash2,
@@ -525,6 +526,7 @@ function AppContent() {
       briefingTitle: '課程簡介會',
       briefingSubtitle: '留下您的聯絡資料，我們將把 YouTube 簡介會影片傳送給您。',
       partnersTitle: '曾合作機構',
+      partnerLogos: [] as string[],
       certCourseDesc: '本證書課程包含 4 個核心 AI 單元，旨在快速提升您的 AI 視覺應用能力。',
       diplomaCourseDesc: '本一年制文憑課程包含核心必修單元，並允許學生根據興趣自由加選其他單元。',
       priceItem1: '單元 1-4：$1,600 / 每個',
@@ -2741,7 +2743,7 @@ function AppContent() {
       {/* Activity Review */}
       <section id="activities" className="py-28 sm:py-40 bg-[#FFEF00] border-y-8 border-black overflow-hidden">
         <div className="max-w-7xl mx-auto px-8 sm:px-16">
-            <div className="flex justify-between items-end mb-12">
+            <div className="flex justify-center items-end mb-12">
               <SectionTitle subtitle="精彩瞬間與技術分享">活動回顧</SectionTitle>
             </div>
 
@@ -2932,15 +2934,17 @@ function AppContent() {
       <section className="py-28 sm:py-40 bg-[#FFEF00] border-y-8 border-black">
         <div className="max-w-7xl mx-auto px-8 sm:px-16 text-center">
           <h3 className="text-2xl font-black uppercase mb-12">{siteSettings.partnersTitle || "曾合作機構"}</h3>
-          <div className="flex flex-wrap justify-center gap-12 opacity-50 hover:opacity-100 transition-all">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <img 
-                key={i} 
-                src={`https://picsum.photos/seed/logo-${i}/120/60`} 
-                alt="Partner" 
-                className="h-12 object-contain"
-                referrerPolicy="no-referrer"
-              />
+          <div className="flex flex-wrap justify-center items-center gap-10 opacity-60 hover:opacity-100 transition-all">
+            {(siteSettings.partnerLogos?.length ? siteSettings.partnerLogos : Array.from({ length: 6 }).map((_, i) => `https://picsum.photos/seed/logo-${i}/120/60`)).map((src: string, i: number) => (
+              <div key={i} className="flex items-center justify-center w-32 h-16">
+                <img
+                  src={src}
+                  alt="Partner"
+                  className="max-w-full max-h-full w-auto h-auto object-contain"
+                  referrerPolicy="no-referrer"
+                />
+              </div>
+            ))}
             ))}
           </div>
         </div>
@@ -3067,6 +3071,7 @@ function AppContent() {
                 { id: 'testimonials', label: '學生見證', icon: MessageSquare },
                 { id: 'activities', label: '活動管理', icon: Film },
                 { id: 'business-coop', label: '商業合作', icon: Briefcase },
+                { id: 'partners', label: '曾合作機構', icon: Building2 },
                 { id: 'masks', label: '遮罩管理', icon: Box },
               ].map(tab => (
                 <button
@@ -5931,6 +5936,99 @@ function AppContent() {
                           >
                             {isSavingSettings ? <Loader2 className="animate-spin" size={24} /> : <Save size={24} />}
                             {!dataLoaded.settings ? '正在載入資料...' : (isSavingSettings ? '正在儲存...' : '儲存商業合作設定')}
+                          </button>
+                        </div>
+                      </section>
+                    )}
+
+                    {adminActiveTab === 'partners' && (
+                      <section className="space-y-10">
+                        <h3 className="text-3xl font-black mb-8 flex items-center gap-3">
+                          <Building2 size={32} /> 曾合作機構管理
+                        </h3>
+
+                        <div className="bg-white border-4 border-black p-8 rounded-3xl shadow-[8px_8px_0px_rgba(0,0,0,1)] space-y-6">
+                          <div className="space-y-2">
+                            <label className="text-xs font-black uppercase">區塊標題</label>
+                            <input
+                              type="text"
+                              className="w-full border-4 border-black p-4 rounded-xl font-bold"
+                              value={siteSettings.partnersTitle || ''}
+                              onChange={e => setSiteSettings({...siteSettings, partnersTitle: e.target.value})}
+                            />
+                          </div>
+
+                          <div>
+                            <div className="flex items-center justify-between mb-4">
+                              <label className="text-xs font-black uppercase">機構 Logo 列表</label>
+                              <button
+                                onClick={() => setSiteSettings({...siteSettings, partnerLogos: [...(siteSettings.partnerLogos || []), '']})}
+                                className="flex items-center gap-2 bg-black text-[#FFEF00] px-4 py-2 rounded-full font-black text-sm hover:scale-105 transition-transform"
+                              >
+                                <Plus size={16} /> 新增
+                              </button>
+                            </div>
+                            <div className="grid md:grid-cols-3 gap-6">
+                              {(siteSettings.partnerLogos || []).map((logo: string, i: number) => (
+                                <div key={i} className="border-4 border-black rounded-2xl p-4 space-y-3 bg-gray-50">
+                                  <div className="aspect-video bg-white border-2 border-black rounded-xl overflow-hidden flex items-center justify-center">
+                                    {logo ? (
+                                      <img src={logo} alt={`Partner ${i+1}`} className="h-12 object-contain" referrerPolicy="no-referrer" />
+                                    ) : (
+                                      <span className="text-black/30 text-xs font-bold">未上傳</span>
+                                    )}
+                                  </div>
+                                  <FileUploader
+                                    label={`Logo ${i + 1}`}
+                                    currentImage={logo}
+                                    onUpload={url => {
+                                      const updated = [...(siteSettings.partnerLogos || [])];
+                                      updated[i] = url;
+                                      setSiteSettings({...siteSettings, partnerLogos: updated});
+                                    }}
+                                  />
+                                  <button
+                                    onClick={() => {
+                                      const updated = (siteSettings.partnerLogos || []).filter((_: string, idx: number) => idx !== i);
+                                      setSiteSettings({...siteSettings, partnerLogos: updated});
+                                    }}
+                                    className="w-full flex items-center justify-center gap-2 text-red-500 border-2 border-red-300 rounded-xl py-2 font-bold text-sm hover:bg-red-50 transition-colors"
+                                  >
+                                    <Trash2 size={14} /> 移除
+                                  </button>
+                                </div>
+                              ))}
+                              {(siteSettings.partnerLogos || []).length === 0 && (
+                                <div className="md:col-span-3 text-center py-12 text-black/40 font-bold border-4 border-dashed border-black/20 rounded-2xl">
+                                  尚未新增任何 Logo，點擊「新增」開始上傳
+                                </div>
+                              )}
+                            </div>
+                          </div>
+
+                          <button
+                            onClick={async () => {
+                              setIsSavingSettings(true);
+                              const saveTimeout = setTimeout(() => {
+                                setIsSavingSettings(false);
+                                showToast('儲存逾時，請檢查網路連線', 'error');
+                              }, 15000);
+                              try {
+                                await apiSetDoc('settings', 'global', siteSettings);
+                                clearTimeout(saveTimeout);
+                                showToast('曾合作機構設定已儲存！');
+                              } catch (error) {
+                                clearTimeout(saveTimeout);
+                                handleFirestoreError(error, OperationType.WRITE, 'settings/global');
+                              } finally {
+                                setIsSavingSettings(false);
+                              }
+                            }}
+                            disabled={isSavingSettings || !dataLoaded.settings}
+                            className={`w-full bg-black text-[#FFEF00] py-6 rounded-full font-black text-xl flex items-center justify-center gap-3 hover:scale-[1.02] transition-transform shadow-[8px_8px_0px_rgba(0,85,255,1)] ${isSavingSettings || !dataLoaded.settings ? 'opacity-70 cursor-not-allowed' : ''}`}
+                          >
+                            {isSavingSettings ? <Loader2 className="animate-spin" size={24} /> : <Save size={24} />}
+                            {!dataLoaded.settings ? '正在載入資料...' : (isSavingSettings ? '正在儲存...' : '儲存曾合作機構設定')}
                           </button>
                         </div>
                       </section>
