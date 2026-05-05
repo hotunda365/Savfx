@@ -5533,9 +5533,9 @@ function AppContent() {
                         <h3 className="text-3xl font-black mb-8 flex items-center gap-3">
                           <FaYoutube size={32} /> 學生作品管理
                         </h3>
-                        <div className="grid md:grid-cols-2 gap-6 mb-12">
+                        <div className="grid md:grid-cols-3 gap-6 mb-12">
                           {studentWorks.length === 0 && (
-                            <p className="font-black text-black/30 col-span-2">尚無學生作品，請新增。</p>
+                            <p className="font-black text-black/30 col-span-3">尚無學生作品，請新增。</p>
                           )}
                           {studentWorks.map(w => (
                             <div key={w.id} className="bg-white border-4 border-black p-5 rounded-3xl shadow-[4px_4px_0px_rgba(0,0,0,1)]">
