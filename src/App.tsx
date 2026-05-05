@@ -1649,6 +1649,18 @@ function AppContent() {
     });
   };
 
+  const handleToggleFeaturedStudentWork = async (w: any) => {
+    const newFeatured = !w.featured;
+    try {
+      const updated = { ...w, featured: newFeatured };
+      await apiSetDoc('studentWorks', w.id, updated);
+      setStudentWorks(prev => prev.map(item => item.id === w.id ? updated : item));
+      showToast(newFeatured ? "已設為精選" : "已取消精選");
+    } catch (error: any) {
+      showToast(error.message || "操作失敗", "error");
+    }
+  };
+
   useEffect(() => {
     const drafts: Record<string, number> = {};
     tutors.forEach((tutor) => {
@@ -5540,7 +5552,11 @@ function AppContent() {
                               <p className="text-xs text-black/50 font-bold mb-4 truncate">{w.youtubeUrl}</p>
                               <div className="flex gap-2">
                                 <button
-                                  onClick={() => { setNewStudentWork({ title: w.title, youtubeUrl: w.youtubeUrl }); setEditingStudentWorkId(w.id); }}
+                                  onClick={() => {
+                                    setNewStudentWork({ title: w.title, youtubeUrl: w.youtubeUrl });
+                                    setEditingStudentWorkId(w.id);
+                                    setTimeout(() => document.getElementById('student-work-form')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+                                  }}
                                   className="flex-1 flex items-center justify-center gap-2 bg-[#FFEF00] border-2 border-black py-2 rounded-full font-black text-sm hover:scale-105 transition-transform"
                                 >
                                   <Edit2 size={16} /> 修改
@@ -5552,11 +5568,19 @@ function AppContent() {
                                   <Trash2 size={16} />
                                 </button>
                               </div>
+                              <button
+                                onClick={() => handleToggleFeaturedStudentWork(w)}
+                                className={`w-full mt-2 py-2 rounded-full font-black text-sm border-2 border-black hover:scale-105 transition-transform ${
+                                  w.featured ? 'bg-black text-[#FFEF00]' : 'bg-white text-black'
+                                }`}
+                              >
+                                {w.featured ? '★ 精選中' : '設為精選'}
+                              </button>
                             </div>
                           ))}
                         </div>
 
-                        <div className="bg-white border-4 border-black p-8 rounded-3xl shadow-[8px_8px_0px_rgba(0,0,0,1)]">
+                        <div id="student-work-form" className="bg-white border-4 border-black p-8 rounded-3xl shadow-[8px_8px_0px_rgba(0,0,0,1)]">
                           <h4 className="text-xl font-black mb-6 uppercase">
                             {editingStudentWorkId ? '修改學生作品' : '新增學生作品'}
                           </h4>
